@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Check, ChevronRight, Heart, Info, PawPrint, Plus, Search, ShieldCheck, Trash2, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, Heart, Info, LoaderCircle, PawPrint, Plus, RefreshCw, Search, ShieldCheck, Trash2, TriangleAlert, X } from 'lucide-react'
 import { Analysis, FeedingItem, getProducts, Product, Profile, Recommendation, analyze, recommend } from './api'
 
 const initialProfile: Profile = {name:'',species:'DOG',weightKg:5,age:{value:24,unit:'MONTH'},completeFeed:true}
@@ -11,13 +11,20 @@ export function App(){
   const [profile,setProfile]=useState<Profile>(()=>{try{return JSON.parse(localStorage.getItem('wooaeyoung-profile')||'null')||initialProfile}catch{return initialProfile}})
   const [products,setProducts]=useState<Product[]>([])
   const [query,setQuery]=useState('')
-  const [items,setItems]=useState<FeedingItem[]>([])
+  const [items,setItems]=useState<FeedingItem[]>(()=>{try{return JSON.parse(localStorage.getItem('wooaeyoung-items')||'[]')}catch{return []}})
   const [result,setResult]=useState<Analysis|null>(null)
   const [recs,setRecs]=useState<Recommendation|null>(null)
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
+  const [productsLoading,setProductsLoading]=useState(true)
+  const [reloadProducts,setReloadProducts]=useState(0)
 
-  useEffect(()=>{getProducts(query).then(x=>setProducts(x.items)).catch(e=>setError(e.message))},[query])
+  useEffect(()=>{localStorage.setItem('wooaeyoung-items',JSON.stringify(items))},[items])
+  useEffect(()=>{
+    let active=true
+    const timer=setTimeout(()=>{setProductsLoading(true);getProducts(query).then(x=>{if(active){setProducts(x.items);setError('')}}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setProductsLoading(false)})},query.trim()?450:0)
+    return()=>{active=false;clearTimeout(timer)}
+  },[query,reloadProducts])
   const profileValid = profile.name.trim() && profile.weightKg>0 && profile.age.value>0 && !(profile.species==='DOG' && profile.age.unit==='MONTH' && profile.age.value<12 && !profile.adultSize)
   const visibleProducts = useMemo(()=>products.filter(p=>!items.some(i=>i.productId===p.id)),[products,items])
 
@@ -32,9 +39,9 @@ export function App(){
     <main>
       <div className="steps" aria-label="진행 단계">{['반려동물','급여 제품','분석 결과'].map((name,i)=><div key={name} className={`step ${step===i+1?'active':''} ${step>i+1?'done':''}`}><span>{step>i+1?<Check size={14}/>:i+1}</span>{name}</div>)}</div>
       {error&&<div className="alert error" role="alert"><TriangleAlert size={18}/>{error}<button onClick={()=>setError('')}>닫기</button></div>}
-      {step===1&&<ProfileStep profile={profile} update={updateProfile} valid={!!profileValid} next={saveProfile}/>} 
-      {step===2&&<ProductsStep query={query} setQuery={setQuery} products={visibleProducts} items={items} add={addProduct} updateItems={setItems} back={()=>setStep(1)} run={run} busy={busy}/>} 
-      {step===3&&result&&<ResultStep result={result} recs={recs} back={()=>setStep(2)} loadRecs={loadRecs} busy={busy}/>} 
+      {step===1&&<ProfileStep profile={profile} update={updateProfile} valid={!!profileValid} next={saveProfile}/>}
+      {step===2&&<ProductsStep query={query} setQuery={setQuery} products={visibleProducts} loading={productsLoading} retry={()=>setReloadProducts(x=>x+1)} items={items} add={addProduct} updateItems={setItems} back={()=>setStep(1)} run={run} busy={busy}/>}
+      {step===3&&result&&<ResultStep result={result} recs={recs} back={()=>setStep(2)} loadRecs={loadRecs} busy={busy}/>}
     </main>
     <footer>시판 제품 정보: Open Pet Food Facts(ODbL) · 사용자 기여 데이터로 정확성·완전성이 보장되지 않습니다. 영양 정보는 수의학적 진단이나 처방을 대신하지 않습니다.</footer>
   </div>
@@ -45,10 +52,25 @@ function ProfileStep({profile,update,valid,next}:{profile:Profile;update:<K exte
   return <section className="panel intro-grid"><div className="intro"><div className="eyebrow"><Heart size={15}/> 첫 번째 단계</div><h1>우리 아이에게 맞는<br/>기준부터 계산해요.</h1><p>품종이나 질환 정보는 받지 않아요. 종, 체중, 나이만으로 영양 기준을 계산합니다.</p><div className="privacy"><ShieldCheck/>입력 정보는 이 브라우저에만 저장됩니다.</div></div><div className="form-card"><h2>반려동물 정보</h2><label>이름<input value={profile.name} maxLength={30} placeholder="예: 몽이" onChange={e=>update('name',e.target.value)}/></label><fieldset><legend>종</legend><div className="segments"><button className={profile.species==='DOG'?'selected':''} onClick={()=>update('species','DOG')}>강아지</button><button className={profile.species==='CAT'?'selected':''} onClick={()=>update('species','CAT')}>고양이</button></div></fieldset><div className="two"><label>체중 (kg)<input type="number" min="0.1" max="100" step="0.1" value={profile.weightKg} onChange={e=>update('weightKg',Number(e.target.value))}/></label><label>나이<div className="input-group"><input type="number" min="1" value={profile.age.value} onChange={e=>update('age',{...profile.age,value:Number(e.target.value)})}/><select value={profile.age.unit} onChange={e=>update('age',{...profile.age,unit:e.target.value as 'WEEK'|'MONTH'})}><option value="MONTH">개월</option><option value="WEEK">주</option></select></div></label></div>{puppy&&<label>예상 성체 체급<select value={profile.adultSize??''} onChange={e=>update('adultSize',e.target.value)}><option value="">선택해주세요</option>{['S','M','L','XL','XXL'].map(x=><option key={x}>{x}</option>)}</select><small>12개월 미만 강아지는 성장 기준 계산에 필요해요.</small></label>}<label className="check"><input type="checkbox" checked={profile.completeFeed} onChange={e=>update('completeFeed',e.target.checked)}/><span><b>완전사료를 급여 중이에요</b><small>성분표가 없는 사료는 최소 권장량으로 추정합니다.</small></span></label><button className="primary full" disabled={!valid} onClick={next}>급여 제품 입력으로 <ChevronRight size={18}/></button></div></section>
 }
 
-function ProductsStep({query,setQuery,products,items,add,updateItems,back,run,busy}:{query:string;setQuery:(x:string)=>void;products:Product[];items:FeedingItem[];add:(p:Product)=>void;updateItems:(x:FeedingItem[])=>void;back:()=>void;run:()=>void;busy:boolean}){
-  return <section><div className="section-head"><button className="back" onClick={back}><ArrowLeft/>반려동물 정보</button><h1>하루에 먹는 제품을 알려주세요.</h1><p>사료와 영양제를 모두 더해 하루 총 섭취량을 계산합니다.</p></div><div className="product-layout"><div className="search-card"><h2>제품 찾기</h2><div className="search"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="제품명이나 브랜드 검색"/></div><div className="results">{products.map(p=><button key={p.id} className="product-result" onClick={()=>add(p)}><span className={`type ${p.type.toLowerCase()}`}>{p.type==='FEED'?'사료':'영양제'}</span><span><b>{p.name}</b><small>{p.brand} · {p.dataQuality==='MINIMUM_ONLY'?'성분 추정':'성분표 있음'}</small></span><Plus/></button>)}{products.length===0&&<div className="empty">검색 결과가 없습니다.<small>수동 성분 입력은 다음 버전에서 제공됩니다.</small></div>}</div></div><div className="feeding-list"><div className="list-title"><h2>현재 급여 목록</h2><span>{items.length}개</span></div>{items.length===0?<div className="empty large"><PawPrint/><b>등록된 제품이 없어요</b><small>왼쪽에서 제품을 선택해주세요.</small></div>:items.map((item,index)=><div className="feeding-item" key={item.productId}><div><span className={`type ${item.type.toLowerCase()}`}>{item.type==='FEED'?'사료':'영양제'}</span><h3>{item.name}</h3></div><label>하루 급여량<div className="amount"><input type="number" min="0.1" step="0.1" value={item.dailyAmount} onChange={e=>{const next=[...items];next[index]={...item,dailyAmount:Number(e.target.value)};updateItems(next)}}/><span>{units[item.unit]??item.unit}</span></div></label><button className="icon" aria-label={`${item.name} 삭제`} onClick={()=>updateItems(items.filter((_,i)=>i!==index))}><Trash2/></button></div>)}<div className="action-bar"><div><b>분석 준비</b><small>{items.length?`${items.length}개 제품의 영양성분을 계산합니다.`:'제품을 하나 이상 추가해주세요.'}</small></div><button className="primary" disabled={!items.length||items.some(x=>x.dailyAmount<=0)||busy} onClick={run}>{busy?'계산 중…':'영양 분석하기'} <ChevronRight/></button></div></div></div></section>
+function ProductsStep({query,setQuery,products,loading,retry,items,add,updateItems,back,run,busy}:{query:string;setQuery:(x:string)=>void;products:Product[];loading:boolean;retry:()=>void;items:FeedingItem[];add:(p:Product)=>void;updateItems:(x:FeedingItem[])=>void;back:()=>void;run:()=>void;busy:boolean}){
+  const marketCount=products.filter(p=>p.origin==='MARKET').length
+  return <section>
+    <div className="section-head"><button className="back" onClick={back}><ArrowLeft/>반려동물 정보</button><h1>하루에 먹는 제품을 알려주세요.</h1><p>사료와 영양제를 모두 더해 하루 총 섭취량을 계산합니다. 급여 목록은 자동 저장됩니다.</p></div>
+    <div className="product-layout"><div className="search-card">
+      <div className="search-title"><h2>제품 찾기</h2><button className="text-button" onClick={retry} disabled={loading}><RefreshCw/>새로고침</button></div>
+      <div className="search"><Search/><input aria-label="제품 검색" value={query} onChange={e=>setQuery(e.target.value)} placeholder="제품명·브랜드·바코드 검색"/>{query&&<button className="clear-search" aria-label="검색어 지우기" onClick={()=>setQuery('')}><X/></button>}</div>
+      <div className="source-status" aria-live="polite">{loading?<><LoaderCircle className="spin"/>시판 제품을 불러오는 중…</>:marketCount?<><span className="status-dot"/>실제 시판 제품 {marketCount}개</>:<>데모 제품으로 검색 중</>}</div>
+      <div className="results" aria-busy={loading}>
+        {!loading&&products.map(p=><button key={p.id} className="product-result" onClick={()=>add(p)}><span className={`type ${p.type.toLowerCase()}`}>{p.type==='FEED'?'사료':'영양제'}</span><span><b>{p.name}</b><small>{p.brand} · {p.dataQuality==='MINIMUM_ONLY'?'성분 추정':'성분표 있음'}</small><span className={`origin ${p.origin==='MARKET'?'market':'demo'}`}>{p.origin==='MARKET'?'실제 데이터':'데모'}</span></span><Plus/></button>)}
+        {loading&&[1,2,3].map(x=><div className="skeleton" key={x}/>)}
+        {!loading&&products.length===0&&<div className="empty">검색 결과가 없습니다.<small>영문 제품명이나 바코드로 다시 검색해보세요.</small><button className="retry" onClick={retry}><RefreshCw/>다시 불러오기</button></div>}
+      </div>
+    </div><div className="feeding-list"><div className="list-title"><h2>현재 급여 목록</h2><span>{items.length}개</span></div>
+      {items.length===0?<div className="empty large"><PawPrint/><b>등록된 제품이 없어요</b><small>왼쪽에서 제품을 선택해주세요.</small></div>:items.map((item,index)=><div className="feeding-item" key={item.productId}><div><span className={`type ${item.type.toLowerCase()}`}>{item.type==='FEED'?'사료':'영양제'}</span><h3>{item.name}</h3></div><label>하루 급여량<div className="amount"><input aria-label={`${item.name} 하루 급여량`} type="number" min="0.1" step="0.1" value={item.dailyAmount} onChange={e=>{const next=[...items];next[index]={...item,dailyAmount:Number(e.target.value)};updateItems(next)}}/><span>{units[item.unit]??item.unit}</span></div></label><button className="icon" aria-label={`${item.name} 삭제`} onClick={()=>updateItems(items.filter((_,i)=>i!==index))}><Trash2/></button></div>)}
+      <div className="action-bar"><div><b>분석 준비</b><small>{items.length?`${items.length}개 제품의 영양성분을 계산합니다.`:'제품을 하나 이상 추가해주세요.'}</small></div><button className="primary" disabled={!items.length||items.some(x=>x.dailyAmount<=0)||busy} onClick={run}>{busy?<><LoaderCircle className="spin"/>계산 중…</>:<>영양 분석하기 <ChevronRight/></>}</button></div>
+    </div></div>
+  </section>
 }
-
 function ResultStep({result,recs,back,loadRecs,busy}:{result:Analysis;recs:Recommendation|null;back:()=>void;loadRecs:()=>void;busy:boolean}){
   const order=['excess','caution','deficient','adequate']
   return <section><div className="section-head result-head"><button className="back" onClick={back}><ArrowLeft/>급여 제품 수정</button><div><span className="eyebrow">기준 {result.standardVersion}</span><h1>오늘의 영양 분석</h1><p>기준 열량 {result.referenceEnergyKcal.toFixed(0)} kcal · {result.lifeStage}</p></div></div>{result.warnings.map(x=><div className="alert warning" key={x}><Info/>{x}</div>)}<div className="summary">{order.map(k=><div className={`summary-card ${k}`} key={k}><span>{({deficient:'부족',adequate:'적정',caution:'주의',excess:'과다'} as Record<string,string>)[k]}</span><b>{result.summary[k]}</b></div>)}</div><div className="nutrients">{[...result.nutrients].sort((a,b)=>['EXCESS','CAUTION','DEFICIENT'].indexOf(a.status)-['EXCESS','CAUTION','DEFICIENT'].indexOf(b.status)).map(n=><Nutrient key={n.nutrientId} n={n}/>)}</div>{result.ratios.calciumPhosphorus&&<div className="ratio"><div><span>칼슘 : 인 비율</span><b>{result.ratios.calciumPhosphorus.value?.toFixed(2)??'계산 불가'} : 1</b></div><span className={`badge ${result.ratios.calciumPhosphorus.status.toLowerCase()}`}>{result.ratios.calciumPhosphorus.status==='ADEQUATE'?'적정':'확인 필요'}</span></div>}<div className="recommend-box"><div><span className="eyebrow"><ShieldCheck/> 조합 안전성 검사</span><h2>지금 조합에 맞는 영양제 후보</h2><p>후보를 가상으로 추가해 주의·과다 여부를 다시 계산합니다.</p></div><button className="primary" disabled={busy} onClick={loadRecs}>{busy?'검사 중…':recs?'다시 계산':'추천 확인하기'}</button></div>{recs&&<div className="recommendations"><p>{recs.message}</p><div className="rec-grid">{recs.items.map((x,i)=><article key={x.productId}><span className="rank">{i+1}</span><h3>{x.name}</h3><p>하루 {x.dailyAmount}{units[x.unit]??x.unit}</p><small>부족 보완 {x.fixedNutrients}개 · 점수 {x.score}</small></article>)}{!recs.items.length&&<div className="empty large">안전 조건을 만족하는 후보가 없습니다.</div>}</div>{recs.excluded.length>0&&<details><summary>제외된 후보 {recs.excluded.length}개</summary>{recs.excluded.map(x=><p key={x.productId}><b>{x.name}</b> — {x.reason}</p>)}</details>}</div>}</section>
