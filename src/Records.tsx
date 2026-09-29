@@ -29,11 +29,21 @@ export default function Records({ go, selectProfile }: { go: (p: 'analysis') => 
   const [list, setList] = useState(loadRecords)
   const [profiles, setProfiles] = useState(loadProfiles)
   const clear = () => { try { localStorage.removeItem(KEY) } catch { /* noop */ } setList([]) }
+  const removeRecord = (id: string) => {
+    const next = list.filter(record => record.id !== id)
+    try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* 저장 불가 환경 */ }
+    setList(next)
+  }
+  const removeProfile = (id: string) => {
+    const next = profiles.filter(profile => profile.id !== id)
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(next)) } catch { /* 저장 불가 환경 */ }
+    setProfiles(next)
+  }
   return (
     <div className="w page">
       <h2>반려동물 기록</h2><p className="lead">저장한 프로필과 분석 기록이 이 기기의 브라우저에만 보관됩니다.</p>
       <div className="panel"><h3>저장된 반려동물 프로필</h3>
-        {profiles.length === 0 ? <p className="note">저장된 프로필이 없습니다. 영양제 분석에서 먼저 프로필을 저장해 주세요.</p> : <ul className="plist">{profiles.map(profile => <li key={profile.id}><span><b>{profile.name}</b> <small>{profile.species === 'DOG' ? '강아지' : '고양이'} · {profile.weightKg}kg · {profile.age.value}{profile.age.unit === 'MONTH' ? '개월' : '주'}</small></span><button className="btn ghost" onClick={() => selectProfile(profile.id)}>이 프로필로 분석</button></li>)}</ul>}
+        {profiles.length === 0 ? <p className="note">저장된 프로필이 없습니다. 영양제 분석에서 먼저 프로필을 저장해 주세요.</p> : <ul className="plist">{profiles.map(profile => <li key={profile.id}><span><b>{profile.name}</b> <small>{profile.species === 'DOG' ? '강아지' : '고양이'} · {profile.weightKg}kg · {profile.age.value}{profile.age.unit === 'MONTH' ? '개월' : '주'}</small></span><span className="row-actions"><button className="btn ghost" onClick={() => selectProfile(profile.id)}>이 프로필로 분석</button><button className="btn danger" onClick={() => removeProfile(profile.id)}>삭제</button></span></li>)}</ul>}
       </div>
       {list.length === 0 ? (
         <div className="panel">아직 저장된 기록이 없습니다. <button className="btn" onClick={() => go('analysis')}>영양제 분석하러 가기</button></div>
@@ -41,7 +51,7 @@ export default function Records({ go, selectProfile }: { go: (p: 'analysis') => 
         <>
           {list.map(r => (
             <div className="panel" key={r.id}>
-              <h3>{r.name} <small className="note">{r.species === 'DOG' ? '강아지' : '고양이'} · {new Date(r.date).toLocaleString('ko-KR')}</small></h3>
+              <div className="record-title"><h3>{r.name} <small className="note">{r.species === 'DOG' ? '강아지' : '고양이'} · {new Date(r.date).toLocaleString('ko-KR')}</small></h3><button className="btn danger" onClick={() => removeRecord(r.id)}>이 기록 삭제</button></div>
               <div className="note">급여: {r.items.join(', ')}</div>
               <div className="note">부족 {r.summary.deficient ?? 0} · 적정 {r.summary.adequate ?? 0} · 주의 {r.summary.caution ?? 0} · 과다 {r.summary.excess ?? 0}</div>
             </div>
