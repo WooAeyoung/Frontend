@@ -5,6 +5,7 @@ import { saveRecord } from './Records'
 
 const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', CAUTION: '주의', EXCESS: '과다' }
 const RATIO: Record<string, string> = { LOW: '낮음', HIGH: '높음', ADEQUATE: '적정', UNAVAILABLE: '계산 불가' }
+const UNIT: Record<string, string> = { TABLET: '정', CAPSULE: '캡슐', G: 'g', MG: 'mg', ML: 'mL' }
 const fmt = (v: number | null) => (v === null ? '-' : v.toFixed(1))
 
 export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
@@ -41,6 +42,18 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
     setItems([...items, { productId: p.id, name: p.name, type: p.type, unit: p.servingUnit, dailyAmount: amount ?? (p.type === 'FEED' ? 100 : 1) }])
   }
   const setAmount = (id: string, v: string) => setItems(items.map(i => (i.productId === id ? { ...i, dailyAmount: Number(v) } : i)))
+
+  async function addRecommendation(r: Recommendation['items'][number]) {
+    const nextItems = [...items, { productId: r.productId, name: r.name, type: 'SUPPLEMENT' as const, unit: r.unit, dailyAmount: r.dailyAmount }]
+    setItems(nextItems)
+    setLoading(true); setError(''); setSaved(false)
+    try {
+      const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems), recommend(profile, nextItems)])
+      setAnalysis(nextAnalysis); setRec(nextRecommendation)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '추가한 제품을 다시 분석하지 못했습니다.')
+    } finally { setLoading(false) }
+  }
 
   async function run() {
     setError(''); setSaved(false)
@@ -124,8 +137,8 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
         <div className="panel"><h3>추천 영양제</h3><p className="note">{rec.message}</p>
           <ul className="plist">
             {rec.items.map(r => (
-              <li key={r.productId}><span>{r.name} <small>하루 {r.dailyAmount}{r.unit} · 보완 {r.fixedNutrients}종</small></span>
-                <button className="btn ghost" onClick={() => add({ id: r.productId, name: r.name, type: 'SUPPLEMENT', servingUnit: r.unit }, r.dailyAmount)} disabled={items.some(i => i.productId === r.productId)}>급여 목록에 추가</button></li>))}
+              <li key={r.productId}><span>{r.name} <small>하루 {r.dailyAmount} {UNIT[r.unit] ?? r.unit} · 부족 성분 {r.fixedNutrients}종 보완</small></span>
+                <button className="btn ghost" onClick={() => addRecommendation(r)} disabled={items.some(i => i.productId === r.productId) || loading}>급여 목록에 추가</button></li>))}
             {rec.items.length === 0 && <li className="note">추가로 권장할 제품이 없습니다.</li>}
           </ul>
           {rec.excluded.length > 0 && <details><summary className="note">제외된 제품 {rec.excluded.length}개</summary><ul className="warns">{rec.excluded.map(x => <li key={x.productId}>{x.name}: {x.reason}</li>)}</ul></details>}
