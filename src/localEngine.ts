@@ -24,7 +24,7 @@ const classify=(total:number,line:Line)=>total<line.minimum?'DEFICIENT':total>li
 
 export function localProducts(query=''):Product[]{const needle=query.replaceAll(' ','').toLowerCase();return catalog.filter(p=>(p.name+p.brand).replaceAll(' ','').toLowerCase().includes(needle)).map(({servingAmount:_,recommendedDailyAmount:__,nutrients:___,...product})=>product)}
 
-type OffProduct={code?:string;product_name?:string;product_name_en?:string;brands?:string;nutriments?:Record<string,unknown>;last_modified_t?:number}
+type OffProduct={code?:string;product_name?:string;product_name_en?:string;brands?:string;categories_tags_en?:string[];nutriments?:Record<string,unknown>;last_modified_t?:number}
 type OffResponse={products?:OffProduct[]}
 const sourceBase='https://world.openpetfoodfacts.org'
 function readNutrient(raw:Record<string,unknown>,key:string,target:'MG'|'UG'){
@@ -35,6 +35,11 @@ function readNutrient(raw:Record<string,unknown>,key:string,target:'MG'|'UG'){
 }
 function convertMarket(product:OffProduct):CatalogProduct|null{
   const code=product.code?.trim(),name=(product.product_name||product.product_name_en)?.trim();if(!code||!name)return null
+  // 일반 검색 결과에는 사람용 식품이나 반려동물 간식도 섞일 수 있으므로,
+  // Open Pet Food Facts의 반려동물 식품 카테고리 태그가 확인된 제품만 사용한다.
+  const categories=(product.categories_tags_en??[]).map(tag=>tag.toLowerCase())
+  const isPetFood=categories.some(tag=>tag.includes('dog-food')||tag.includes('cat-food')||tag.includes('pet-food')||tag.includes('animal-food'))
+  if(!isPetFood)return null
   const raw=product.nutriments??{},mapped:Record<string,number>={}
   const pairs:[string,string,'MG'|'UG'][]=[['CALCIUM','calcium','MG'],['PHOSPHORUS','phosphorus','MG'],['VITAMIN_D','vitamin-d','UG'],['VITAMIN_E','vitamin-e','MG'],['OMEGA3','omega-3-fat','MG'],['ZINC','zinc','MG']]
   for(const [id,key,unit] of pairs){const value=readNutrient(raw,key,unit);if(value!==undefined)mapped[id]=value}
@@ -42,7 +47,7 @@ function convertMarket(product:OffProduct):CatalogProduct|null{
 }
 async function fetchOff(url:string){const response=await fetch(url,{headers:{Accept:'application/json'}});if(!response.ok)throw new Error(`Open Pet Food Facts ${response.status}`);return response.json() as Promise<OffResponse>}
 export async function marketProducts(query=''):Promise<Product[]>{
-  const fields='code,product_name,product_name_en,brands,nutriments,last_modified_t'
+  const fields='code,product_name,product_name_en,brands,categories_tags_en,nutriments,last_modified_t'
   let responses:OffResponse[]
   if(query.trim()){
     const params=new URLSearchParams({search_terms:query.trim(),search_simple:'1',action:'process',json:'1',page_size:'20',fields})
