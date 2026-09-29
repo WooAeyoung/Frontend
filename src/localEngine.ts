@@ -89,7 +89,9 @@ export function localRecommend(profile:Profile,items:FeedingItem[]):Recommendati
   return {
     message: base.summary.deficient ? '부족 성분과 안전 여유를 함께 고려했습니다.' : '현재 급여 구성이 기준 범위 안에 있어 추가 제품이 필요하지 않습니다.',
     usesEstimatedFeed: base.usesEstimatedFeed,
-    items: selected.filter(s => s.fixedNutrients > 0).slice(0, 3),
+    // 부족 성분이 없더라도 안전 범위 후보를 보여줘 사용자가 급여 목록에
+    // 추가한 뒤 전체 조합을 다시 확인할 수 있도록 한다.
+    items: selected.slice(0, 3),
     excluded
   }
 }
