@@ -36,7 +36,7 @@ export function App(){
       {step===2&&<ProductsStep query={query} setQuery={setQuery} products={visibleProducts} items={items} add={addProduct} updateItems={setItems} back={()=>setStep(1)} run={run} busy={busy}/>} 
       {step===3&&result&&<ResultStep result={result} recs={recs} back={()=>setStep(2)} loadRecs={loadRecs} busy={busy}/>} 
     </main>
-    <footer>본 서비스는 영양 정보 확인을 돕는 데모이며 수의학적 진단이나 처방을 대신하지 않습니다.</footer>
+    <footer>시판 제품 정보: Open Pet Food Facts(ODbL) · 사용자 기여 데이터로 정확성·완전성이 보장되지 않습니다. 영양 정보는 수의학적 진단이나 처방을 대신하지 않습니다.</footer>
   </div>
 }
 

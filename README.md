@@ -12,6 +12,12 @@ npm run dev
 
 공개 GitHub Pages 빌드는 별도 서버 없이 브라우저 계산 엔진을 사용하므로 분석과 추천까지 동작합니다. `main`에 푸시하면 GitHub Actions가 자동 배포합니다.
 
+## 시판 제품 데이터
+
+공개 웹은 Open Pet Food Facts API에서 실제 제품명, 브랜드, 바코드, 공개 영양성분과 갱신일을 먼저 조회합니다. API가 응답하지 않거나 검색 결과가 없을 때만 내장 데모 목록을 사용합니다. 외부 데이터에 미량영양소가 없으면 완전사료 여부에 따라 추정값으로 명시합니다.
+
+Open Food Facts 데이터베이스는 ODbL로 제공되며 사용자 기여 데이터이므로 정확성·완전성이 보장되지 않습니다: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/
+
 ## 구현 화면
 
 - 조건부 검증이 있는 반려동물 프로필

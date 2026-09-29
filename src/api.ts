@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-export type Product = {id:string;name:string;brand:string;type:'FEED'|'SUPPLEMENT';servingUnit:string;dataQuality:string}
+export type Product = {id:string;name:string;brand:string;type:'FEED'|'SUPPLEMENT';servingUnit:string;dataQuality:string;origin?:'MARKET'|'DEMO';barcode?:string;sourceUrl?:string;updatedAt?:number}
 export type Profile = {name:string;species:'DOG'|'CAT';weightKg:number;age:{value:number;unit:'WEEK'|'MONTH'};adultSize?:string;completeFeed:boolean}
 export type FeedingItem = {productId:string;name:string;type:'FEED'|'SUPPLEMENT';dailyAmount:number;unit:string}
 export type NutrientResult = {nutrientId:string;name:string;unit:string;fromFeed:number;fromSupplements:number;total:number;minimum:number|null;caution:number|null;upper:number|null;status:string;source:string}
@@ -14,7 +14,12 @@ async function call<T>(path:string,init?:RequestInit):Promise<T>{
   return response.json()
 }
 export async function getProducts(query=''){
-  if(STATIC_MODE){const {localProducts}=await import('./localEngine');return {items:localProducts(query)}}
+  if(STATIC_MODE){
+    const {marketProducts,localProducts}=await import('./localEngine')
+    try{const items=await marketProducts(query);if(items.length)return {items}}
+    catch(error){console.warn('시판 제품 데이터를 불러오지 못해 데모 목록을 사용합니다.',error)}
+    return {items:localProducts(query)}
+  }
   return call<{items:Product[]}>(`/api/v1/products?query=${encodeURIComponent(query)}&limit=20`)
 }
 export async function analyze(profile:Profile,items:FeedingItem[]){

@@ -24,6 +24,39 @@ const classify=(total:number,line:Line)=>total<line.minimum?'DEFICIENT':total>li
 
 export function localProducts(query=''):Product[]{const needle=query.replaceAll(' ','').toLowerCase();return catalog.filter(p=>(p.name+p.brand).replaceAll(' ','').toLowerCase().includes(needle)).map(({servingAmount:_,recommendedDailyAmount:__,nutrients:___,...product})=>product)}
 
+type OffProduct={code?:string;product_name?:string;product_name_en?:string;brands?:string;nutriments?:Record<string,unknown>;last_modified_t?:number}
+type OffResponse={products?:OffProduct[]}
+const sourceBase='https://world.openpetfoodfacts.org'
+function readNutrient(raw:Record<string,unknown>,key:string,target:'MG'|'UG'){
+  const value=Number(raw[`${key}_100g`]);if(!Number.isFinite(value))return undefined
+  const unit=String(raw[`${key}_unit`]??'g').toLowerCase()
+  const mg=unit==='kg'?value*1_000_000:unit==='g'?value*1000:unit==='mg'?value:unit==='µg'||unit==='ug'?value/1000:NaN
+  return Number.isFinite(mg)?(target==='UG'?mg*1000:mg):undefined
+}
+function convertMarket(product:OffProduct):CatalogProduct|null{
+  const code=product.code?.trim(),name=(product.product_name||product.product_name_en)?.trim();if(!code||!name)return null
+  const raw=product.nutriments??{},mapped:Record<string,number>={}
+  const pairs:[string,string,'MG'|'UG'][]=[['CALCIUM','calcium','MG'],['PHOSPHORUS','phosphorus','MG'],['VITAMIN_D','vitamin-d','UG'],['VITAMIN_E','vitamin-e','MG'],['OMEGA3','omega-3-fat','MG'],['ZINC','zinc','MG']]
+  for(const [id,key,unit] of pairs){const value=readNutrient(raw,key,unit);if(value!==undefined)mapped[id]=value}
+  return{id:`off-${code}`,barcode:code,name,brand:`실제 시판 · ${product.brands?.trim()||'브랜드 미표기'}`,type:'FEED',servingAmount:100,servingUnit:'G',dataQuality:Object.keys(mapped).length?'PARTIAL':'MINIMUM_ONLY',nutrients:mapped,origin:'MARKET',sourceUrl:`${sourceBase}/product/${code}`,updatedAt:product.last_modified_t}
+}
+async function fetchOff(url:string){const response=await fetch(url,{headers:{Accept:'application/json'}});if(!response.ok)throw new Error(`Open Pet Food Facts ${response.status}`);return response.json() as Promise<OffResponse>}
+export async function marketProducts(query=''):Promise<Product[]>{
+  const fields='code,product_name,product_name_en,brands,nutriments,last_modified_t'
+  let responses:OffResponse[]
+  if(query.trim()){
+    const params=new URLSearchParams({search_terms:query.trim(),search_simple:'1',action:'process',json:'1',page_size:'20',fields})
+    responses=[await fetchOff(`${sourceBase}/cgi/search.pl?${params}`)]
+  }else{
+    const make=(category:string)=>`${sourceBase}/api/v2/search?categories_tags_en=${category}&page_size=12&sort_by=popularity_key&fields=${fields}`
+    responses=await Promise.all([fetchOff(make('dog-food')),fetchOff(make('cat-food'))])
+  }
+  const unique=new Map<string,CatalogProduct>()
+  for(const raw of responses.flatMap(response=>response.products??[])){const product=convertMarket(raw);if(product)unique.set(product.id,product)}
+  for(const product of unique.values())byId.set(product.id,product)
+  return [...unique.values()].map(({servingAmount:_,recommendedDailyAmount:__,nutrients:___,...product})=>product).slice(0,20)
+}
+
 export function localAnalyze(profile:Profile,items:FeedingItem[]):Analysis{
   const ageDays=profile.age.unit==='WEEK'?profile.age.value*7:profile.age.value*30.4375
   if(ageDays<56)throw new Error('8주 미만 개체는 현재 지원하지 않습니다.')
