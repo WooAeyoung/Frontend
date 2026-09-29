@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { analyze, getProducts, recommend } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation } from './api'
-import { saveRecord } from './Records'
+import { loadProfiles, saveProfile, saveRecord } from './Records'
 
 const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', CAUTION: '주의', EXCESS: '과다' }
 const RATIO: Record<string, string> = { LOW: '낮음', HIGH: '높음', ADEQUATE: '적정', UNAVAILABLE: '계산 불가' }
@@ -26,6 +26,9 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [profiles, setProfiles] = useState(loadProfiles)
+  const [profileId, setProfileId] = useState('')
+  const [profileSaved, setProfileSaved] = useState(false)
 
   useEffect(() => {
     getProducts(query).then(r => setFound(r.items)).catch(() => setFound([]))
@@ -37,6 +40,22 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
     name: name || '우리 아이', species, weightKg: Number(weight),
     age: { value: Number(ageValue), unit: ageUnit }, completeFeed,
     ...(needSize ? { adultSize } : {}),
+  }
+
+  function loadProfile(id: string) {
+    setProfileId(id)
+    const selected = profiles.find(item => item.id === id)
+    if (!selected) return
+    setName(selected.name); setSpecies(selected.species); setWeight(String(selected.weightKg))
+    setAgeValue(String(selected.age.value)); setAgeUnit(selected.age.unit)
+    setAdultSize(selected.adultSize ?? 'MEDIUM'); setCompleteFeed(selected.completeFeed)
+    setProfileSaved(false); setError('')
+  }
+  function saveCurrentProfile() {
+    if (!name.trim() || !(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('프로필을 저장하려면 이름, 체중, 나이를 입력해 주세요.'); return }
+    const savedProfile = saveProfile(profile, profileId || undefined)
+    const next = profileId ? profiles.map(item => item.id === savedProfile.id ? savedProfile : item) : [savedProfile, ...profiles]
+    setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
   }
 
   const add = (p: { id: string; name: string; type: 'FEED' | 'SUPPLEMENT'; servingUnit: string }, amount?: number) => {
@@ -89,7 +108,8 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
     <div className="w page">
       <h2>영양제 성분 분석</h2><p className="lead">프로필을 입력하고 급여 중인 사료·영양제를 추가하면 하루 영양소 총량을 계산합니다.</p>
 
-      <div className="panel"><h3>1. 반려동물 프로필</h3>
+      <div className="panel"><h3>1. 반려동물 프로필</h3><p className="note">프로필만 먼저 저장한 뒤, 나중에 제품·영양소를 입력해 분석할 수 있어요.</p>
+        <div className="profile-actions"><label className="f">저장된 프로필 불러오기<select className="in" value={profileId} onChange={e => loadProfile(e.target.value)}><option value="">새 프로필 작성</option>{profiles.map(item => <option key={item.id} value={item.id}>{item.name} · {item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg</option>)}</select></label><button className="btn ghost" onClick={saveCurrentProfile}>{profileSaved ? '프로필 저장됨' : profileId ? '프로필 수정 저장' : '프로필 저장'}</button></div>
         <div className="grid2">
           <label className="f">이름<input className="in" value={name} onChange={e => setName(e.target.value)} placeholder="예: 보리" /></label>
           <label className="f">종<select className="in" value={species} onChange={e => setSpecies(e.target.value as 'DOG' | 'CAT')}><option value="DOG">강아지</option><option value="CAT">고양이</option></select></label>
