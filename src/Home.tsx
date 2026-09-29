@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 export type Page = 'home' | 'analysis' | 'records'
 
 export default function Home({ go }: { go: (p: Page) => void }) {
   const [focus, setFocus] = useState<'food' | 'data' | 'safe'>('food')
-  const [intro, setIntro] = useState(true)
-  useEffect(() => { const timer = window.setTimeout(() => setIntro(false), 5200); return () => window.clearTimeout(timer) }, [])
   const info = {
     food: ['오늘의 급여', '실제 시판 사료와 영양제를 하루 급여량으로 모아요.'],
     data: ['영양 신호', '칼슘·인·비타민의 부족과 과다를 한눈에 비교해요.'],
@@ -13,11 +11,11 @@ export default function Home({ go }: { go: (p: Page) => void }) {
   }[focus]
   return (
     <>
-      {intro && <div className="intro-show" role="dialog" aria-label="우애영 서비스 소개"><button className="intro-skip" onClick={() => setIntro(false)}>건너뛰기</button><div className="intro-stage">
-        <div className="intro-slide intro-one"><div className="pet-scene dog-play"><span className="pet dog">🐕</span><span className="toy ball">●</span><span className="ground"/></div><span>HELLO, WOOAEYOUNG</span><b>신나게 뛰어논<br/>우리 강아지</b></div>
-        <div className="intro-slide intro-two"><div className="pet-scene cat-play"><span className="pet cat">🐈</span><span className="toy yarn">●</span><span className="yarn-line"/><span className="ground"/></div><span>PLAY &amp; CARE</span><b>호기심 많은<br/>우리 고양이</b></div>
-        <div className="intro-slide intro-three"><div className="pet-scene together"><span className="pet dog">🐕</span><span className="pet cat">🐈</span><span className="bowl-mini">♥</span><span className="ground"/></div><span>HEALTHY EVERY DAY</span><b>잘 놀고 잘 먹는 하루,<br/>영양까지 함께 봐요</b></div>
-      </div></div>}
+      <section className="welcome-intro"><div className="w"><div className="welcome-head"><span>WOOAEYOUNG INTRODUCTION</span><h1>잘 놀고, 잘 먹는 하루를<br/>영양 기록으로 이어가요.</h1></div><div className="welcome-scenes">
+        <article className="intro-slide intro-one"><div className="pet-scene dog-play"><span className="pet dog">🐕</span><span className="toy ball">●</span><span className="ground"/></div><span>PLAY TIME</span><b>신나게 뛰어논<br/>우리 강아지</b></article>
+        <article className="intro-slide intro-two"><div className="pet-scene cat-play"><span className="pet cat">🐈</span><span className="toy yarn">●</span><span className="yarn-line"/><span className="ground"/></div><span>CURIOUS CAT</span><b>호기심 많은<br/>우리 고양이</b></article>
+        <article className="intro-slide intro-three"><div className="pet-scene together"><span className="pet dog">🐕</span><span className="pet cat">🐈</span><span className="bowl-mini">♥</span><span className="ground"/></div><span>HEALTHY EVERY DAY</span><b>먹는 것까지<br/>함께 살펴봐요</b></article>
+      </div></div></section>
       <section className="lab-hero"><div className="w lab-grid"><div className="lab-copy"><span className="lab-kicker">INTERACTIVE NUTRITION LAB</span><h1>먹는 것을 올려두면,<br />영양 신호가 보여요.</h1><p>작업대의 오브젝트를 눌러 분석 과정을 살펴보세요.</p><div className="lab-info" aria-live="polite"><b>{info[0]}</b><span>{info[1]}</span></div><button className="btn lab-cta" onClick={() => go('analysis')}>영양 분석 시작하기</button></div>
         <div className="lab-scene" aria-label="3D 영양 분석 작업대"><div className="lab-wall"><span>WOOAEYOUNG LAB</span></div><div className="lab-table"/>
           <button className={`lab-object food ${focus === 'food' ? 'active' : ''}`} onClick={() => setFocus('food')} aria-label="오늘의 급여"><i/><i/><i/><span/></button>
