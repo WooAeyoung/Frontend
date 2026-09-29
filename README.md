@@ -10,6 +10,8 @@ npm run dev
 
 백엔드는 `http://localhost:8000`에서 실행합니다. 다른 주소라면 `.env.example`을 `.env`로 복사해 `VITE_API_URL`을 수정하세요.
 
+공개 GitHub Pages 빌드는 별도 서버 없이 브라우저 계산 엔진을 사용하므로 분석과 추천까지 동작합니다. `main`에 푸시하면 GitHub Actions가 자동 배포합니다.
+
 ## 구현 화면
 
 - 조건부 검증이 있는 반려동물 프로필

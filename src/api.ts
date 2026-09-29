@@ -7,12 +7,21 @@ export type Analysis = {traceId:string;standardVersion:string;lifeStage:string;r
 export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number}[];excluded:{productId:string;name:string;reason:string}[]}
 
 const API = import.meta.env.VITE_API_URL ?? ''
-async function call<T>(path:string, init?:RequestInit):Promise<T>{
-  const response = await fetch(`${API}${path}`, {headers:{'Content-Type':'application/json'},...init})
-  if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.detail?.message ?? body.detail?.[0]?.msg ?? '요청을 처리하지 못했습니다.')}
+const STATIC_MODE = import.meta.env.PROD && !API
+async function call<T>(path:string,init?:RequestInit):Promise<T>{
+  const response=await fetch(`${API}${path}`,{headers:{'Content-Type':'application/json'},...init})
+  if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.detail?.message??body.detail?.[0]?.msg??'요청을 처리하지 못했습니다.')}
   return response.json()
 }
-export const getProducts = (query='') => call<{items:Product[]}>(`/api/v1/products?query=${encodeURIComponent(query)}&limit=20`)
-export const analyze = (profile:Profile, items:FeedingItem[]) => call<Analysis>('/api/v1/analyses',{method:'POST',body:JSON.stringify({profile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems:[]})})
-export const recommend = (profile:Profile, items:FeedingItem[]) => call<Recommendation>('/api/v1/recommendations',{method:'POST',body:JSON.stringify({profile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems:[],maxItems:3})})
-
+export async function getProducts(query=''){
+  if(STATIC_MODE){const {localProducts}=await import('./localEngine');return {items:localProducts(query)}}
+  return call<{items:Product[]}>(`/api/v1/products?query=${encodeURIComponent(query)}&limit=20`)
+}
+export async function analyze(profile:Profile,items:FeedingItem[]){
+  if(STATIC_MODE){const {localAnalyze}=await import('./localEngine');return localAnalyze(profile,items)}
+  return call<Analysis>('/api/v1/analyses',{method:'POST',body:JSON.stringify({profile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems:[]})})
+}
+export async function recommend(profile:Profile,items:FeedingItem[]){
+  if(STATIC_MODE){const {localRecommend}=await import('./localEngine');return localRecommend(profile,items)}
+  return call<Recommendation>('/api/v1/recommendations',{method:'POST',body:JSON.stringify({profile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems:[],maxItems:3})})
+}
