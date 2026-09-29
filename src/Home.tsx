@@ -1,20 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 export type Page = 'home' | 'analysis' | 'records'
 
 export default function Home({ go }: { go: (p: Page) => void }) {
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    const t = setInterval(() => setN(v => (v + 1) % 2), 5000)
-    return () => clearInterval(t)
-  }, [])
+  const [focus, setFocus] = useState<'food' | 'data' | 'safe'>('food')
+  const info = {
+    food: ['오늘의 급여', '실제 시판 사료와 영양제를 하루 급여량으로 모아요.'],
+    data: ['영양 신호', '칼슘·인·비타민의 부족과 과다를 한눈에 비교해요.'],
+    safe: ['조합 확인', '함께 먹일 때 주의가 필요한 성분을 다시 계산해요.'],
+  }[focus]
   return (
     <>
-      <div className="hero">
-        <div className={`slide s1${n === 0 ? ' on' : ''}`}><div className="w"><h1>반려동물 건강 기록,<br />매일매일 쉽게</h1><p>프로필 등록부터 하루 기록까지, 체계적으로 관리하세요.</p><span className="deco">🛋️🪴</span></div></div>
-        <div className={`slide s2${n === 1 ? ' on' : ''}`}><div className="w"><h1>먹이는 영양제,<br />성분까지 한눈에</h1><p>여러 영양제를 함께 급여해도 성분 중복과 부족을 확인해요.</p><span className="deco">🐕🐈</span></div></div>
-        <div className="dots">{[0, 1].map(i => <button key={i} aria-label={`슬라이드 ${i + 1}`} className={n === i ? 'on' : ''} onClick={() => setN(i)} />)}</div>
-      </div>
+      <section className="lab-hero"><div className="w lab-grid"><div className="lab-copy"><span className="lab-kicker">INTERACTIVE NUTRITION LAB</span><h1>먹는 것을 올려두면,<br />영양 신호가 보여요.</h1><p>작업대의 오브젝트를 눌러 분석 과정을 살펴보세요.</p><div className="lab-info" aria-live="polite"><b>{info[0]}</b><span>{info[1]}</span></div><button className="btn lab-cta" onClick={() => go('analysis')}>영양 분석 시작하기</button></div>
+        <div className="lab-scene" aria-label="3D 영양 분석 작업대"><div className="lab-wall"><span>WOOAEYOUNG LAB</span></div><div className="lab-table"/>
+          <button className={`lab-object food ${focus === 'food' ? 'active' : ''}`} onClick={() => setFocus('food')} aria-label="오늘의 급여"><i/><i/><i/><span/></button>
+          <button className={`lab-object screen ${focus === 'data' ? 'active' : ''}`} onClick={() => setFocus('data')} aria-label="영양 신호"><span><i/><i/><i/></span></button>
+          <button className={`lab-object jar ${focus === 'safe' ? 'active' : ''}`} onClick={() => setFocus('safe')} aria-label="조합 확인"><b>+</b></button>
+          <div className="lab-pet">🐕</div><div className="lab-shadow"/>
+        </div></div></section>
 
       <section className="sec"><div className="w">
         <h2>영양제 성분 분석</h2><p className="lead">개와 고양이 영양제의 핵심 성분을 항목별로 비교·확인하세요.</p>
