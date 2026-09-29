@@ -66,7 +66,9 @@ export function localAnalyze(profile:Profile,items:FeedingItem[]):Analysis{
   const ageDays=profile.age.unit==='WEEK'?profile.age.value*7:profile.age.value*30.4375
   if(ageDays<56)throw new Error('8주 미만 개체는 현재 지원하지 않습니다.')
   if(profile.species==='DOG'&&ageDays<365&&!profile.adultSize)throw new Error('12개월 미만 개는 예상 성체 체급이 필요합니다.')
-  const kcal=(profile.species==='DOG'?95:100)*profile.weightKg**(profile.species==='DOG'?.75:.67)
+  const lifeStage=profile.species==='CAT'?(ageDays<365?'GROWTH':'ADULT'):(ageDays<98?'GROWTH_EARLY':ageDays<365?'GROWTH_LATE':'ADULT')
+  const factor=profile.species==='DOG'?(lifeStage==='ADULT'?95:110):(lifeStage==='ADULT'?75:100)
+  const kcal=factor*profile.weightKg**(profile.species==='DOG'?.75:.67)
   const lines=Object.fromEntries(Object.entries(standards[profile.species]).map(([id,x])=>[id,{minimum:kcal/1000*x.minimum,upper:kcal/1000*x.upper,caution:kcal/1000*x.upper*(profile.species==='DOG'?.75:.5)}])) as Record<string,Line>
   const totals=Object.fromEntries(nutrientMeta.map(([id])=>[id,{fromFeed:0,fromSupplements:0,source:'ACTUAL'}])) as Record<string,{fromFeed:number;fromSupplements:number;source:string}>
   const warnings:string[]=[];let estimated=false
@@ -74,7 +76,8 @@ export function localAnalyze(profile:Profile,items:FeedingItem[]):Analysis{
   const summary={deficient:0,adequate:0,caution:0,excess:0}
   const results=nutrientMeta.map(([id,name,unit])=>{const total=totals[id].fromFeed+totals[id].fromSupplements,status=classify(total,lines[id]);summary[status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:totals[id].fromFeed,fromSupplements:totals[id].fromSupplements,total,...lines[id],status,source:totals[id].source}})
   const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>2?'HIGH':'ADEQUATE'}}
-  return{traceId:crypto.randomUUID(),standardVersion:'DEMO-2026.1',lifeStage:ageDays<365?(profile.species==='DOG'?'PUPPY':'KITTEN'):'ADULT',referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,ratios,warnings}
+  warnings.push('현재 영양소 수치는 검증용 데모 기준입니다. 실제 급여 판단은 공식 기준과 수의사 상담을 확인하세요.')
+  return{traceId:crypto.randomUUID(),standardVersion:'DEMO-2026.1',standardSource:'FEDIAF Nutritional Guidelines 2024 구조; 영양소 표는 데모 기준',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,ratios,warnings}
 }
 
 export function localRecommend(profile:Profile,items:FeedingItem[]):Recommendation{
