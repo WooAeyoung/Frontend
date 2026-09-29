@@ -8,7 +8,7 @@ const RATIO: Record<string, string> = { LOW: '낮음', HIGH: '높음', ADEQUATE:
 const UNIT: Record<string, string> = { TABLET: '정', CAPSULE: '캡슐', G: 'g', MG: 'mg', ML: 'mL' }
 const fmt = (v: number | null) => (v === null ? '-' : v.toFixed(1))
 
-export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
+export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: () => void; initialProfileId?: string }) {
   const [name, setName] = useState('')
   const [species, setSpecies] = useState<'DOG' | 'CAT'>('DOG')
   const [weight, setWeight] = useState('')
@@ -57,6 +57,9 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
     const next = profileId ? profiles.map(item => item.id === savedProfile.id ? savedProfile : item) : [savedProfile, ...profiles]
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
   }
+  useEffect(() => {
+    if (initialProfileId) loadProfile(initialProfileId)
+  }, [initialProfileId])
 
   const add = (p: { id: string; name: string; type: 'FEED' | 'SUPPLEMENT'; servingUnit: string }, amount?: number) => {
     if (items.some(i => i.productId === p.id)) return
