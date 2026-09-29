@@ -2,6 +2,8 @@
 export type Product = {id:string;name:string;brand:string;type:'FEED'|'SUPPLEMENT';servingUnit:string;dataQuality:string;origin?:'MARKET'|'DEMO';barcode?:string;sourceUrl?:string;updatedAt?:number}
 export type Profile = {name:string;species:'DOG'|'CAT';weightKg:number;age:{value:number;unit:'WEEK'|'MONTH'};adultSize?:string;completeFeed:boolean}
 export type FeedingItem = {productId:string;name:string;type:'FEED'|'SUPPLEMENT';dailyAmount:number;unit:string}
+export type ManualNutrient = {nutrientId:string;amount:number;unit:string}
+export type ManualItem = {name:string;type:'FEED'|'SUPPLEMENT';servingAmount:number;servingUnit:string;dailyAmount:number;nutrients:ManualNutrient[]}
 export type NutrientResult = {nutrientId:string;name:string;unit:string;fromFeed:number;fromSupplements:number;total:number;minimum:number|null;caution:number|null;upper:number|null;status:string;source:string}
 export type Analysis = {traceId:string;standardVersion:string;standardSource?:string;lifeStage:string;referenceEnergyKcal:number;usesEstimatedFeed:boolean;summary:Record<string,number>;nutrients:NutrientResult[];ratios:Record<string,{value:number|null;status:string}>;warnings:string[]}
 export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number}[];excluded:{productId:string;name:string;reason:string}[]}
@@ -22,9 +24,9 @@ export async function getProducts(query=''){
   }
   return call<{items:Product[]}>(`/api/v1/products?query=${encodeURIComponent(query)}&limit=20`)
 }
-export async function analyze(profile:Profile,items:FeedingItem[]){
-  if(STATIC_MODE){const {localAnalyze}=await import('./localEngine');return localAnalyze(profile,items)}
-  return call<Analysis>('/api/v1/analyses',{method:'POST',body:JSON.stringify({profile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems:[]})})
+export async function analyze(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[]){
+  if(STATIC_MODE){const {localAnalyze}=await import('./localEngine');return localAnalyze(profile,items,manualItems)}
+  return call<Analysis>('/api/v1/analyses',{method:'POST',body:JSON.stringify({profile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems})})
 }
 export async function recommend(profile:Profile,items:FeedingItem[]){
   if(STATIC_MODE){const {localRecommend}=await import('./localEngine');return localRecommend(profile,items)}

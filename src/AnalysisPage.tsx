@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { analyze, getProducts, recommend } from './api'
-import type { Analysis, FeedingItem, Product, Profile, Recommendation } from './api'
+import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation } from './api'
 import { saveRecord } from './Records'
 
 const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', CAUTION: '주의', EXCESS: '과다' }
@@ -19,6 +19,8 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
   const [query, setQuery] = useState('')
   const [found, setFound] = useState<Product[]>([])
   const [items, setItems] = useState<FeedingItem[]>([])
+  const [manualItems, setManualItems] = useState<ManualItem[]>([])
+  const [manual, setManual] = useState({ name: '', type: 'SUPPLEMENT' as 'FEED' | 'SUPPLEMENT', amount: '1', unit: 'TABLET', daily: '1', nutrients: { CALCIUM: '', PHOSPHORUS: '', VITAMIN_D: '', VITAMIN_E: '', OMEGA3: '', ZINC: '' } as Record<string, string> })
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [rec, setRec] = useState<Recommendation | null>(null)
   const [error, setError] = useState('')
@@ -58,15 +60,23 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
   async function run() {
     setError(''); setSaved(false)
     if (!(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('체중과 나이를 입력해 주세요.'); return }
-    if (items.length === 0) { setError('급여 중인 제품을 하나 이상 추가해 주세요.'); return }
+    if (items.length === 0 && manualItems.length === 0) { setError('급여 중인 제품을 하나 이상 추가해 주세요.'); return }
     setLoading(true)
     try {
-      const [a, r] = await Promise.all([analyze(profile, items), recommend(profile, items)])
+      const [a, r] = await Promise.all([analyze(profile, items, manualItems), recommend(profile, items)])
       setAnalysis(a); setRec(r)
     } catch (e) {
       setAnalysis(null); setRec(null)
       setError(e instanceof Error ? e.message : '요청을 처리하지 못했습니다.')
     } finally { setLoading(false) }
+  }
+
+  function saveManual() {
+    const nutrients = Object.entries(manual.nutrients).filter(([, value]) => Number(value) >= 0 && value !== '').map(([nutrientId, value]) => ({ nutrientId, amount: Number(value), unit: nutrientId === 'VITAMIN_D' ? 'UG' : 'MG' }))
+    if (!manual.name.trim() || !nutrients.length || Number(manual.amount) <= 0 || Number(manual.daily) <= 0) { setError('직접 입력 제품명, 급여량, 영양성분을 하나 이상 입력해 주세요.'); return }
+    setManualItems([...manualItems, { name: manual.name.trim(), type: manual.type, servingAmount: Number(manual.amount), servingUnit: manual.unit, dailyAmount: Number(manual.daily), nutrients }])
+    setManual({ ...manual, name: '', nutrients: Object.fromEntries(Object.keys(manual.nutrients).map(key => [key, ''])) })
+    setError('')
   }
 
   function save() {
@@ -109,6 +119,13 @@ export default function AnalysisPage({ onSaved }: { onSaved: () => void }) {
                   <button className="btn ghost" onClick={() => setItems(items.filter(x => x.productId !== i.productId))}>삭제</button></span></li>
             ))}
           </ul></>}
+      </div>
+
+      <div className="panel"><h3>직접 입력한 제품·영양소 저장</h3><p className="note">검색되지 않는 제품은 라벨의 1회 제공량과 영양성분을 직접 입력해 함께 계산할 수 있습니다.</p>
+        <div className="grid2"><label className="f">제품명<input className="in" value={manual.name} onChange={e => setManual({ ...manual, name: e.target.value })} placeholder="예: 우리집 관절 영양제" /></label><label className="f">구분<select className="in" value={manual.type} onChange={e => setManual({ ...manual, type: e.target.value as 'FEED' | 'SUPPLEMENT' })}><option value="SUPPLEMENT">영양제</option><option value="FEED">사료</option></select></label><label className="f">1회 제공량<input className="in" type="number" min="0.1" value={manual.amount} onChange={e => setManual({ ...manual, amount: e.target.value })} /></label><label className="f">단위<select className="in" value={manual.unit} onChange={e => setManual({ ...manual, unit: e.target.value })}><option value="TABLET">정</option><option value="CAPSULE">캡슐</option><option value="G">g</option></select></label><label className="f">하루 급여량<input className="in" type="number" min="0.1" value={manual.daily} onChange={e => setManual({ ...manual, daily: e.target.value })} /></label></div>
+        <div className="grid2" style={{ marginTop: 12 }}>{[['CALCIUM','칼슘 (mg)'],['PHOSPHORUS','인 (mg)'],['VITAMIN_D','비타민 D (µg)'],['VITAMIN_E','비타민 E (mg)'],['OMEGA3','오메가3 (mg)'],['ZINC','아연 (mg)']].map(([id, label]) => <label className="f" key={id}>{label}<input className="in" type="number" min="0" value={manual.nutrients[id]} onChange={e => setManual({ ...manual, nutrients: { ...manual.nutrients, [id]: e.target.value } })} /></label>)}</div>
+        <button className="btn" style={{ marginTop: 14 }} onClick={saveManual}>직접 입력 제품 저장</button>
+        {manualItems.length > 0 && <ul className="plist">{manualItems.map((item, index) => <li key={`${item.name}-${index}`}><span><span className="tag">직접 입력</span>{item.name}</span><button className="btn ghost" onClick={() => setManualItems(manualItems.filter((_, i) => i !== index))}>삭제</button></li>)}</ul>}
       </div>
 
       {error && <div className="err" role="alert">{error}</div>}
