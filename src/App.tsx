@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Check, ChevronRight, Heart, Info, LoaderCircle, PawPrint, Plus, RefreshCw, Search, ShieldCheck, Trash2, TriangleAlert, X } from 'lucide-react'
-import { Analysis, FeedingItem, getProducts, Product, Profile, Recommendation, analyze, recommend } from './api'
+import { Analysis, FeedingItem, getProducts, Product, Profile, analyze } from './api'
 
 const initialProfile: Profile = {name:'',species:'DOG',weightKg:5,age:{value:24,unit:'MONTH'},completeFeed:true}
 const labels:Record<string,string> = {DEFICIENT:'부족',ADEQUATE:'적정',ADEQUATE_NO_UPPER_LIMIT:'적정 · 상한 없음',CAUTION:'주의',EXCESS:'과다'}
@@ -13,7 +13,6 @@ export function App(){
   const [query,setQuery]=useState('')
   const [items,setItems]=useState<FeedingItem[]>(()=>{try{return JSON.parse(localStorage.getItem('wooaeyoung-items')||'[]')}catch{return []}})
   const [result,setResult]=useState<Analysis|null>(null)
-  const [recs,setRecs]=useState<Recommendation|null>(null)
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
   const [productsLoading,setProductsLoading]=useState(true)
@@ -28,11 +27,10 @@ export function App(){
   const profileValid = profile.name.trim() && profile.weightKg>0 && profile.age.value>0 && !(profile.species==='DOG' && profile.age.unit==='MONTH' && profile.age.value<12 && !profile.adultSize)
   const visibleProducts = useMemo(()=>products.filter(p=>!items.some(i=>i.productId===p.id)),[products,items])
 
-  function updateProfile<K extends keyof Profile>(key:K,value:Profile[K]){setProfile({...profile,[key]:value});setResult(null);setRecs(null)}
-  function addProduct(p:Product){setItems([...items,{productId:p.id,name:p.name,type:p.type,dailyAmount:p.type==='FEED'?80:1,unit:p.servingUnit}]);setQuery('');setResult(null);setRecs(null)}
+  function updateProfile<K extends keyof Profile>(key:K,value:Profile[K]){setProfile({...profile,[key]:value});setResult(null)}
+  function addProduct(p:Product){setItems([...items,{productId:p.id,name:p.name,type:p.type,dailyAmount:p.type==='FEED'?80:1,unit:p.servingUnit}]);setQuery('');setResult(null)}
   function saveProfile(){localStorage.setItem('wooaeyoung-profile',JSON.stringify(profile));setStep(2)}
-  async function run(){setBusy(true);setError('');try{const data=await analyze(profile,items);setResult(data);setStep(3);setRecs(null)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
-  async function loadRecs(){setBusy(true);setError('');try{setRecs(await recommend(profile,items))}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
+  async function run(){setBusy(true);setError('');try{const data=await analyze(profile,items);setResult(data);setStep(3)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
 
   return <div className="app">
     <header><a className="brand" href="#"><span><PawPrint size={21}/></span>우애영</a><div className="header-note">사료와 영양제를 함께 계산해요</div></header>
@@ -41,7 +39,7 @@ export function App(){
       {error&&<div className="alert error" role="alert"><TriangleAlert size={18}/>{error}<button onClick={()=>setError('')}>닫기</button></div>}
       {step===1&&<ProfileStep profile={profile} update={updateProfile} valid={!!profileValid} next={saveProfile}/>}
       {step===2&&<ProductsStep query={query} setQuery={setQuery} products={visibleProducts} loading={productsLoading} retry={()=>setReloadProducts(x=>x+1)} items={items} add={addProduct} updateItems={setItems} back={()=>setStep(1)} run={run} busy={busy}/>}
-      {step===3&&result&&<ResultStep result={result} recs={recs} back={()=>setStep(2)} loadRecs={loadRecs} busy={busy}/>}
+      {step===3&&result&&<ResultStep result={result} back={()=>setStep(2)}/>}
     </main>
     <footer>시판 제품 정보: Open Pet Food Facts(ODbL) · 사용자 기여 데이터로 정확성·완전성이 보장되지 않습니다. 영양 정보는 수의학적 진단이나 처방을 대신하지 않습니다.</footer>
   </div>
@@ -71,9 +69,9 @@ function ProductsStep({query,setQuery,products,loading,retry,items,add,updateIte
     </div></div>
   </section>
 }
-function ResultStep({result,recs,back,loadRecs,busy}:{result:Analysis;recs:Recommendation|null;back:()=>void;loadRecs:()=>void;busy:boolean}){
+function ResultStep({result,back}:{result:Analysis;back:()=>void}){
   const order=['excess','caution','deficient','adequate']
-  return <section><div className="section-head result-head"><button className="back" onClick={back}><ArrowLeft/>급여 제품 수정</button><div><span className="eyebrow">기준 {result.standardVersion}</span><h1>오늘의 영양 분석</h1><p>기준 열량 {result.referenceEnergyKcal.toFixed(0)} kcal · {result.lifeStage}</p></div></div>{result.warnings.map(x=><div className="alert warning" key={x}><Info/>{x}</div>)}<div className="summary">{order.map(k=><div className={`summary-card ${k}`} key={k}><span>{({deficient:'부족',adequate:'적정',caution:'주의',excess:'과다'} as Record<string,string>)[k]}</span><b>{result.summary[k]}</b></div>)}</div><div className="nutrients">{[...result.nutrients].sort((a,b)=>['EXCESS','CAUTION','DEFICIENT'].indexOf(a.status)-['EXCESS','CAUTION','DEFICIENT'].indexOf(b.status)).map(n=><Nutrient key={n.nutrientId} n={n}/>)}</div>{result.ratios.calciumPhosphorus&&<div className="ratio"><div><span>칼슘 : 인 비율</span><b>{result.ratios.calciumPhosphorus.value?.toFixed(2)??'계산 불가'} : 1</b></div><span className={`badge ${result.ratios.calciumPhosphorus.status.toLowerCase()}`}>{result.ratios.calciumPhosphorus.status==='ADEQUATE'?'적정':'확인 필요'}</span></div>}<div className="recommend-box"><div><span className="eyebrow"><ShieldCheck/> 조합 안전성 검사</span><h2>지금 조합에 맞는 영양제 후보</h2><p>후보를 가상으로 추가해 주의·과다 여부를 다시 계산합니다.</p></div><button className="primary" disabled={busy} onClick={loadRecs}>{busy?'검사 중…':recs?'다시 계산':'추천 확인하기'}</button></div>{recs&&<div className="recommendations"><p>{recs.message}</p><div className="rec-grid">{recs.items.map((x,i)=><article key={x.productId}><span className="rank">{i+1}</span><h3>{x.name}</h3><p>하루 {x.dailyAmount}{units[x.unit]??x.unit}</p><small>부족 보완 {x.fixedNutrients}개 · 점수 {x.score}</small></article>)}{!recs.items.length&&<div className="empty large">안전 조건을 만족하는 후보가 없습니다.</div>}</div>{recs.excluded.length>0&&<details><summary>제외된 후보 {recs.excluded.length}개</summary>{recs.excluded.map(x=><p key={x.productId}><b>{x.name}</b> — {x.reason}</p>)}</details>}</div>}</section>
+  return <section><div className="section-head result-head"><button className="back" onClick={back}><ArrowLeft/>급여 제품 수정</button><div><span className="eyebrow">기준 {result.standardVersion}</span><h1>오늘의 영양 분석</h1><p>기준 열량 {result.referenceEnergyKcal.toFixed(0)} kcal · {result.lifeStage}</p></div></div>{result.warnings.map(x=><div className="alert warning" key={x}><Info/>{x}</div>)}<div className="summary">{order.map(k=><div className={`summary-card ${k}`} key={k}><span>{({deficient:'부족',adequate:'적정',caution:'주의',excess:'과다'} as Record<string,string>)[k]}</span><b>{result.summary[k]}</b></div>)}</div><div className="nutrients">{[...result.nutrients].sort((a,b)=>['EXCESS','CAUTION','DEFICIENT'].indexOf(a.status)-['EXCESS','CAUTION','DEFICIENT'].indexOf(b.status)).map(n=><Nutrient key={n.nutrientId} n={n}/>)}</div>{result.ratios.calciumPhosphorus&&<div className="ratio"><div><span>칼슘 : 인 비율</span><b>{result.ratios.calciumPhosphorus.value?.toFixed(2)??'계산 불가'} : 1</b></div><span className={`badge ${result.ratios.calciumPhosphorus.status.toLowerCase()}`}>{result.ratios.calciumPhosphorus.status==='ADEQUATE'?'적정':'확인 필요'}</span></div>}<div className="result-note"><Info size={17}/><p>현재 단계에서는 영양성분의 기준 대비 판정까지만 제공합니다. 부족·주의·과다 결과를 확인한 뒤 수의사와 상담해 주세요.</p></div></section>
 }
 
 function Nutrient({n}:{n:Analysis['nutrients'][number]}){
