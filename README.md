@@ -1,29 +1,46 @@
 # 우애영 Frontend
 
-반려동물 프로필과 급여 제품을 입력하고 백엔드 계산 결과·영양제 추천을 확인하는 React/Vite MVP입니다.
+반려동물 프로필과 하루 급여 제품을 바탕으로 6종 영양소의 총량·상태·추천 후보를 보여 주는 React/Vite 데모입니다.
+
+**공개 데모:** https://wooaeyoung.github.io/Frontend/
+
+## 실행 모드
+
+| 모드 | 실행 방법 | 데이터·계산 |
+| --- | --- | --- |
+| 공개 데모 | GitHub Pages 링크 | 브라우저 계산 엔진, Open Pet Food Facts 제품 검색, API 실패 시 내장 데모 목록 |
+| 로컬 통합 | `npm run dev` + FastAPI | `/api` 프록시를 통한 backend API |
 
 ```powershell
-cd C:\Users\yeoh0\wooaeyoung1\Frontend
 npm install
 npm run dev
 ```
 
-백엔드는 `http://localhost:8000`에서 실행합니다. 다른 주소라면 `.env.example`을 `.env`로 복사해 `VITE_API_URL`을 수정하세요.
+다른 백엔드 주소를 사용할 때는 `.env.example`을 `.env`로 복사한 뒤 `VITE_API_URL`을 설정합니다.
 
-공개 GitHub Pages 빌드는 별도 서버 없이 브라우저 계산 엔진을 사용하므로 분석과 추천까지 동작합니다. `main`에 푸시하면 GitHub Actions가 자동 배포합니다.
+## 데이터 사용 원칙
 
-## 시판 제품 데이터
+- Open Pet Food Facts는 실제 제품명·브랜드·바코드 검색에 사용합니다. 데이터는 ODbL이며 사용자 기여형이라 정확성과 완전성이 보장되지 않습니다.
+- 추적하는 칼슘, 인, 비타민 D, 비타민 E, 오메가3, 아연 **6종이 모두 있는 사료만** 실제값으로 합산합니다.
+- 6종 중 하나라도 빠진 사료는 일부 값을 0으로 취급하지 않고, 완전사료 선택 시 최소 권장량 추정으로 표시합니다.
+- 기준 수치와 추천 제품은 기능 검증용 데모입니다. 수의학적 처방이나 실제 급여 결정을 대신하지 않습니다.
 
-공개 웹은 Open Pet Food Facts API에서 실제 제품명, 브랜드, 바코드, 공개 영양성분과 갱신일을 먼저 조회합니다. API가 응답하지 않거나 검색 결과가 없을 때만 내장 데모 목록을 사용합니다. 외부 데이터에 미량영양소가 없으면 완전사료 여부에 따라 추정값으로 명시합니다.
+데이터 출처: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/
 
-Open Food Facts 데이터베이스는 ODbL로 제공되며 사용자 기여 데이터이므로 정확성·완전성이 보장되지 않습니다: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/
+## 구현 범위
 
-## 구현 화면
+- 프로필 저장·불러오기, 급여 제품 검색·추가·하루 급여량 편집
+- 검색되지 않는 제품의 영양성분 직접 입력
+- 영양상태 요약, 성분별 합계, 기준선, 추정값·경고, 칼슘:인 비율
+- 안전성 재평가 기반 추천과 제외 사유
+- 분석 기록의 개별·전체 삭제
 
-- 조건부 검증이 있는 반려동물 프로필
-- 제품 검색·추가·급여량 편집
-- 영양상태 요약, 성분별 누적 막대와 기준선
-- 추정값 및 경고 안내
-- 칼슘:인 비율
-- 추천과 제외 후보 사유
+사진 인식(OCR), 최저가 비교, 처방·진단 기능은 이 데모 범위에 포함하지 않습니다.
 
+## 검증
+
+```powershell
+npm run build
+```
+
+발표용 설계·자료구조·한계와 데모 순서는 [docs/presentation-guide.md](docs/presentation-guide.md)를 참고하세요.

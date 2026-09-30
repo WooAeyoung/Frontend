@@ -161,6 +161,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
             <div><b>{analysis.summary.caution ?? 0}</b>주의</div><div><b>{analysis.summary.excess ?? 0}</b>과다</div>
           </div>
           <div className="note">하루 기준 에너지 약 {Math.round(analysis.referenceEnergyKcal)}kcal · 기준 {analysis.standardVersion}</div>
+          {analysis.standardSource && <div className="note">기준 출처: {analysis.standardSource}</div>}
           <div className="tw"><table>
             <thead><tr><th>영양소</th><th>사료</th><th>영양제</th><th>합계</th><th>최소</th><th>상한</th><th>상태</th></tr></thead>
             <tbody>{analysis.nutrients.map(n => (

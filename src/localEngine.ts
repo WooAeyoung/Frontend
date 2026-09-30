@@ -43,7 +43,11 @@ function convertMarket(product:OffProduct):CatalogProduct|null{
   const raw=product.nutriments??{},mapped:Record<string,number>={}
   const pairs:[string,string,'MG'|'UG'][]=[['CALCIUM','calcium','MG'],['PHOSPHORUS','phosphorus','MG'],['VITAMIN_D','vitamin-d','UG'],['VITAMIN_E','vitamin-e','MG'],['OMEGA3','omega-3-fat','MG'],['ZINC','zinc','MG']]
   for(const [id,key,unit] of pairs){const value=readNutrient(raw,key,unit);if(value!==undefined)mapped[id]=value}
-  return{id:`off-${code}`,barcode:code,name,brand:`실제 시판 · ${product.brands?.trim()||'브랜드 미표기'}`,type:'FEED',servingAmount:100,servingUnit:'G',dataQuality:Object.keys(mapped).length?'PARTIAL':'MINIMUM_ONLY',nutrients:mapped,origin:'MARKET',sourceUrl:`${sourceBase}/product/${code}`,updatedAt:product.last_modified_t}
+  // 사용자 기여 제품 데이터는 성분 일부만 비어 있는 경우가 많다. 추적하는 6개
+  // 성분이 모두 있어야만 실제값 합산에 사용하고, 그 외에는 설계 기준대로 최소
+  // 권장량 추정 경로를 사용한다. 일부 실제값과 0값을 섞어 과소 추정하지 않는다.
+  const complete=Object.keys(mapped).length===nutrientMeta.length
+  return{id:`off-${code}`,barcode:code,name,brand:`실제 시판 · ${product.brands?.trim()||'브랜드 미표기'}`,type:'FEED',servingAmount:100,servingUnit:'G',dataQuality:complete?'COMPLETE':'MINIMUM_ONLY',nutrients:complete?mapped:{},origin:'MARKET',sourceUrl:`${sourceBase}/product/${code}`,updatedAt:product.last_modified_t}
 }
 async function fetchOff(url:string){const response=await fetch(url,{headers:{Accept:'application/json'}});if(!response.ok)throw new Error(`Open Pet Food Facts ${response.status}`);return response.json() as Promise<OffResponse>}
 export async function marketProducts(query=''):Promise<Product[]>{
@@ -62,6 +66,15 @@ export async function marketProducts(query=''):Promise<Product[]>{
   return [...unique.values()].map(({servingAmount:_,recommendedDailyAmount:__,nutrients:___,...product})=>product).slice(0,20)
 }
 
+/** Convert a label amount into the nutrient's display unit once, before daily serving scaling. */
+function convertManualAmount(amount:number,from:string,to:'MG'|'UG'){
+  if(from===to)return amount
+  if(from==='G')return to==='MG'?amount*1000:amount*1_000_000
+  if(from==='MG'&&to==='UG')return amount*1000
+  if(from==='UG'&&to==='MG')return amount/1000
+  return amount
+}
+
 export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[]):Analysis{
   const ageDays=profile.age.unit==='WEEK'?profile.age.value*7:profile.age.value*30.4375
   if(ageDays<56)throw new Error('8주 미만 개체는 현재 지원하지 않습니다.')
@@ -72,8 +85,8 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   const lines=Object.fromEntries(Object.entries(standards[profile.species]).map(([id,x])=>[id,{minimum:kcal/1000*x.minimum,upper:kcal/1000*x.upper,caution:kcal/1000*x.upper*(profile.species==='DOG'?.75:.5)}])) as Record<string,Line>
   const totals=Object.fromEntries(nutrientMeta.map(([id])=>[id,{fromFeed:0,fromSupplements:0,source:'ACTUAL'}])) as Record<string,{fromFeed:number;fromSupplements:number;source:string}>
   const warnings:string[]=[];let estimated=false
-  for(const item of items){const product=byId.get(item.productId);if(!product)throw new Error(`제품을 찾을 수 없습니다: ${item.productId}`);const bucket=product.type==='FEED'?'fromFeed':'fromSupplements';if(product.type==='FEED'&&!Object.keys(product.nutrients).length){if(profile.completeFeed){estimated=true;for(const id of Object.keys(lines)){totals[id][bucket]+=lines[id].minimum;totals[id].source='ESTIMATED'}warnings.push('사료 상세 성분이 없어 최소 권장량으로 추정했습니다.')}else warnings.push('사료 성분을 알 수 없어 사료 기여량을 0으로 계산했습니다.')}else{const ratio=item.dailyAmount/product.servingAmount;for(const [id,value] of Object.entries(product.nutrients))totals[id][bucket]+=value*ratio}}
-  for(const item of manualItems){const bucket=item.type==='FEED'?'fromFeed':'fromSupplements';const ratio=item.dailyAmount/item.servingAmount;for(const nutrient of item.nutrients){const meta=nutrientMeta.find(x=>x[0]===nutrient.nutrientId);if(!meta)continue;const value=nutrient.unit===meta[2]?nutrient.amount:nutrient.unit==='G'?nutrient.amount*1000:nutrient.unit==='UG'&&meta[2]==='MG'?nutrient.amount/1000:nutrient.amount*ratio;totals[nutrient.nutrientId][bucket]+=value*ratio}}
+  for(const item of items){const product=byId.get(item.productId);if(!product)throw new Error(`제품을 찾을 수 없습니다: ${item.productId}`);const bucket=product.type==='FEED'?'fromFeed':'fromSupplements';if(product.type==='FEED'&&product.dataQuality!=='COMPLETE'){if(profile.completeFeed){estimated=true;for(const id of Object.keys(lines)){totals[id][bucket]+=lines[id].minimum;totals[id].source='ESTIMATED'}warnings.push('사료의 추적 성분 6종이 모두 확인되지 않아 최소 권장량으로 추정했습니다.')}else warnings.push('사료 성분을 알 수 없어 사료 기여량을 0으로 계산했습니다.')}else{const ratio=item.dailyAmount/product.servingAmount;for(const [id,value] of Object.entries(product.nutrients))totals[id][bucket]+=value*ratio}}
+  for(const item of manualItems){const bucket=item.type==='FEED'?'fromFeed':'fromSupplements';const ratio=item.dailyAmount/item.servingAmount;for(const nutrient of item.nutrients){const meta=nutrientMeta.find(x=>x[0]===nutrient.nutrientId);if(!meta)continue;const value=convertManualAmount(nutrient.amount,nutrient.unit,meta[2]);totals[nutrient.nutrientId][bucket]+=value*ratio}}
   const summary={deficient:0,adequate:0,caution:0,excess:0}
   const results=nutrientMeta.map(([id,name,unit])=>{const total=totals[id].fromFeed+totals[id].fromSupplements,status=classify(total,lines[id]);summary[status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:totals[id].fromFeed,fromSupplements:totals[id].fromSupplements,total,...lines[id],status,source:totals[id].source}})
   const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>2?'HIGH':'ADEQUATE'}}
