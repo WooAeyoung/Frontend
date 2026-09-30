@@ -93,7 +93,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
     setItems(nextItems)
     setLoading(true); setError(''); setSaved(false)
     try {
-      const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems), recommend(profile, nextItems)])
+      const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems, manualItems), recommend(profile, nextItems, manualItems)])
       setAnalysis(nextAnalysis); setRec(nextRecommendation)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
@@ -107,7 +107,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
     if (items.length === 0 && manualItems.length === 0) { setError('급여 중인 제품을 하나 이상 추가해 주세요.'); return }
     setLoading(true)
     try {
-      const [a, r] = await Promise.all([analyze(profile, items, manualItems), recommend(profile, items)])
+      const [a, r] = await Promise.all([analyze(profile, items, manualItems), recommend(profile, items, manualItems)])
       setAnalysis(a); setRec(r)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
@@ -126,7 +126,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
 
   function save() {
     if (!analysis) return
-    saveRecord({ id: analysis.traceId, date: new Date().toISOString(), name: profile.name, species, items: items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), summary: analysis.summary })
+    saveRecord({ id: analysis.traceId, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary })
     setSaved(true); onSaved()
   }
 
@@ -194,6 +194,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
               <tr key={n.nutrientId}><td>{n.name} ({n.unit.toLowerCase()})</td><td>{n.source === 'ESTIMATED' ? '사료 추정' : '실제값'}</td><td>{fmt(n.fromFeed)}</td><td>{fmt(n.fromSupplements)}</td><td>{fmt(n.total)}</td><td>{fmt(n.minimum)}</td><td>{fmt(n.upper)}</td>
                 <td className={`st ${n.status}`}>{STATUS[n.status] ?? n.status}</td></tr>))}</tbody>
           </table></div>
+          <details className="contribution-details"><summary>제품별 성분 기여량 보기</summary><ul className="plist">{analysis.contributions.map((item, index) => <li key={`${item.name}-${index}`}><span><span className="tag">{item.type === 'FEED' ? '사료' : '영양제'}</span>{item.name} <small>{item.source === 'ESTIMATED' ? '최소 권장량 추정' : '성분표 실제값'}</small></span><small>{Object.entries(item.nutrients).map(([id, value]) => `${id}: ${fmt(value)}`).join(' · ') || '확인된 성분 없음'}</small></li>)}</ul></details>
           {Object.entries(analysis.ratios).map(([k, v]) => <p key={k} className="note">{k === 'calciumPhosphorus' ? '칼슘:인 비율' : k} {fmt(v.value)} ({RATIO[v.status] ?? v.status})</p>)}
           {analysis.warnings.length > 0 && <ul className="warns">{analysis.warnings.map(w => <li key={w}>{w}</li>)}</ul>}
           <p style={{ marginTop: 14 }}><button className="btn" onClick={save} disabled={saved}>{saved ? '저장됨' : '기록으로 저장'}</button></p>

@@ -14,7 +14,26 @@ export const catalog: CatalogProduct[] = [
   {id:'supp-multi',name:'데일리 멀티',brand:'우애영 데모',type:'SUPPLEMENT',servingAmount:1,servingUnit:'TABLET',recommendedDailyAmount:1,dataQuality:'COMPLETE',nutrients:{VITAMIN_D:4,VITAMIN_E:6,ZINC:5}},
   {id:'supp-zinc',name:'아연 케어',brand:'우애영 데모',type:'SUPPLEMENT',servingAmount:1,servingUnit:'TABLET',recommendedDailyAmount:1,dataQuality:'COMPLETE',nutrients:{ZINC:7}},
 ]
-const byId = new Map(catalog.map(product=>[product.id,product]))
+
+/** Separate chaining hash table used for product-ID lookup in the static browser build. */
+class ProductHashTable {
+  private buckets: Array<Array<[string, CatalogProduct]>>
+  constructor(size = 31) { this.buckets = Array.from({ length: size }, () => []) }
+  private slot(key: string) { let hash = 0; for (const char of key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0; return hash % this.buckets.length }
+  set(key: string, value: CatalogProduct) { const bucket = this.buckets[this.slot(key)], existing = bucket.findIndex(([id]) => id === key); if (existing >= 0) bucket[existing] = [key, value]; else bucket.push([key, value]) }
+  get(key: string) { return this.buckets[this.slot(key)].find(([id]) => id === key)?.[1] }
+}
+
+type TrieNode = { children: Map<string, TrieNode>; ids: string[] }
+class ProductPrefixTrie {
+  private root: TrieNode = { children: new Map(), ids: [] }
+  insert(text: string, id: string) { let node = this.root; for (const char of text.replaceAll(' ', '').toLowerCase()) { node = node.children.get(char) ?? (() => { const next: TrieNode = { children: new Map(), ids: [] }; node.children.set(char, next); return next })(); if (!node.ids.includes(id)) node.ids.push(id) } }
+  find(prefix: string) { let node = this.root; for (const char of prefix.replaceAll(' ', '').toLowerCase()) { const next = node.children.get(char); if (!next) return []; node = next } return node.ids }
+}
+
+const byId = new ProductHashTable()
+const productTrie = new ProductPrefixTrie()
+for (const product of catalog) { byId.set(product.id, product); productTrie.insert(product.name, product.id); productTrie.insert(product.brand, product.id) }
 const standards:Record<Profile['species'],Record<string,{minimum:number;upper:number}>> = {
   DOG:{CALCIUM:{minimum:1000,upper:2500},PHOSPHORUS:{minimum:750,upper:2000},VITAMIN_D:{minimum:12.5,upper:80},VITAMIN_E:{minimum:12,upper:100},OMEGA3:{minimum:300,upper:1200},ZINC:{minimum:18,upper:75}},
   CAT:{CALCIUM:{minimum:1250,upper:3000},PHOSPHORUS:{minimum:1000,upper:2500},VITAMIN_D:{minimum:10,upper:75},VITAMIN_E:{minimum:10,upper:100},OMEGA3:{minimum:250,upper:1000},ZINC:{minimum:20,upper:70}},
@@ -22,7 +41,7 @@ const standards:Record<Profile['species'],Record<string,{minimum:number;upper:nu
 type Line={minimum:number;caution:number;upper:number}
 const classify=(total:number,line:Line)=>total<line.minimum?'DEFICIENT':total>line.upper?'EXCESS':total>=line.caution?'CAUTION':'ADEQUATE'
 
-export function localProducts(query=''):Product[]{const needle=query.replaceAll(' ','').toLowerCase();return catalog.filter(p=>(p.name+p.brand).replaceAll(' ','').toLowerCase().includes(needle)).map(({servingAmount:_,recommendedDailyAmount:__,nutrients:___,...product})=>product)}
+export function localProducts(query=''):Product[]{const needle=query.replaceAll(' ','').toLowerCase();const ids = needle ? productTrie.find(needle) : catalog.map(product => product.id);return ids.map(id => byId.get(id)).filter((product): product is CatalogProduct => Boolean(product)).map(({servingAmount:_,recommendedDailyAmount:__,nutrients:___,...product})=>product)}
 
 type OffProduct={code?:string;product_name?:string;product_name_en?:string;brands?:string;categories_tags_en?:string[];nutriments?:Record<string,unknown>;last_modified_t?:number}
 type OffResponse={products?:OffProduct[]}
@@ -62,7 +81,7 @@ export async function marketProducts(query=''):Promise<Product[]>{
   }
   const unique=new Map<string,CatalogProduct>()
   for(const raw of responses.flatMap(response=>response.products??[])){const product=convertMarket(raw);if(product)unique.set(product.id,product)}
-  for(const product of unique.values())byId.set(product.id,product)
+  for(const product of unique.values()) { byId.set(product.id,product); productTrie.insert(product.name,product.id); productTrie.insert(product.brand,product.id) }
   return [...unique.values()].map(({servingAmount:_,recommendedDailyAmount:__,nutrients:___,...product})=>product).slice(0,20)
 }
 
@@ -83,29 +102,53 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   const factor=profile.species==='DOG'?(lifeStage==='ADULT'?95:110):(lifeStage==='ADULT'?75:100)
   const kcal=factor*profile.weightKg**(profile.species==='DOG'?.75:.67)
   const lines=Object.fromEntries(Object.entries(standards[profile.species]).map(([id,x])=>[id,{minimum:kcal/1000*x.minimum,upper:kcal/1000*x.upper,caution:kcal/1000*x.upper*(profile.species==='DOG'?.75:.5)}])) as Record<string,Line>
-  const totals=Object.fromEntries(nutrientMeta.map(([id])=>[id,{fromFeed:0,fromSupplements:0,source:'ACTUAL'}])) as Record<string,{fromFeed:number;fromSupplements:number;source:string}>
+  // 영양소 ID 순서는 고정이다. 배열 인덱스로 합산해 반복 계산에서도 순서가 바뀌지 않는다.
+  const nutrientIds = nutrientMeta.map(([id]) => id)
+  const indexById = Object.fromEntries(nutrientIds.map((id, index) => [id, index])) as Record<string, number>
+  const fromFeed = Array<number>(nutrientIds.length).fill(0), fromSupplements = Array<number>(nutrientIds.length).fill(0)
+  const sources = Array<'ACTUAL'|'ESTIMATED'>(nutrientIds.length).fill('ACTUAL')
+  const contributions: Analysis['contributions'] = []
   const warnings:string[]=[];let estimated=false
-  for(const item of items){const product=byId.get(item.productId);if(!product)throw new Error(`제품을 찾을 수 없습니다: ${item.productId}`);const bucket=product.type==='FEED'?'fromFeed':'fromSupplements';if(product.type==='FEED'&&product.dataQuality!=='COMPLETE'){if(profile.completeFeed){estimated=true;for(const id of Object.keys(lines)){totals[id][bucket]+=lines[id].minimum;totals[id].source='ESTIMATED'}warnings.push('사료의 추적 성분 6종이 모두 확인되지 않아 최소 권장량으로 추정했습니다.')}else warnings.push('사료 성분을 알 수 없어 사료 기여량을 0으로 계산했습니다.')}else{const ratio=item.dailyAmount/product.servingAmount;for(const [id,value] of Object.entries(product.nutrients))totals[id][bucket]+=value*ratio}}
-  for(const item of manualItems){const bucket=item.type==='FEED'?'fromFeed':'fromSupplements';const ratio=item.dailyAmount/item.servingAmount;for(const nutrient of item.nutrients){const meta=nutrientMeta.find(x=>x[0]===nutrient.nutrientId);if(!meta)continue;const value=convertManualAmount(nutrient.amount,nutrient.unit,meta[2]);totals[nutrient.nutrientId][bucket]+=value*ratio}}
+  const addContribution = (name:string,type:'FEED'|'SUPPLEMENT',source:'ACTUAL'|'ESTIMATED', values:Record<string,number>) => {
+    const applied:Record<string,number> = {}
+    for (const [id,value] of Object.entries(values)) { const index=indexById[id]; if (index === undefined) continue; if (type === 'FEED') fromFeed[index] += value; else fromSupplements[index] += value; if (source === 'ESTIMATED') sources[index] = 'ESTIMATED'; applied[id] = value }
+    contributions.push({name,type,source,nutrients:applied})
+  }
+  for(const item of items){const product=byId.get(item.productId);if(!product)throw new Error(`제품을 찾을 수 없습니다: ${item.productId}`);if(product.type==='FEED'&&product.dataQuality!=='COMPLETE'){if(profile.completeFeed){estimated=true;addContribution(product.name,'FEED','ESTIMATED',Object.fromEntries(nutrientIds.map(id=>[id,lines[id].minimum])));warnings.push('사료의 추적 성분 6종이 모두 확인되지 않아 최소 권장량으로 추정했습니다.')}else { addContribution(product.name,'FEED','ACTUAL',{}); warnings.push('사료 성분을 알 수 없어 사료 기여량을 0으로 계산했습니다.') }}else{const ratio=item.dailyAmount/product.servingAmount;addContribution(product.name,product.type,'ACTUAL',Object.fromEntries(Object.entries(product.nutrients).map(([id,value])=>[id,value*ratio])))}}
+  for(const item of manualItems){const ratio=item.dailyAmount/item.servingAmount, values:Record<string,number>={};for(const nutrient of item.nutrients){const meta=nutrientMeta.find(x=>x[0]===nutrient.nutrientId);if(meta)values[nutrient.nutrientId]=convertManualAmount(nutrient.amount,nutrient.unit,meta[2])*ratio}addContribution(item.name,item.type,'ACTUAL',values)}
   const summary={deficient:0,adequate:0,caution:0,excess:0}
-  const results=nutrientMeta.map(([id,name,unit])=>{const total=totals[id].fromFeed+totals[id].fromSupplements,status=classify(total,lines[id]);summary[status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:totals[id].fromFeed,fromSupplements:totals[id].fromSupplements,total,...lines[id],status,source:totals[id].source}})
+  const results=nutrientMeta.map(([id,name,unit],index)=>{const total=fromFeed[index]+fromSupplements[index],status=classify(total,lines[id]);summary[status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:fromFeed[index],fromSupplements:fromSupplements[index],total,...lines[id],status,source:sources[index]}})
   const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>2?'HIGH':'ADEQUATE'}}
   warnings.push('현재 영양소 수치는 검증용 데모 기준입니다. 실제 급여 판단은 공식 기준과 수의사 상담을 확인하세요.')
-  return{traceId:crypto.randomUUID(),standardVersion:'DEMO-2026.1',standardSource:'FEDIAF Nutritional Guidelines 2024 구조; 영양소 표는 데모 기준',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,ratios,warnings}
+  return{traceId:crypto.randomUUID(),standardVersion:'DEMO-2026.1',standardSource:'FEDIAF Nutritional Guidelines 2024 구조; 영양소 표는 데모 기준',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
 }
 
-export function localRecommend(profile:Profile,items:FeedingItem[]):Recommendation{
-  const base=localAnalyze(profile,items),current=Object.fromEntries(base.nutrients.map(n=>[n.nutrientId,n.total])),original=Object.fromEntries(base.nutrients.map(n=>[n.nutrientId,n.status])),lines=Object.fromEntries(base.nutrients.map(n=>[n.nutrientId,{minimum:n.minimum!,caution:n.caution!,upper:n.upper!}]))
-  const selected:Recommendation['items']=[],excluded:Recommendation['excluded']=[]
-  for(const product of catalog.filter(p=>p.type==='SUPPLEMENT')){const projected={...current};for(const [id,value] of Object.entries(product.nutrients))projected[id]+=value;const statuses=Object.fromEntries(Object.entries(projected).map(([id,value])=>[id,classify(value,lines[id])]));const affected=Object.keys(product.nutrients);const existingRisk=affected.filter(id=>['CAUTION','EXCESS'].includes(original[id]));const projectedRisk=affected.filter(id=>['CAUTION','EXCESS'].includes(statuses[id]));const harmful=[...new Set([...existingRisk,...projectedRisk])];if(harmful.length){const names=harmful.map(id=>nutrientMeta.find(n=>n[0]===id)?.[1]).join(', ');const reason=existingRisk.length?`현재 주의·과다 성분을 더 올림: ${names}`:`주의·과다 예상: ${names}`;excluded.push({productId:product.id,name:product.name,reason});continue}const fixed=Object.keys(original).filter(id=>original[id]==='DEFICIENT'&&statuses[id]!=='DEFICIENT').length;selected.push({productId:product.id,name:product.name,dailyAmount:1,unit:product.servingUnit,score:fixed*10+1,fixedNutrients:fixed})}
-  selected.sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'ko'))
+class MaxHeap<T> {
+  private values:T[]=[]
+  constructor(private score:(value:T)=>number){}
+  push(value:T){this.values.push(value);let i=this.values.length-1;while(i){const p=Math.floor((i-1)/2);if(this.score(this.values[p])>=this.score(value))break;[this.values[p],this.values[i]]=[this.values[i],this.values[p]];i=p}}
+  pop(){if(!this.values.length)return undefined;const top=this.values[0],last=this.values.pop()!;if(this.values.length){this.values[0]=last;let i=0;while(true){const l=i*2+1,r=l+1,b=r<this.values.length&&this.score(this.values[r])>this.score(this.values[l])?r:l;if(b>=this.values.length||this.score(this.values[i])>=this.score(this.values[b]))break;[this.values[i],this.values[b]]=[this.values[b],this.values[i]];i=b}}return top}
+}
 
-  return {
-    message: base.summary.caution || base.summary.excess ? '현재 주의·과다 성분을 더 높이지 않는 안전 후보만 표시합니다.' : base.summary.deficient ? '부족 성분과 안전 여유를 함께 고려했습니다.' : '현재 구성에서 추가해도 안전한 후보를 다시 계산했습니다.',
-    usesEstimatedFeed: base.usesEstimatedFeed,
-    // 부족 성분이 없더라도 안전 범위 후보를 보여줘 사용자가 급여 목록에
-    // 추가한 뒤 전체 조합을 다시 확인할 수 있도록 한다.
-    items: selected.slice(0, 3),
-    excluded
+export function localRecommend(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[]):Recommendation{
+  const selected:Recommendation['items']=[],excluded:Recommendation['excluded']=[],chosen=new Set<string>()
+  let working=[...items], base=localAnalyze(profile,working,manualItems)
+  const candidateResult=(product:CatalogProduct)=>{
+    const nextItems=[...working,{productId:product.id,name:product.name,type:'SUPPLEMENT' as const,unit:product.servingUnit,dailyAmount:product.recommendedDailyAmount??1}]
+    const projected=localAnalyze(profile,nextItems,manualItems), original=Object.fromEntries(base.nutrients.map(n=>[n.nutrientId,n.status]))
+    const risks=projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)&&['CAUTION','EXCESS'].includes(n.status)).map(n=>n.nutrientId)
+    const fixed=projected.nutrients.filter(n=>original[n.nutrientId]==='DEFICIENT'&&n.status!=='DEFICIENT').length
+    const overlap=Object.keys(product.nutrients).filter(id=>original[id]!=='DEFICIENT').length
+    const safety=Math.round(projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)).reduce((sum,n)=>sum+(n.caution! - n.total)/Math.max(n.caution!,1),0)*10)
+    return {projected,nextItems,risks,fixed,score:fixed*100+safety-overlap*5}
   }
+  // 매 선택 뒤 현재 총량으로 후보를 다시 계산한다. heap의 최고 점수 후보만 하나 선택한다.
+  while(selected.length<3){
+    const heap=new MaxHeap<{product:CatalogProduct;result:ReturnType<typeof candidateResult>}>(entry=>entry.result.score)
+    for(const product of catalog.filter(p=>p.type==='SUPPLEMENT'&&!chosen.has(p.id))){const result=candidateResult(product);if(result.risks.length){if(!excluded.some(item=>item.productId===product.id)){const names=result.risks.map(id=>nutrientMeta.find(n=>n[0]===id)?.[1]).join(', ');excluded.push({productId:product.id,name:product.name,reason:`추가 후 주의·과다 예상: ${names}`})}continue}heap.push({product,result})}
+    const best=heap.pop();if(!best)break
+    chosen.add(best.product.id);working=best.result.nextItems;base=best.result.projected
+    selected.push({productId:best.product.id,name:best.product.name,dailyAmount:best.product.recommendedDailyAmount??1,unit:best.product.servingUnit,score:best.result.score,fixedNutrients:best.result.fixed})
+  }
+  return {message:base.summary.caution||base.summary.excess?'현재 주의·과다 성분을 더 높이지 않는 안전 후보만 표시합니다.':base.summary.deficient?'부족 성분, 안전 여유, 중복 성분을 함께 계산했습니다.':'현재 구성에서 추가해도 안전한 후보를 다시 계산했습니다.',usesEstimatedFeed:base.usesEstimatedFeed,items:selected,excluded}
 }
