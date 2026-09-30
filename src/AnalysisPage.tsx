@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { analyze, getProducts, recommend } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation } from './api'
 import { loadProfiles, saveProfile, saveRecord } from './Records'
@@ -7,6 +7,26 @@ const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정'
 const RATIO: Record<string, string> = { LOW: '낮음', HIGH: '높음', ADEQUATE: '적정', UNAVAILABLE: '계산 불가' }
 const UNIT: Record<string, string> = { TABLET: '정', CAPSULE: '캡슐', G: 'g', MG: 'mg', ML: 'mL' }
 const fmt = (v: number | null) => (v === null ? '-' : v.toFixed(1))
+
+function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) {
+  const ceiling = nutrient.upper ?? nutrient.caution ?? Math.max(nutrient.minimum ?? 0, nutrient.total, 1)
+  const percent = (value: number | null) => value === null ? null : Math.min(100, Math.max(0, value / ceiling * 100))
+  const total = percent(nutrient.total) ?? 0
+  const minimum = percent(nutrient.minimum)
+  const caution = percent(nutrient.caution)
+  const upper = percent(nutrient.upper)
+  const source = nutrient.source === 'ESTIMATED' ? '사료 추정 포함' : '성분표 실제값'
+  return <div className="nutrient-bar-row">
+    <div className="nutrient-bar-head"><b>{nutrient.name}</b><span>{source} · {STATUS[nutrient.status] ?? nutrient.status}</span></div>
+    <div className="nutrient-track" role="img" aria-label={`${nutrient.name}: ${fmt(nutrient.total)} ${nutrient.unit}, ${source}, ${STATUS[nutrient.status] ?? nutrient.status}`}>
+      <span className={`nutrient-fill ${nutrient.status}`} style={{ width: `${total}%` }} />
+      {minimum !== null && <i className="nutrient-marker minimum" style={{ left: `${minimum}%` }} title={`하한 ${fmt(nutrient.minimum)}`} />}
+      {caution !== null && <i className="nutrient-marker caution" style={{ left: `${caution}%` }} title={`주의 ${fmt(nutrient.caution)}`} />}
+      {upper !== null && <i className="nutrient-marker upper" style={{ left: `${upper}%` }} title={`상한 ${fmt(nutrient.upper)}`} />}
+    </div>
+    <div className="nutrient-bar-scale"><span>합계 {fmt(nutrient.total)} {nutrient.unit.toLowerCase()}</span><span>하한 {fmt(nutrient.minimum)} · 주의 {fmt(nutrient.caution)} · 상한 {fmt(nutrient.upper)}</span></div>
+  </div>
+}
 
 export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: () => void; initialProfileId?: string }) {
   const [name, setName] = useState('')
@@ -29,6 +49,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
   const [profiles, setProfiles] = useState(loadProfiles)
   const [profileId, setProfileId] = useState('')
   const [profileSaved, setProfileSaved] = useState(false)
+  const resultRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     getProducts(query).then(r => setFound(r.items)).catch(() => setFound([]))
@@ -74,6 +95,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
     try {
       const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems), recommend(profile, nextItems)])
       setAnalysis(nextAnalysis); setRec(nextRecommendation)
+      window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
       setError(e instanceof Error ? e.message : '추가한 제품을 다시 분석하지 못했습니다.')
     } finally { setLoading(false) }
@@ -87,6 +109,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
     try {
       const [a, r] = await Promise.all([analyze(profile, items, manualItems), recommend(profile, items)])
       setAnalysis(a); setRec(r)
+      window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
       setAnalysis(null); setRec(null)
       setError(e instanceof Error ? e.message : '요청을 처리하지 못했습니다.')
@@ -155,17 +178,20 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
       <button className="btn" onClick={run} disabled={loading}>{loading ? '분석 중…' : '분석하기'}</button>
 
       {analysis && (
-        <div className="panel" style={{ marginTop: 24 }}><h3>3. 분석 결과</h3>
+        <div className="panel" ref={resultRef} style={{ marginTop: 24 }}><h3>3. 분석 결과</h3>
           <div className="sum">
             <div><b>{analysis.summary.deficient ?? 0}</b>부족</div><div><b>{analysis.summary.adequate ?? 0}</b>적정</div>
             <div><b>{analysis.summary.caution ?? 0}</b>주의</div><div><b>{analysis.summary.excess ?? 0}</b>과다</div>
           </div>
+          <div className="note">분석 프로필: {profile.name || '우리 아이'} · {species === 'DOG' ? '강아지' : '고양이'} · {weight}kg · {ageValue}{ageUnit === 'MONTH' ? '개월' : '주'}</div>
           <div className="note">하루 기준 에너지 약 {Math.round(analysis.referenceEnergyKcal)}kcal · 기준 {analysis.standardVersion}</div>
           {analysis.standardSource && <div className="note">기준 출처: {analysis.standardSource}</div>}
+          <p className="note">현재 화면은 검증용 6종 성분을 지원합니다. 막대의 선은 하한·주의·상한이며, 각 성분의 실제값 또는 추정 여부를 함께 표시합니다.</p>
+          <div className="nutrient-bars">{analysis.nutrients.map(n => <NutrientBar key={n.nutrientId} nutrient={n} />)}</div>
           <div className="tw"><table>
-            <thead><tr><th>영양소</th><th>사료</th><th>영양제</th><th>합계</th><th>최소</th><th>상한</th><th>상태</th></tr></thead>
+            <thead><tr><th>영양소</th><th>데이터</th><th>사료</th><th>영양제</th><th>합계</th><th>최소</th><th>상한</th><th>상태</th></tr></thead>
             <tbody>{analysis.nutrients.map(n => (
-              <tr key={n.nutrientId}><td>{n.name} ({n.unit.toLowerCase()})</td><td>{fmt(n.fromFeed)}</td><td>{fmt(n.fromSupplements)}</td><td>{fmt(n.total)}</td><td>{fmt(n.minimum)}</td><td>{fmt(n.upper)}</td>
+              <tr key={n.nutrientId}><td>{n.name} ({n.unit.toLowerCase()})</td><td>{n.source === 'ESTIMATED' ? '사료 추정' : '실제값'}</td><td>{fmt(n.fromFeed)}</td><td>{fmt(n.fromSupplements)}</td><td>{fmt(n.total)}</td><td>{fmt(n.minimum)}</td><td>{fmt(n.upper)}</td>
                 <td className={`st ${n.status}`}>{STATUS[n.status] ?? n.status}</td></tr>))}</tbody>
           </table></div>
           {Object.entries(analysis.ratios).map(([k, v]) => <p key={k} className="note">{k === 'calciumPhosphorus' ? '칼슘:인 비율' : k} {fmt(v.value)} ({RATIO[v.status] ?? v.status})</p>)}
