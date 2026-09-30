@@ -12,6 +12,8 @@ function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) 
   const ceiling = nutrient.upper ?? nutrient.caution ?? Math.max(nutrient.minimum ?? 0, nutrient.total, 1)
   const percent = (value: number | null) => value === null ? null : Math.min(100, Math.max(0, value / ceiling * 100))
   const total = percent(nutrient.total) ?? 0
+  const feed = percent(nutrient.fromFeed) ?? 0
+  const supplements = percent(nutrient.fromSupplements) ?? 0
   const minimum = percent(nutrient.minimum)
   const caution = percent(nutrient.caution)
   const upper = percent(nutrient.upper)
@@ -20,11 +22,13 @@ function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) 
     <div className="nutrient-bar-head"><b>{nutrient.name}</b><span>{source} · {STATUS[nutrient.status] ?? nutrient.status}</span></div>
     <div className="nutrient-track" role="img" aria-label={`${nutrient.name}: ${fmt(nutrient.total)} ${nutrient.unit}, ${source}, ${STATUS[nutrient.status] ?? nutrient.status}`}>
       <span className={`nutrient-fill ${nutrient.status}`} style={{ width: `${total}%` }} />
+      <span className="nutrient-segment feed" style={{ width: `${feed}%` }} title={`사료 ${fmt(nutrient.fromFeed)}`} />
+      <span className="nutrient-segment supplement" style={{ left: `${feed}%`, width: `${supplements}%` }} title={`영양제 ${fmt(nutrient.fromSupplements)}`} />
       {minimum !== null && <i className="nutrient-marker minimum" style={{ left: `${minimum}%` }} title={`하한 ${fmt(nutrient.minimum)}`} />}
       {caution !== null && <i className="nutrient-marker caution" style={{ left: `${caution}%` }} title={`주의 ${fmt(nutrient.caution)}`} />}
       {upper !== null && <i className="nutrient-marker upper" style={{ left: `${upper}%` }} title={`상한 ${fmt(nutrient.upper)}`} />}
     </div>
-    <div className="nutrient-bar-scale"><span>합계 {fmt(nutrient.total)} {nutrient.unit.toLowerCase()}</span><span>하한 {fmt(nutrient.minimum)} · 주의 {fmt(nutrient.caution)} · 상한 {fmt(nutrient.upper)}</span></div>
+    <div className="nutrient-bar-scale"><span>사료 {fmt(nutrient.fromFeed)} · 영양제 {fmt(nutrient.fromSupplements)} · 합계 {fmt(nutrient.total)} {nutrient.unit.toLowerCase()}</span><span>하한 {fmt(nutrient.minimum)} · 주의 {fmt(nutrient.caution)} · 상한 {fmt(nutrient.upper)}</span></div>
   </div>
 }
 
