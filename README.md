@@ -23,9 +23,11 @@ npm run dev
 - Open Pet Food Facts는 실제 제품명·브랜드·바코드 검색에 사용합니다. 데이터는 ODbL이며 사용자 기여형이라 정확성과 완전성이 보장되지 않습니다.
 - 추적하는 칼슘, 인, 비타민 D, 비타민 E, 오메가3, 아연 **6종이 모두 있는 사료만** 실제값으로 합산합니다.
 - 6종 중 하나라도 빠진 사료는 일부 값을 0으로 취급하지 않고, 완전사료 선택 시 최소 권장량 추정으로 표시합니다.
-- 기준 수치와 추천 제품은 기능 검증용 데모입니다. 수의학적 처방이나 실제 급여 결정을 대신하지 않습니다.
+- 기준선은 FEDIAF Nutritional Guidelines 2025의 생애주기별 1000 kcal ME 값을 사용합니다. 추천 제품 수치는 기능 검증용 데모이며 수의학적 처방이나 실제 급여 결정을 대신하지 않습니다.
 
 데이터 출처: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/
+
+영양 기준 출처: https://europeanpetfood.org/wp-content/uploads/2025/09/FEDIAF-Nutritional-Guidelines_2025-ONLINE.pdf
 
 ## 구현 범위
 
