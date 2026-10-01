@@ -39,6 +39,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
   const [ageValue, setAgeValue] = useState('')
   const [ageUnit, setAgeUnit] = useState<'WEEK' | 'MONTH'>('MONTH')
   const [adultSize, setAdultSize] = useState('MEDIUM')
+  const [expectedAdultWeight, setExpectedAdultWeight] = useState('')
   const [completeFeed, setCompleteFeed] = useState(true)
   const [query, setQuery] = useState('')
   const [found, setFound] = useState<Product[]>([])
@@ -64,7 +65,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
   const profile: Profile = {
     name: name || '우리 아이', species, weightKg: Number(weight),
     age: { value: Number(ageValue), unit: ageUnit }, completeFeed,
-    ...(needSize ? { adultSize } : {}),
+    ...(needSize ? { adultSize, expectedAdultWeightKg: Number(expectedAdultWeight) } : {}),
   }
 
   function loadProfile(id: string) {
@@ -73,11 +74,12 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
     if (!selected) return
     setName(selected.name); setSpecies(selected.species); setWeight(String(selected.weightKg))
     setAgeValue(String(selected.age.value)); setAgeUnit(selected.age.unit)
-    setAdultSize(selected.adultSize ?? 'MEDIUM'); setCompleteFeed(selected.completeFeed)
+    setAdultSize(selected.adultSize ?? 'MEDIUM'); setExpectedAdultWeight(selected.expectedAdultWeightKg ? String(selected.expectedAdultWeightKg) : ''); setCompleteFeed(selected.completeFeed)
     setProfileSaved(false); setError('')
   }
   function saveCurrentProfile() {
     if (!name.trim() || !(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('프로필을 저장하려면 이름, 체중, 나이를 입력해 주세요.'); return }
+    if (needSize && (!(Number(expectedAdultWeight) >= Number(weight)))) { setError('성장기 강아지는 현재 체중 이상인 예상 성체 체중을 입력해 주세요.'); return }
     const savedProfile = saveProfile(profile, profileId || undefined)
     const next = profileId ? profiles.map(item => item.id === savedProfile.id ? savedProfile : item) : [savedProfile, ...profiles]
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
@@ -146,7 +148,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
           <label className="f">체중(kg)<input className="in" type="number" min="0" step="0.1" value={weight} onChange={e => setWeight(e.target.value)} /></label>
           <label className="f">나이<input className="in" type="number" min="0" value={ageValue} onChange={e => setAgeValue(e.target.value)} /></label>
           <label className="f">나이 단위<select className="in" value={ageUnit} onChange={e => setAgeUnit(e.target.value as 'WEEK' | 'MONTH')}><option value="MONTH">개월</option><option value="WEEK">주</option></select></label>
-          {needSize && <label className="f">예상 성체 체급<select className="in" value={adultSize} onChange={e => setAdultSize(e.target.value)}><option value="SMALL">소형</option><option value="MEDIUM">중형</option><option value="LARGE">대형</option></select></label>}
+          {needSize && <label className="f">예상 성체 체중(kg)<input className="in" type="number" min={weight || '0.1'} step="0.1" value={expectedAdultWeight} onChange={e => setExpectedAdultWeight(e.target.value)} /><small className="note">성장기 열량 계산에 사용합니다.</small></label>}
         </div>
         <label className="chk"><input type="checkbox" checked={completeFeed} onChange={e => setCompleteFeed(e.target.checked)} />주식으로 완전사료를 먹고 있어요</label>
       </div>

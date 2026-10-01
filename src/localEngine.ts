@@ -97,9 +97,11 @@ function convertManualAmount(amount:number,from:string,to:'MG'|'UG'){
 export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[]):Analysis{
   const ageDays=profile.age.unit==='WEEK'?profile.age.value*7:profile.age.value*30.4375
   if(ageDays<56)throw new Error('8주 미만 개체는 현재 지원하지 않습니다.')
-  if(profile.species==='DOG'&&ageDays<365&&!profile.adultSize)throw new Error('12개월 미만 개는 예상 성체 체급이 필요합니다.')
+  if(profile.species==='DOG'&&ageDays<365&&!(profile.expectedAdultWeightKg&&profile.expectedAdultWeightKg>=profile.weightKg))throw new Error('12개월 미만 개는 현재 체중 이상인 예상 성체 체중이 필요합니다.')
   const lifeStage=profile.species==='CAT'?(ageDays<365?'GROWTH':'ADULT'):(ageDays<98?'GROWTH_EARLY':ageDays<365?'GROWTH_LATE':'ADULT')
-  const factor=profile.species==='DOG'?(lifeStage==='ADULT'?95:110):(lifeStage==='ADULT'?75:100)
+  // FEDIAF 2025 Table VII-8b: 8주~1세 강아지는 현재/예상 성체 체중 비율을 열량식에 사용한다.
+  const puppyFactor=profile.species==='DOG'&&lifeStage!=='ADULT'?254.1-135*(profile.weightKg/(profile.expectedAdultWeightKg??profile.weightKg)):null
+  const factor=profile.species==='DOG'?(lifeStage==='ADULT'?95:puppyFactor!):(lifeStage==='ADULT'?75:100)
   const kcal=factor*profile.weightKg**(profile.species==='DOG'?.75:.67)
   const lines=Object.fromEntries(Object.entries(standards[profile.species]).map(([id,x])=>[id,{minimum:kcal/1000*x.minimum,upper:kcal/1000*x.upper,caution:kcal/1000*x.upper*(profile.species==='DOG'?.75:.5)}])) as Record<string,Line>
   // 영양소 ID 순서는 고정이다. 배열 인덱스로 합산해 반복 계산에서도 순서가 바뀌지 않는다.
@@ -119,8 +121,8 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   const summary={deficient:0,adequate:0,caution:0,excess:0}
   const results=nutrientMeta.map(([id,name,unit],index)=>{const total=fromFeed[index]+fromSupplements[index],status=classify(total,lines[id]);summary[status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:fromFeed[index],fromSupplements:fromSupplements[index],total,...lines[id],status,source:sources[index]}})
   const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>2?'HIGH':'ADEQUATE'}}
-  warnings.push('현재 영양소 수치는 검증용 데모 기준입니다. 실제 급여 판단은 공식 기준과 수의사 상담을 확인하세요.')
-  return{traceId:crypto.randomUUID(),standardVersion:'DEMO-2026.1',standardSource:'FEDIAF Nutritional Guidelines 2024 구조; 영양소 표는 데모 기준',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
+  warnings.push('영양소 기준선은 현재 검증용 데모 기준입니다. FEDIAF 2025 성장기 열량식만 예상 성체 체중을 반영합니다. 실제 급여 판단은 수의사 상담을 확인하세요.')
+  return{traceId:crypto.randomUUID(),standardVersion:'DEMO-2026.1',standardSource:'FEDIAF Nutritional Guidelines 2025 Table VII-8b 열량식; 영양소 표는 데모 기준',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
 }
 
 class MaxHeap<T> {
