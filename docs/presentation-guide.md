@@ -33,5 +33,6 @@
 ## 한계와 다음 우선순위
 
 - 영양 기준은 FEDIAF Nutritional Guidelines 2025의 생애주기별 1000 kcal ME 표를 적용한다. 비타민 E와 오메가3는 현재 제품 단위·정의가 달라 기준 없음으로 분리한다.
+- 원문 표·단위 변환·각주 대조 내용은 [backend 검증 기록](https://github.com/WooAeyoung/backend/blob/main/docs/standards-validation.md)에서 확인할 수 있다.
 - 브라우저 엔진과 FastAPI 엔진은 같은 검산 시나리오로 비교하는 회귀 테스트가 필요하다.
 - OCR·가격 비교·의학적 처방은 제외 범위다.
