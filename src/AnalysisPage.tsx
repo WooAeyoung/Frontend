@@ -66,6 +66,9 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
     age: { value: Number(ageValue), unit: ageUnit }, completeFeed,
     ...(needSize ? { expectedAdultWeightKg: Number(expectedAdultWeight) } : {}),
   }
+  const profileReady = Boolean(name.trim() && Number(weight) > 0 && Number(ageValue) > 0 && (!needSize || Number(expectedAdultWeight) >= Number(weight)))
+  const manualReady = Boolean(manual.name.trim() && Number(manual.amount) > 0 && Number(manual.daily) > 0 && Object.values(manual.nutrients).some(value => value !== '' && Number(value) >= 0))
+  const analysisReady = profileReady && (items.length > 0 || manualItems.length > 0) && items.every(item => item.dailyAmount > 0)
 
   function loadProfile(id: string) {
     setProfileId(id)
@@ -132,7 +135,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
 
   function save() {
     if (!analysis) return
-    saveRecord({ id: analysis.traceId, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary })
+    saveRecord({ id: analysis.traceId, profileId: profileId || undefined, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary })
     setSaved(true); onSaved()
   }
 
@@ -150,7 +153,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
       <div className="analysis-grid">
 
       <div className="panel input-panel profile-panel"><div className="panel-title"><span>STEP 1</span><div><h3>반려동물 정보</h3><p>한 번 저장하면 다음 분석에서 다시 사용할 수 있어요.</p></div></div>
-        <div className="profile-actions"><label className="f">저장된 프로필 불러오기<select className="in" value={profileId} onChange={e => loadProfile(e.target.value)}><option value="">새 프로필 작성</option>{profiles.map(item => <option key={item.id} value={item.id}>{item.name} · {item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg</option>)}</select></label><button className="btn ghost" onClick={saveCurrentProfile}>{profileSaved ? '프로필 저장됨' : profileId ? '프로필 수정 저장' : '프로필 저장'}</button></div>
+        <div className="profile-actions"><label className="f">저장된 프로필 불러오기<select className="in" value={profileId} onChange={e => loadProfile(e.target.value)}><option value="">새 프로필 작성</option>{profiles.map(item => <option key={item.id} value={item.id}>{item.name} · {item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg</option>)}</select></label>{profileReady ? <button className="btn ghost reveal-action" onClick={saveCurrentProfile}>{profileSaved ? '프로필 저장됨' : profileId ? '프로필 수정 저장' : '프로필 저장'}</button> : <span className="action-hint">필수 칸을 입력하면 저장 버튼이 나타나요.</span>}</div>
         <div className="grid2">
           <label className="f">이름<input className="in" value={name} onChange={e => setName(e.target.value)} placeholder="예: 보리" /></label>
           <label className="f">종<select className="in" value={species} onChange={e => setSpecies(e.target.value as 'DOG' | 'CAT')}><option value="DOG">강아지</option><option value="CAT">고양이</option></select></label>
@@ -185,12 +188,12 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
       <div className="panel manual-panel"><div className="panel-title compact"><span>OPTION</span><div><h3>검색되지 않는 제품 직접 입력</h3><p>제품 라벨의 1회 제공량과 영양성분을 입력해 함께 계산할 수 있어요.</p></div></div>
         <div className="grid2"><label className="f">제품명<input className="in" value={manual.name} onChange={e => setManual({ ...manual, name: e.target.value })} placeholder="예: 우리집 관절 영양제" /></label><label className="f">구분<select className="in" value={manual.type} onChange={e => setManual({ ...manual, type: e.target.value as 'FEED' | 'SUPPLEMENT' })}><option value="SUPPLEMENT">영양제</option><option value="FEED">사료</option></select></label><label className="f">1회 제공량<input className="in" type="number" min="0.1" value={manual.amount} onChange={e => setManual({ ...manual, amount: e.target.value })} /></label><label className="f">단위<select className="in" value={manual.unit} onChange={e => setManual({ ...manual, unit: e.target.value })}><option value="TABLET">정</option><option value="CAPSULE">캡슐</option><option value="G">g</option></select></label><label className="f">하루 급여량<input className="in" type="number" min="0.1" value={manual.daily} onChange={e => setManual({ ...manual, daily: e.target.value })} /></label></div>
         <div className="grid2" style={{ marginTop: 12 }}>{[['CALCIUM','칼슘 (mg)'],['PHOSPHORUS','인 (mg)'],['VITAMIN_D','비타민 D (µg)'],['VITAMIN_E','비타민 E (mg)'],['OMEGA3','오메가3 (mg)'],['ZINC','아연 (mg)']].map(([id, label]) => <label className="f" key={id}>{label}<input className="in" type="number" min="0" value={manual.nutrients[id]} onChange={e => setManual({ ...manual, nutrients: { ...manual.nutrients, [id]: e.target.value } })} /></label>)}</div>
-        <button className="btn" style={{ marginTop: 14 }} onClick={saveManual}>직접 입력 제품 저장</button>
+        {manualReady ? <button className="btn reveal-action" style={{ marginTop: 14 }} onClick={saveManual}>직접 입력 제품 저장</button> : <p className="action-hint inline">제품명과 영양성분을 입력하면 저장 버튼이 나타나요.</p>}
         {manualItems.length > 0 && <ul className="plist">{manualItems.map((item, index) => <li key={`${item.name}-${index}`}><span><span className="tag">직접 입력</span>{item.name}</span><button className="btn ghost" onClick={() => setManualItems(manualItems.filter((_, i) => i !== index))}>삭제</button></li>)}</ul>}
       </div>
 
       {error && <div className="err" role="alert">{error}</div>}
-      <div className="analysis-action"><span>{items.length + manualItems.length}개 제품의 하루 총량을 계산합니다.</span><button className="btn" onClick={run} disabled={loading}>{loading ? '분석 중…' : '분석하기'}</button></div>
+      <div className={`analysis-action ${analysisReady ? 'ready' : ''}`}><span>{analysisReady ? `${items.length + manualItems.length}개 제품의 하루 총량을 계산할 준비가 됐어요.` : '프로필 필수 칸과 급여 제품을 입력하면 분석 버튼이 나타나요.'}</span>{analysisReady && <button className="btn reveal-action" onClick={run} disabled={loading}>{loading ? '분석 중…' : '분석하기'}</button>}</div>
 
       {analysis && (
         <div className="panel result-panel" ref={resultRef} style={{ marginTop: 24 }}><div className="result-title"><span>STEP 3 · RESULT</span><h3>오늘의 영양 분석</h3><p>사료와 영양제의 하루 섭취량을 공식 기준과 비교했어요.</p></div>
