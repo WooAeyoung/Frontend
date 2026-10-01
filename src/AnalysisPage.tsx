@@ -3,7 +3,7 @@ import { analyze, getProducts, recommend } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation } from './api'
 import { loadProfiles, saveProfile, saveRecord } from './Records'
 
-const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', CAUTION: '주의', EXCESS: '과다' }
+const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', ADEQUATE_NO_UPPER_LIMIT: '적정 · 상한 없음', NO_STANDARD: '기준 없음', CAUTION: '주의', EXCESS: '과다' }
 const RATIO: Record<string, string> = { LOW: '낮음', HIGH: '높음', ADEQUATE: '적정', UNAVAILABLE: '계산 불가' }
 const UNIT: Record<string, string> = { TABLET: '정', CAPSULE: '캡슐', G: 'g', MG: 'mg', ML: 'mL' }
 const fmt = (v: number | null) => (v === null ? '-' : v.toFixed(1))
