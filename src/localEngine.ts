@@ -120,11 +120,12 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   }
   for(const item of items){const product=byId.get(item.productId);if(!product)throw new Error(`제품을 찾을 수 없습니다: ${item.productId}`);if(product.type==='FEED'&&product.dataQuality!=='COMPLETE'){if(profile.completeFeed){estimated=true;addContribution(product.name,'FEED','ESTIMATED',Object.fromEntries(nutrientIds.filter(id=>lines[id].minimum!==null).map(id=>[id,lines[id].minimum as number])));warnings.push('사료의 비교 가능한 성분만 최소 권장량으로 추정했습니다.')}else { addContribution(product.name,'FEED','ACTUAL',{}); warnings.push('사료 성분을 알 수 없어 사료 기여량을 0으로 계산했습니다.') }}else{const ratio=item.dailyAmount/product.servingAmount;addContribution(product.name,product.type,'ACTUAL',Object.fromEntries(Object.entries(product.nutrients).map(([id,value])=>[id,value*ratio])))}}
   for(const item of manualItems){const ratio=item.dailyAmount/item.servingAmount, values:Record<string,number>={};for(const nutrient of item.nutrients){const meta=nutrientMeta.find(x=>x[0]===nutrient.nutrientId);if(meta)values[nutrient.nutrientId]=convertManualAmount(nutrient.amount,nutrient.unit,meta[2])*ratio}addContribution(item.name,item.type,'ACTUAL',values)}
-  const summary={deficient:0,adequate:0,caution:0,excess:0}
-  const results=nutrientMeta.map(([id,name,unit],index)=>{const total=fromFeed[index]+fromSupplements[index],status=classify(total,lines[id]);summary[status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:fromFeed[index],fromSupplements:fromSupplements[index],total,...lines[id],status,source:sources[index]}})
+  const summary={deficient:0,adequate:0,caution:0,excess:0,noStandard:0}
+  const results=nutrientMeta.map(([id,name,unit],index)=>{const total=fromFeed[index]+fromSupplements[index],status=classify(total,lines[id]);summary[status==='NO_STANDARD'?'noStandard':status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:fromFeed[index],fromSupplements:fromSupplements[index],total,...lines[id],status,source:sources[index]}})
   const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>2?'HIGH':'ADEQUATE'}}
   warnings.push('비타민 E와 오메가3는 현재 제품 단위가 공식 기준과 달라 기준 없음으로 표시하며 추천 점수에서 제외합니다.')
   warnings.push('상한이 없는 성분은 안전하다는 뜻이 아니라 비교 가능한 공식 상한을 적용하지 않았다는 뜻입니다.')
+  if(lifeStage!=='ADULT')warnings.push('성장기 영양 기준선은 아직 지원하지 않아 모든 성분을 기준 없음으로 표시하고 영양제 추천을 제공하지 않습니다.')
   return{traceId:crypto.randomUUID(),standardVersion:'FEDIAF-2025.09',standardSource:'FEDIAF Nutritional Guidelines 2025, adult values per 1000 kcal ME',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
 }
 
@@ -138,12 +139,13 @@ class MaxHeap<T> {
 export function localRecommend(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[]):Recommendation{
   const selected:Recommendation['items']=[],excluded:Recommendation['excluded']=[],chosen=new Set<string>()
   let working=[...items], base=localAnalyze(profile,working,manualItems)
+  if(base.nutrients.every(n=>n.status==='NO_STANDARD'))return{message:'성장기 영양 기준선이 아직 지원되지 않아 추천 안전성을 판정할 수 없습니다.',usesEstimatedFeed:base.usesEstimatedFeed,items:[],excluded:[]}
   const candidateResult=(product:CatalogProduct)=>{
     const nextItems=[...working,{productId:product.id,name:product.name,type:'SUPPLEMENT' as const,unit:product.servingUnit,dailyAmount:product.recommendedDailyAmount??1}]
     const projected=localAnalyze(profile,nextItems,manualItems), original=Object.fromEntries(base.nutrients.map(n=>[n.nutrientId,n.status]))
     const risks=projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)&&['CAUTION','EXCESS'].includes(n.status)).map(n=>n.nutrientId)
     const fixed=projected.nutrients.filter(n=>original[n.nutrientId]==='DEFICIENT'&&n.status!=='DEFICIENT').length
-    const overlap=Object.keys(product.nutrients).filter(id=>original[id]!=='DEFICIENT').length
+    const overlap=Object.keys(product.nutrients).filter(id=>original[id]!=='DEFICIENT'&&original[id]!=='NO_STANDARD').length
     const margins=projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)&&n.minimum!==null&&n.upper!==null&&n.upper>n.minimum).map(n=>(n.upper!-n.total)/(n.upper!-n.minimum!))
     const safety=margins.length?Math.max(0,Math.min(1,margins.reduce((sum,value)=>sum+value,0)/margins.length)):0
     return {projected,nextItems,risks,fixed,score:fixed*10+safety*5-overlap}

@@ -187,6 +187,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
           <div className="sum">
             <div><b>{analysis.summary.deficient ?? 0}</b>부족</div><div><b>{analysis.summary.adequate ?? 0}</b>적정</div>
             <div><b>{analysis.summary.caution ?? 0}</b>주의</div><div><b>{analysis.summary.excess ?? 0}</b>과다</div>
+            <div><b>{analysis.summary.noStandard ?? 0}</b>기준 없음</div>
           </div>
           <div className="note">분석 프로필: {profile.name || '우리 아이'} · {species === 'DOG' ? '강아지' : '고양이'} · {weight}kg · {ageValue}{ageUnit === 'MONTH' ? '개월' : '주'}</div>
           <div className="note">하루 기준 에너지 약 {Math.round(analysis.referenceEnergyKcal)}kcal · 기준 {analysis.standardVersion}</div>

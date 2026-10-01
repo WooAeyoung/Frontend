@@ -53,7 +53,7 @@ export default function Records({ go, selectProfile }: { go: (p: 'analysis') => 
             <div className="panel" key={r.id}>
               <div className="record-title"><h3>{r.name} <small className="note">{r.species === 'DOG' ? '강아지' : '고양이'} · {new Date(r.date).toLocaleString('ko-KR')}</small></h3><button className="btn danger" onClick={() => removeRecord(r.id)}>이 기록 삭제</button></div>
               <div className="note">급여: {r.items.join(', ')}</div>
-              <div className="note">부족 {r.summary.deficient ?? 0} · 적정 {r.summary.adequate ?? 0} · 주의 {r.summary.caution ?? 0} · 과다 {r.summary.excess ?? 0}</div>
+              <div className="note">부족 {r.summary.deficient ?? 0} · 적정 {r.summary.adequate ?? 0} · 주의 {r.summary.caution ?? 0} · 과다 {r.summary.excess ?? 0} · 기준 없음 {r.summary.noStandard ?? 0}</div>
             </div>
           ))}
           <button className="btn ghost" onClick={clear}>기록 모두 삭제</button>
