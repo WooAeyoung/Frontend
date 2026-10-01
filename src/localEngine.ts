@@ -105,6 +105,7 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   const factor=profile.species==='DOG'?(lifeStage==='ADULT'?95:puppyFactor!):(lifeStage==='ADULT'?75:100)
   const kcal=factor*profile.weightKg**(profile.species==='DOG'?.75:.67)
   const lines=Object.fromEntries(Object.entries(standards[profile.species]).map(([id,x])=>{const minimum=x.minimum===null?null:kcal/1000*x.minimum,upper=x.upper===null?null:kcal/1000*x.upper;return[id,{minimum,upper,caution:upper===null?null:upper*(profile.species==='DOG'?.75:.5)}]})) as Record<string,Line>
+  if(lifeStage!=='ADULT')for(const id of Object.keys(lines))lines[id]={minimum:null,caution:null,upper:null}
   // 영양소 ID 순서는 고정이다. 배열 인덱스로 합산해 반복 계산에서도 순서가 바뀌지 않는다.
   const nutrientIds = nutrientMeta.map(([id]) => id)
   const indexById = Object.fromEntries(nutrientIds.map((id, index) => [id, index])) as Record<string, number>
