@@ -69,6 +69,8 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
   const profileReady = Boolean(name.trim() && Number(weight) > 0 && Number(ageValue) > 0 && (!needSize || Number(expectedAdultWeight) >= Number(weight)))
   const manualReady = Boolean(manual.name.trim() && Number(manual.amount) > 0 && Number(manual.daily) > 0 && Object.values(manual.nutrients).some(value => value !== '' && Number(value) >= 0))
   const analysisReady = profileReady && (items.length > 0 || manualItems.length > 0) && items.every(item => item.dailyAmount > 0)
+  const calciumPhosphorus = analysis?.ratios.calciumPhosphorus
+  const ratioNeedsAttention = Boolean(calciumPhosphorus && ['LOW', 'HIGH'].includes(calciumPhosphorus.status))
 
   function loadProfile(id: string) {
     setProfileId(id)
@@ -197,9 +199,9 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
 
       {analysis && (
         <div className="panel result-panel" ref={resultRef} style={{ marginTop: 24 }}><div className="result-title"><span>STEP 3 · RESULT</span><h3>오늘의 영양 분석</h3><p>사료와 영양제의 하루 섭취량을 공식 기준과 비교했어요.</p></div>
-          <div className={`verdict ${analysis.summary.excess ? 'danger' : analysis.summary.caution ? 'warning' : analysis.summary.deficient ? 'check' : 'safe'}`} role="status">
-            <span>{analysis.summary.excess ? '과다 성분이 있어요' : analysis.summary.caution ? '주의가 필요한 성분이 있어요' : analysis.summary.deficient ? '부족한 성분을 확인해 주세요' : '현재 조합은 기준 범위 안이에요'}</span>
-            <b>{analysis.summary.excess ? `${analysis.summary.excess}개 성분이 상한을 넘었어요. 급여 제품을 줄이거나 제외해 다시 분석해 보세요.` : analysis.summary.caution ? `${analysis.summary.caution}개 성분이 서비스 주의선에 도달했어요.` : analysis.summary.deficient ? `${analysis.summary.deficient}개 성분이 최소 권장량보다 낮아요.` : '적용 가능한 공식 기준에서 주의·과다가 확인되지 않았어요.'}</b>
+          <div className={`verdict ${analysis.summary.excess || ratioNeedsAttention ? 'danger' : analysis.summary.caution ? 'warning' : analysis.summary.deficient ? 'check' : 'safe'}`} role="status">
+            <span>{analysis.summary.excess ? '과다 성분이 있어요' : ratioNeedsAttention ? '칼슘:인 비율을 확인해 주세요' : analysis.summary.caution ? '주의가 필요한 성분이 있어요' : analysis.summary.deficient ? '부족한 성분을 확인해 주세요' : '현재 조합은 기준 범위 안이에요'}</span>
+            <b>{analysis.summary.excess ? `${analysis.summary.excess}개 성분이 상한을 넘었어요. 급여 제품을 줄이거나 제외해 다시 분석해 보세요.` : ratioNeedsAttention ? `현재 칼슘:인 비율이 적용 범위보다 ${calciumPhosphorus?.status === 'LOW' ? '낮아요' : '높아요'}. 칼슘과 인 급여량을 조정해 주세요.` : analysis.summary.caution ? `${analysis.summary.caution}개 성분이 서비스 주의선에 도달했어요.` : analysis.summary.deficient ? `${analysis.summary.deficient}개 성분이 최소 권장량보다 낮아요.` : '적용 가능한 공식 기준에서 주의·과다가 확인되지 않았어요.'}</b>
           </div>
           {analysis.usesEstimatedFeed && <div className="estimate-alert">일부 사료 성분은 제품 상세값이 없어 최소 권장량으로 추정했어요. 성분표 실제값과 구분해 확인해 주세요.</div>}
           <div className="sum">
@@ -220,7 +222,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
                 <td data-label="상태" className={`st ${n.status}`}>{STATUS[n.status] ?? n.status}</td></tr>))}</tbody>
           </table></div>
           <details className="contribution-details"><summary>제품별 성분 기여량 보기</summary><ul className="plist">{analysis.contributions.map((item, index) => <li key={`${item.name}-${index}`}><span><span className="tag">{item.type === 'FEED' ? '사료' : '영양제'}</span>{item.name} <small>{item.source === 'ESTIMATED' ? '최소 권장량 추정' : '성분표 실제값'}</small></span><small>{Object.entries(item.nutrients).map(([id, value]) => `${id}: ${fmt(value)}`).join(' · ') || '확인된 성분 없음'}</small></li>)}</ul></details>
-          {Object.entries(analysis.ratios).map(([k, v]) => <p key={k} className="ratio-note"><b>{k === 'calciumPhosphorus' ? '칼슘:인 비율' : k} {fmt(v.value)} : 1</b><span>현재 단계 기준 적정 범위 1 : 1 ~ {analysis.lifeStage === 'GROWTH_EARLY' ? '1.6' : analysis.lifeStage === 'GROWTH_LATE' ? '1.8' : '2.0'} : 1 · {RATIO[v.status] ?? v.status}</span></p>)}
+          {Object.entries(analysis.ratios).map(([k, v]) => <p key={k} className="ratio-note"><b>{k === 'calciumPhosphorus' ? '칼슘:인 비율' : k} {fmt(v.value)} : 1</b><span>현재 분석 적용 범위 {v.minimum ?? 1} : 1 ~ {v.maximum ?? (analysis.lifeStage === 'GROWTH_EARLY' ? 1.6 : analysis.lifeStage === 'GROWTH_LATE' && Number(expectedAdultWeight) > 15 && ageDays < 182.625 ? 1.6 : analysis.lifeStage === 'GROWTH_LATE' ? 1.8 : 2)} : 1 · {RATIO[v.status] ?? v.status}</span></p>)}
           {analysis.warnings.length > 0 && <ul className="warns">{analysis.warnings.map(w => <li key={w}>{w}</li>)}</ul>}
           <p style={{ marginTop: 14 }}><button className="btn" onClick={save} disabled={saved}>{saved ? '저장됨' : '기록으로 저장'}</button></p>
         </div>
