@@ -35,9 +35,17 @@ const byId = new ProductHashTable()
 const productTrie = new ProductPrefixTrie()
 for (const product of catalog) { byId.set(product.id, product); productTrie.insert(product.name, product.id); productTrie.insert(product.brand, product.id) }
 type Standard={minimum:number|null;upper:number|null}
-const standards:Record<Profile['species'],Record<string,Standard>> = {
-  DOG:{CALCIUM:{minimum:1450,upper:6250},PHOSPHORUS:{minimum:1160,upper:4000},VITAMIN_D:{minimum:3.975,upper:20},VITAMIN_E:{minimum:null,upper:null},OMEGA3:{minimum:null,upper:null},ZINC:{minimum:20.8,upper:null}},
-  CAT:{CALCIUM:{minimum:1330,upper:null},PHOSPHORUS:{minimum:850,upper:null},VITAMIN_D:{minimum:2.0825,upper:187.5},VITAMIN_E:{minimum:null,upper:null},OMEGA3:{minimum:null,upper:null},ZINC:{minimum:25,upper:null}},
+const noComparableStandard={minimum:null,upper:null}
+const standards:Record<Profile['species'],Record<string,Record<string,Standard>>> = {
+  DOG:{
+    ADULT:{CALCIUM:{minimum:1450,upper:6250},PHOSPHORUS:{minimum:1160,upper:4000},VITAMIN_D:{minimum:3.975,upper:20},VITAMIN_E:noComparableStandard,OMEGA3:noComparableStandard,ZINC:{minimum:20.8,upper:null}},
+    GROWTH_EARLY:{CALCIUM:{minimum:2500,upper:4000},PHOSPHORUS:{minimum:2250,upper:null},VITAMIN_D:{minimum:3.45,upper:20},VITAMIN_E:noComparableStandard,OMEGA3:noComparableStandard,ZINC:{minimum:25,upper:null}},
+    GROWTH_LATE:{CALCIUM:{minimum:2000,upper:4500},PHOSPHORUS:{minimum:1750,upper:null},VITAMIN_D:{minimum:3.125,upper:20},VITAMIN_E:noComparableStandard,OMEGA3:noComparableStandard,ZINC:{minimum:25,upper:null}},
+  },
+  CAT:{
+    ADULT:{CALCIUM:{minimum:1330,upper:null},PHOSPHORUS:{minimum:850,upper:null},VITAMIN_D:{minimum:2.0825,upper:187.5},VITAMIN_E:noComparableStandard,OMEGA3:noComparableStandard,ZINC:{minimum:25,upper:null}},
+    GROWTH:{CALCIUM:{minimum:2500,upper:null},PHOSPHORUS:{minimum:2100,upper:null},VITAMIN_D:{minimum:1.75,upper:187.5},VITAMIN_E:noComparableStandard,OMEGA3:noComparableStandard,ZINC:{minimum:18.8,upper:null}},
+  },
 }
 type Line={minimum:number|null;caution:number|null;upper:number|null}
 const classify=(total:number,line:Line)=>line.minimum===null&&line.upper===null?'NO_STANDARD':line.minimum!==null&&total<line.minimum?'DEFICIENT':line.upper!==null&&total>line.upper?'EXCESS':line.caution!==null&&total>=line.caution?'CAUTION':line.upper===null?'ADEQUATE_NO_UPPER_LIMIT':'ADEQUATE'
@@ -104,8 +112,10 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   const puppyFactor=profile.species==='DOG'&&lifeStage!=='ADULT'?254.1-135*(profile.weightKg/(profile.expectedAdultWeightKg??profile.weightKg)):null
   const factor=profile.species==='DOG'?(lifeStage==='ADULT'?95:puppyFactor!):(lifeStage==='ADULT'?75:100)
   const kcal=factor*profile.weightKg**(profile.species==='DOG'?.75:.67)
-  const lines=Object.fromEntries(Object.entries(standards[profile.species]).map(([id,x])=>{const minimum=x.minimum===null?null:kcal/1000*x.minimum,upper=x.upper===null?null:kcal/1000*x.upper;return[id,{minimum,upper,caution:upper===null?null:upper*(profile.species==='DOG'?.75:.5)}]})) as Record<string,Line>
-  if(lifeStage!=='ADULT')for(const id of Object.keys(lines))lines[id]={minimum:null,caution:null,upper:null}
+  const stageStandards={...standards[profile.species][lifeStage]}
+  // FEDIAF 2025 footnote b: 예상 성체 15 kg 초과인 개는 6개월까지 후기 성장기 칼슘 2.5 g/1000 kcal를 적용한다.
+  if(profile.species==='DOG'&&lifeStage==='GROWTH_LATE'&&(profile.expectedAdultWeightKg??0)>15&&ageDays<182.625)stageStandards.CALCIUM={minimum:2500,upper:4500}
+  const lines=Object.fromEntries(Object.entries(stageStandards).map(([id,x])=>{const minimum=x.minimum===null?null:kcal/1000*x.minimum,upper=x.upper===null?null:kcal/1000*x.upper;return[id,{minimum,upper,caution:upper===null?null:upper*(profile.species==='DOG'?.75:.5)}]})) as Record<string,Line>
   // 영양소 ID 순서는 고정이다. 배열 인덱스로 합산해 반복 계산에서도 순서가 바뀌지 않는다.
   const nutrientIds = nutrientMeta.map(([id]) => id)
   const indexById = Object.fromEntries(nutrientIds.map((id, index) => [id, index])) as Record<string, number>
@@ -122,11 +132,10 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   for(const item of manualItems){const ratio=item.dailyAmount/item.servingAmount, values:Record<string,number>={};for(const nutrient of item.nutrients){const meta=nutrientMeta.find(x=>x[0]===nutrient.nutrientId);if(meta)values[nutrient.nutrientId]=convertManualAmount(nutrient.amount,nutrient.unit,meta[2])*ratio}addContribution(item.name,item.type,'ACTUAL',values)}
   const summary={deficient:0,adequate:0,caution:0,excess:0,noStandard:0}
   const results=nutrientMeta.map(([id,name,unit],index)=>{const total=fromFeed[index]+fromSupplements[index],status=classify(total,lines[id]);summary[status==='NO_STANDARD'?'noStandard':status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:fromFeed[index],fromSupplements:fromSupplements[index],total,...lines[id],status,source:sources[index]}})
-  const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>2?'HIGH':'ADEQUATE'}}
+  const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;const ratioUpper=lifeStage==='GROWTH_EARLY'?1.6:lifeStage==='GROWTH_LATE'&&((profile.expectedAdultWeightKg??0)<=15||ageDays>=182.625)?1.8:lifeStage==='GROWTH_LATE'?1.6:2;ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>ratioUpper?'HIGH':'ADEQUATE'}}
   warnings.push('비타민 E와 오메가3는 현재 제품 단위가 공식 기준과 달라 기준 없음으로 표시하며 추천 점수에서 제외합니다.')
   warnings.push('상한이 없는 성분은 안전하다는 뜻이 아니라 비교 가능한 공식 상한을 적용하지 않았다는 뜻입니다.')
-  if(lifeStage!=='ADULT')warnings.push('성장기 영양 기준선은 아직 지원하지 않아 모든 성분을 기준 없음으로 표시하고 영양제 추천을 제공하지 않습니다.')
-  return{traceId:crypto.randomUUID(),standardVersion:'FEDIAF-2025.09',standardSource:'FEDIAF Nutritional Guidelines 2025, adult values per 1000 kcal ME',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
+  return{traceId:crypto.randomUUID(),standardVersion:'FEDIAF-2025.09',standardSource:'FEDIAF Nutritional Guidelines 2025, life-stage values per 1000 kcal ME',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
 }
 
 class MaxHeap<T> {
@@ -139,7 +148,6 @@ class MaxHeap<T> {
 export function localRecommend(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[]):Recommendation{
   const selected:Recommendation['items']=[],excluded:Recommendation['excluded']=[],chosen=new Set<string>()
   let working=[...items], base=localAnalyze(profile,working,manualItems)
-  if(base.nutrients.every(n=>n.status==='NO_STANDARD'))return{message:'성장기 영양 기준선이 아직 지원되지 않아 추천 안전성을 판정할 수 없습니다.',usesEstimatedFeed:base.usesEstimatedFeed,items:[],excluded:[]}
   const candidateResult=(product:CatalogProduct)=>{
     const nextItems=[...working,{productId:product.id,name:product.name,type:'SUPPLEMENT' as const,unit:product.servingUnit,dailyAmount:product.recommendedDailyAmount??1}]
     const projected=localAnalyze(profile,nextItems,manualItems), original=Object.fromEntries(base.nutrients.map(n=>[n.nutrientId,n.status]))
@@ -158,5 +166,5 @@ export function localRecommend(profile:Profile,items:FeedingItem[],manualItems:M
     chosen.add(best.product.id);working=best.result.nextItems;base=best.result.projected
     selected.push({productId:best.product.id,name:best.product.name,dailyAmount:best.product.recommendedDailyAmount??1,unit:best.product.servingUnit,score:best.result.score,fixedNutrients:best.result.fixed})
   }
-  return {message:base.summary.caution||base.summary.excess?'현재 주의·과다 성분을 더 높이지 않는 안전 후보만 표시합니다.':base.summary.deficient?'부족 성분, 안전 여유, 중복 성분을 함께 계산했습니다.':'현재 구성에서 추가해도 안전한 후보를 다시 계산했습니다.',usesEstimatedFeed:base.usesEstimatedFeed,items:selected,excluded}
+  return {message:base.summary.caution||base.summary.excess?'적용 가능한 기준에서 현재 주의·과다 성분을 더 높이지 않는 후보만 표시합니다.':base.summary.deficient?'부족 성분, 기준선까지의 여유, 중복 성분을 함께 계산했습니다.':'적용 가능한 기준에서 주의·과다가 검출되지 않은 후보입니다.',usesEstimatedFeed:base.usesEstimatedFeed,items:selected,excluded}
 }
