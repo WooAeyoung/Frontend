@@ -38,7 +38,6 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
   const [weight, setWeight] = useState('')
   const [ageValue, setAgeValue] = useState('')
   const [ageUnit, setAgeUnit] = useState<'WEEK' | 'MONTH'>('MONTH')
-  const [adultSize, setAdultSize] = useState('MEDIUM')
   const [expectedAdultWeight, setExpectedAdultWeight] = useState('')
   const [completeFeed, setCompleteFeed] = useState(true)
   const [query, setQuery] = useState('')
@@ -65,7 +64,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
   const profile: Profile = {
     name: name || '우리 아이', species, weightKg: Number(weight),
     age: { value: Number(ageValue), unit: ageUnit }, completeFeed,
-    ...(needSize ? { adultSize, expectedAdultWeightKg: Number(expectedAdultWeight) } : {}),
+    ...(needSize ? { expectedAdultWeightKg: Number(expectedAdultWeight) } : {}),
   }
 
   function loadProfile(id: string) {
@@ -74,7 +73,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
     if (!selected) return
     setName(selected.name); setSpecies(selected.species); setWeight(String(selected.weightKg))
     setAgeValue(String(selected.age.value)); setAgeUnit(selected.age.unit)
-    setAdultSize(selected.adultSize ?? 'MEDIUM'); setExpectedAdultWeight(selected.expectedAdultWeightKg ? String(selected.expectedAdultWeightKg) : ''); setCompleteFeed(selected.completeFeed)
+    setExpectedAdultWeight(selected.expectedAdultWeightKg ? String(selected.expectedAdultWeightKg) : ''); setCompleteFeed(selected.completeFeed)
     setProfileSaved(false); setError('')
   }
   function saveCurrentProfile() {
