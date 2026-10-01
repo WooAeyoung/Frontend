@@ -141,8 +141,9 @@ export function localRecommend(profile:Profile,items:FeedingItem[],manualItems:M
     const risks=projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)&&['CAUTION','EXCESS'].includes(n.status)).map(n=>n.nutrientId)
     const fixed=projected.nutrients.filter(n=>original[n.nutrientId]==='DEFICIENT'&&n.status!=='DEFICIENT').length
     const overlap=Object.keys(product.nutrients).filter(id=>original[id]!=='DEFICIENT').length
-    const safety=Math.round(projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)).reduce((sum,n)=>sum+(n.caution! - n.total)/Math.max(n.caution!,1),0)*10)
-    return {projected,nextItems,risks,fixed,score:fixed*100+safety-overlap*5}
+    const margins=projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)&&n.minimum!==null&&n.upper!==null&&n.upper>n.minimum).map(n=>(n.upper!-n.total)/(n.upper!-n.minimum!))
+    const safety=margins.length?Math.max(0,Math.min(1,margins.reduce((sum,value)=>sum+value,0)/margins.length)):0
+    return {projected,nextItems,risks,fixed,score:fixed*10+safety*5-overlap}
   }
   // 매 선택 뒤 현재 총량으로 후보를 다시 계산한다. heap의 최고 점수 후보만 하나 선택한다.
   while(selected.length<3){
