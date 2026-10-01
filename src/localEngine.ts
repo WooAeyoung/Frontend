@@ -136,7 +136,7 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;const ratioUpper=calciumPhosphorusUpper(profile,lifeStage,ageDays);ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>ratioUpper?'HIGH':'ADEQUATE'}}
   warnings.push('비타민 E와 오메가3는 현재 제품 단위가 공식 기준과 달라 기준 없음으로 표시하며 추천 점수에서 제외합니다.')
   warnings.push('상한이 없는 성분은 안전하다는 뜻이 아니라 비교 가능한 공식 상한을 적용하지 않았다는 뜻입니다.')
-  return{traceId:crypto.randomUUID(),standardVersion:'FEDIAF-2025.09',standardSource:'FEDIAF Nutritional Guidelines 2025, life-stage values per 1000 kcal ME',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
+  return{traceId:crypto.randomUUID(),standardVersion:'FEDIAF-2025.09',standardSource:'FEDIAF Nutritional Guidelines 2025, life-stage values per 1000 kcal ME',cautionPolicy:`서비스 조기 경고 기준: 공식 상한의 ${profile.species==='DOG'?'75':'50'}%부터 주의`,lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
 }
 
 class MaxHeap<T> {
