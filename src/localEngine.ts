@@ -49,6 +49,7 @@ const standards:Record<Profile['species'],Record<string,Record<string,Standard>>
 }
 type Line={minimum:number|null;caution:number|null;upper:number|null}
 const classify=(total:number,line:Line)=>line.minimum===null&&line.upper===null?'NO_STANDARD':line.minimum!==null&&total<line.minimum?'DEFICIENT':line.upper!==null&&total>line.upper?'EXCESS':line.caution!==null&&total>=line.caution?'CAUTION':line.upper===null?'ADEQUATE_NO_UPPER_LIMIT':'ADEQUATE'
+const calciumPhosphorusUpper=(profile:Profile,lifeStage:string,ageDays:number)=>lifeStage==='GROWTH_EARLY'?1.6:lifeStage==='GROWTH_LATE'&&((profile.expectedAdultWeightKg??0)<=15||ageDays>=182.625)?1.8:lifeStage==='GROWTH_LATE'?1.6:2
 
 export function localProducts(query=''):Product[]{const needle=query.replaceAll(' ','').toLowerCase();const ids = needle ? productTrie.find(needle) : catalog.map(product => product.id);return ids.map(id => byId.get(id)).filter((product): product is CatalogProduct => Boolean(product)).map(({servingAmount:_,recommendedDailyAmount:__,nutrients:___,...product})=>product)}
 
@@ -132,7 +133,7 @@ export function localAnalyze(profile:Profile,items:FeedingItem[],manualItems:Man
   for(const item of manualItems){const ratio=item.dailyAmount/item.servingAmount, values:Record<string,number>={};for(const nutrient of item.nutrients){const meta=nutrientMeta.find(x=>x[0]===nutrient.nutrientId);if(meta)values[nutrient.nutrientId]=convertManualAmount(nutrient.amount,nutrient.unit,meta[2])*ratio}addContribution(item.name,item.type,'ACTUAL',values)}
   const summary={deficient:0,adequate:0,caution:0,excess:0,noStandard:0}
   const results=nutrientMeta.map(([id,name,unit],index)=>{const total=fromFeed[index]+fromSupplements[index],status=classify(total,lines[id]);summary[status==='NO_STANDARD'?'noStandard':status==='DEFICIENT'?'deficient':status==='CAUTION'?'caution':status==='EXCESS'?'excess':'adequate']++;return{nutrientId:id,name,unit,fromFeed:fromFeed[index],fromSupplements:fromSupplements[index],total,...lines[id],status,source:sources[index]}})
-  const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;const ratioUpper=lifeStage==='GROWTH_EARLY'?1.6:lifeStage==='GROWTH_LATE'&&((profile.expectedAdultWeightKg??0)<=15||ageDays>=182.625)?1.8:lifeStage==='GROWTH_LATE'?1.6:2;ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>ratioUpper?'HIGH':'ADEQUATE'}}
+  const ratios:Analysis['ratios']={};if(profile.species==='DOG'){const value=results[1].total?results[0].total/results[1].total:null;const ratioUpper=calciumPhosphorusUpper(profile,lifeStage,ageDays);ratios.calciumPhosphorus={value,status:value===null?'UNAVAILABLE':value<1?'LOW':value>ratioUpper?'HIGH':'ADEQUATE'}}
   warnings.push('비타민 E와 오메가3는 현재 제품 단위가 공식 기준과 달라 기준 없음으로 표시하며 추천 점수에서 제외합니다.')
   warnings.push('상한이 없는 성분은 안전하다는 뜻이 아니라 비교 가능한 공식 상한을 적용하지 않았다는 뜻입니다.')
   return{traceId:crypto.randomUUID(),standardVersion:'FEDIAF-2025.09',standardSource:'FEDIAF Nutritional Guidelines 2025, life-stage values per 1000 kcal ME',lifeStage,referenceEnergyKcal:kcal,usesEstimatedFeed:estimated,summary,nutrients:results,contributions,ratios,warnings}
@@ -151,7 +152,9 @@ export function localRecommend(profile:Profile,items:FeedingItem[],manualItems:M
   const candidateResult=(product:CatalogProduct)=>{
     const nextItems=[...working,{productId:product.id,name:product.name,type:'SUPPLEMENT' as const,unit:product.servingUnit,dailyAmount:product.recommendedDailyAmount??1}]
     const projected=localAnalyze(profile,nextItems,manualItems), original=Object.fromEntries(base.nutrients.map(n=>[n.nutrientId,n.status]))
-    const risks=projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)&&['CAUTION','EXCESS'].includes(n.status)).map(n=>n.nutrientId)
+    const risks=projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)&&['CAUTION','EXCESS'].includes(n.status)).map(n=>n.name)
+    const ratio=projected.ratios.calciumPhosphorus
+    if((Object.hasOwn(product.nutrients,'CALCIUM')||Object.hasOwn(product.nutrients,'PHOSPHORUS'))&&ratio&&['LOW','HIGH'].includes(ratio.status))risks.push('칼슘:인 비율')
     const fixed=projected.nutrients.filter(n=>original[n.nutrientId]==='DEFICIENT'&&n.status!=='DEFICIENT').length
     const overlap=Object.keys(product.nutrients).filter(id=>original[id]!=='DEFICIENT'&&original[id]!=='NO_STANDARD').length
     const margins=projected.nutrients.filter(n=>Object.prototype.hasOwnProperty.call(product.nutrients,n.nutrientId)&&n.minimum!==null&&n.upper!==null&&n.upper>n.minimum).map(n=>(n.upper!-n.total)/(n.upper!-n.minimum!))
@@ -161,7 +164,7 @@ export function localRecommend(profile:Profile,items:FeedingItem[],manualItems:M
   // 매 선택 뒤 현재 총량으로 후보를 다시 계산한다. heap의 최고 점수 후보만 하나 선택한다.
   while(selected.length<3){
     const heap=new MaxHeap<{product:CatalogProduct;result:ReturnType<typeof candidateResult>}>(entry=>entry.result.score)
-    for(const product of catalog.filter(p=>p.type==='SUPPLEMENT'&&!chosen.has(p.id))){const result=candidateResult(product);if(result.risks.length){if(!excluded.some(item=>item.productId===product.id)){const names=result.risks.map(id=>nutrientMeta.find(n=>n[0]===id)?.[1]).join(', ');excluded.push({productId:product.id,name:product.name,reason:`추가 후 주의·과다 예상: ${names}`})}continue}heap.push({product,result})}
+    for(const product of catalog.filter(p=>p.type==='SUPPLEMENT'&&!chosen.has(p.id))){const result=candidateResult(product);if(result.risks.length){if(!excluded.some(item=>item.productId===product.id))excluded.push({productId:product.id,name:product.name,reason:`추가 후 기준 이탈 예상: ${result.risks.join(', ')}`});continue}heap.push({product,result})}
     const best=heap.pop();if(!best)break
     chosen.add(best.product.id);working=best.result.nextItems;base=best.result.projected
     selected.push({productId:best.product.id,name:best.product.name,dailyAmount:best.product.recommendedDailyAmount??1,unit:best.product.servingUnit,score:best.result.score,fixedNutrients:best.result.fixed})
