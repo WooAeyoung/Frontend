@@ -8,7 +8,7 @@
 
 | 모드 | 실행 방법 | 데이터·계산 |
 | --- | --- | --- |
-| 공개 데모 | GitHub Pages 링크 | 브라우저 계산 엔진, Open Pet Food Facts 제품 검색, API 실패 시 내장 데모 목록 |
+| 공개 데모 | GitHub Pages 링크 | Render Backend API, API 실패 시 브라우저 내장 데모 목록 |
 | 로컬 통합 | `npm run dev` + FastAPI | `/api` 프록시를 통한 backend API |
 
 ```powershell
