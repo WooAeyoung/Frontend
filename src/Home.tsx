@@ -9,6 +9,11 @@ export default function Home({ go }: { go: (p: Page) => void }) {
   const [focus, setFocus] = useState<'food' | 'data' | 'safe'>('food')
   const [storyStep, setStoryStep] = useState(0)
   const [flowStep, setFlowStep] = useState(0)
+  const setStoryFocus = (index: number) => {
+    storyStepRef.current = index
+    setStoryStep(index)
+    setFocus((['food', 'data', 'safe'] as const)[index])
+  }
   const info = {
     food: ['오늘의 급여', '오늘 먹은 제품과 양을 담았어요.'],
     data: ['영양 신호', '성분별 섭취량을 기준과 비교했어요.'],
@@ -81,12 +86,12 @@ export default function Home({ go }: { go: (p: Page) => void }) {
         <article className="intro-slide intro-three" data-scroll-3d><div className="pet-scene together"><span className="pet dog">🐕</span><span className="pet cat">🐈</span><span className="bowl-mini">♥</span><span className="ground"/></div><span>HEALTHY EVERY DAY</span><b>먹는 것까지<br/>함께 살펴봐요</b></article>
       </div></div></section>
       <section className={`lab-hero story-step-${storyStep}`} data-scroll-3d><div className="w lab-grid"><div className="lab-copy"><span className="lab-kicker">02 · ADD TODAY'S FOOD</span><h1>오늘 먹은 제품을<br />담아볼까요?</h1><p>급여한 제품을 담으면 영양 분석이 이어져요.</p><div className="lab-story" aria-label="영양 분석 과정">
-          {([['급여 담기', '제품과 양을 선택해요.'], ['영양 확인', '섭취량을 기준과 비교해요.'], ['조합 점검', '함께 먹일 때를 확인해요.']] as const).map((item, index) => <button key={item[0]} className={storyStep === index ? 'active' : ''} onClick={() => { storyStepRef.current = index; setStoryStep(index); setFocus((['food', 'data', 'safe'] as const)[index]) }}><i>{String(index + 1).padStart(2, '0')}</i><span><b>{item[0]}</b><small>{item[1]}</small></span></button>)}
+          {([['급여 담기', '먹인 제품과 양을 기록해요.'], ['영양 확인', '하루 기준과 비교해요.'], ['조합 점검', '함께 먹을 때를 살펴봐요.']] as const).map((item, index) => <button key={item[0]} className={storyStep === index ? 'active' : ''} onClick={() => setStoryFocus(index)}><i>{String(index + 1).padStart(2, '0')}</i><span><b>{item[0]}</b><small>{item[1]}</small></span></button>)}
         </div><div className="lab-info" aria-live="polite"><b>{info[0]}</b><span>{info[1]}</span></div><button className="btn lab-cta" onClick={() => go('analysis')}>영양 분석 시작하기</button></div>
         <div className="lab-scene" aria-label="3D 영양 분석 작업대"><div className="lab-wall"><span>WOOAEYOUNG LAB</span></div><div className="lab-table"/>
-          <button className={`lab-object food ${focus === 'food' ? 'active' : ''}`} onClick={() => setFocus('food')} aria-label="오늘의 급여"><i/><i/><i/><span/></button>
-          <button className={`lab-object laptop ${focus === 'data' ? 'active' : ''}`} onClick={() => setFocus('data')} aria-label="영양 신호"><img src="./laptop.svg" alt="영양 수치가 표시된 노트북"/></button>
-          <button className={`lab-object jar ${focus === 'safe' ? 'active' : ''}`} onClick={() => setFocus('safe')} aria-label="조합 확인"><b>+</b></button>
+          <button className={`lab-object food ${focus === 'food' ? 'active' : ''}`} onClick={() => setStoryFocus(0)} aria-label="급여 담기"><i/><i/><i/><span/></button>
+          <button className={`lab-object laptop ${focus === 'data' ? 'active' : ''}`} onClick={() => setStoryFocus(1)} aria-label="영양 확인"><img src="./laptop.svg" alt="영양 수치가 표시된 노트북"/></button>
+          <button className={`lab-object jar ${focus === 'safe' ? 'active' : ''}`} onClick={() => setStoryFocus(2)} aria-label="조합 점검"><b>+</b></button>
           <div className="lab-pet">🐕</div><div className="lab-shadow"/>
         </div></div></section>
 
