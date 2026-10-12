@@ -1,22 +1,50 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export type Page = 'home' | 'analysis' | 'records'
 
 export default function Home({ go }: { go: (p: Page) => void }) {
+  const homeRef = useRef<HTMLElement>(null)
   const [focus, setFocus] = useState<'food' | 'data' | 'safe'>('food')
   const info = {
     food: ['오늘의 급여', '실제 시판 사료와 영양제를 하루 급여량으로 모아요.'],
     data: ['영양 신호', '칼슘·인·비타민의 부족과 과다를 한눈에 비교해요.'],
     safe: ['조합 확인', '함께 먹일 때 주의가 필요한 성분을 다시 계산해요.'],
   }[focus]
+
+  useEffect(() => {
+    const root = homeRef.current
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+      root.style.setProperty('--page-scroll', String(window.scrollY / max))
+      const lab = root.querySelector<HTMLElement>('.lab-hero')
+      if (lab) {
+        const rect = lab.getBoundingClientRect()
+        const progress = Math.max(0, Math.min(1, (window.innerHeight - rect.top) / (window.innerHeight + rect.height)))
+        root.style.setProperty('--lab-scroll', String(progress))
+      }
+    }
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update) }
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => entry.target.classList.toggle('is-visible', entry.isIntersecting))
+    }, { threshold: .16 })
+    root.querySelectorAll('[data-scroll-3d]').forEach(element => observer.observe(element))
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) cancelAnimationFrame(frame); observer.disconnect() }
+  }, [])
+
   return (
-    <>
-      <section className="welcome-intro"><div className="w"><div className="welcome-head"><span>WOOAEYOUNG INTRODUCTION</span><h1>잘 놀고, 잘 먹는 하루를<br/>영양 기록으로 이어가요.</h1></div><div className="welcome-scenes">
-        <article className="intro-slide intro-one"><div className="pet-scene dog-play"><span className="pet dog">🐕</span><span className="toy ball">●</span><span className="ground"/></div><span>PLAY TIME</span><b>신나게 뛰어논<br/>우리 강아지</b></article>
-        <article className="intro-slide intro-two"><div className="pet-scene cat-play"><span className="pet cat">🐈</span><span className="toy yarn">●</span><span className="yarn-line"/><span className="ground"/></div><span>CURIOUS CAT</span><b>호기심 많은<br/>우리 고양이</b></article>
-        <article className="intro-slide intro-three"><div className="pet-scene together"><span className="pet dog">🐕</span><span className="pet cat">🐈</span><span className="bowl-mini">♥</span><span className="ground"/></div><span>HEALTHY EVERY DAY</span><b>먹는 것까지<br/>함께 살펴봐요</b></article>
+    <main ref={homeRef} className="home-scroll3d">
+      <section className="welcome-intro" data-scroll-3d><div className="w"><div className="welcome-head"><span>WOOAEYOUNG INTRODUCTION</span><h1>잘 놀고, 잘 먹는 하루를<br/>영양 기록으로 이어가요.</h1></div><div className="welcome-scenes">
+        <article className="intro-slide intro-one" data-scroll-3d><div className="pet-scene dog-play"><span className="pet dog">🐕</span><span className="toy ball">●</span><span className="ground"/></div><span>PLAY TIME</span><b>신나게 뛰어논<br/>우리 강아지</b></article>
+        <article className="intro-slide intro-two" data-scroll-3d><div className="pet-scene cat-play"><span className="pet cat">🐈</span><span className="toy yarn">●</span><span className="yarn-line"/><span className="ground"/></div><span>CURIOUS CAT</span><b>호기심 많은<br/>우리 고양이</b></article>
+        <article className="intro-slide intro-three" data-scroll-3d><div className="pet-scene together"><span className="pet dog">🐕</span><span className="pet cat">🐈</span><span className="bowl-mini">♥</span><span className="ground"/></div><span>HEALTHY EVERY DAY</span><b>먹는 것까지<br/>함께 살펴봐요</b></article>
       </div></div></section>
-      <section className="lab-hero"><div className="w lab-grid"><div className="lab-copy"><span className="lab-kicker">INTERACTIVE NUTRITION LAB</span><h1>먹는 것을 올려두면,<br />영양 신호가 보여요.</h1><p>작업대의 오브젝트를 눌러 분석 과정을 살펴보세요.</p><div className="lab-info" aria-live="polite"><b>{info[0]}</b><span>{info[1]}</span></div><button className="btn lab-cta" onClick={() => go('analysis')}>영양 분석 시작하기</button></div>
+      <section className="lab-hero" data-scroll-3d><div className="w lab-grid"><div className="lab-copy"><span className="lab-kicker">INTERACTIVE NUTRITION LAB</span><h1>먹는 것을 올려두면,<br />영양 신호가 보여요.</h1><p>작업대의 오브젝트를 눌러 분석 과정을 살펴보세요.</p><div className="lab-info" aria-live="polite"><b>{info[0]}</b><span>{info[1]}</span></div><button className="btn lab-cta" onClick={() => go('analysis')}>영양 분석 시작하기</button></div>
         <div className="lab-scene" aria-label="3D 영양 분석 작업대"><div className="lab-wall"><span>WOOAEYOUNG LAB</span></div><div className="lab-table"/>
           <button className={`lab-object food ${focus === 'food' ? 'active' : ''}`} onClick={() => setFocus('food')} aria-label="오늘의 급여"><i/><i/><i/><span/></button>
           <button className={`lab-object laptop ${focus === 'data' ? 'active' : ''}`} onClick={() => setFocus('data')} aria-label="영양 신호"><img src="./laptop.svg" alt="영양 수치가 표시된 노트북"/></button>
@@ -24,7 +52,7 @@ export default function Home({ go }: { go: (p: Page) => void }) {
           <div className="lab-pet">🐕</div><div className="lab-shadow"/>
         </div></div></section>
 
-      <section className="sec"><div className="w">
+      <section className="sec" data-scroll-3d><div className="w">
         <h2>영양제 성분 분석</h2><p className="lead">개와 고양이 영양제의 핵심 성분을 항목별로 비교·확인하세요.</p>
         <div className="cards">
           <button className="card feature-link" onClick={() => go('analysis')}><div className="img" style={{ background: '#dfe2e3' }}><svg width="110" height="50" viewBox="0 0 110 50"><rect x="5" y="8" width="100" height="34" rx="17" fill="#4d8f4a" /><rect x="55" y="8" width="50" height="34" rx="17" fill="#8a7a3a" /></svg></div><h3>비타민 분석</h3><p>비타민 D와 비타민 E의 하루 섭취량을 확인하고 적용 가능한 영양 기준과 비교합니다.</p><span>분석 화면 열기 →</span></button>
@@ -34,7 +62,7 @@ export default function Home({ go }: { go: (p: Page) => void }) {
         <button className="btn" onClick={() => go('analysis')}>영양제 분석 시작하기</button>
       </div></section>
 
-      <section className="sec alt"><div className="w">
+      <section className="sec alt" data-scroll-3d><div className="w">
         <h2>이렇게 활용하세요</h2><p className="lead">우애영의 3단계 영양 관리 프로세스</p>
         <div className="steps">
           <div><b>01</b><h3>반려동물 프로필 등록</h3><p>이름, 나이, 품종, 체중 등 기본 정보를 입력하면 맞춤 분석이 시작됩니다.</p></div>
@@ -43,13 +71,13 @@ export default function Home({ go }: { go: (p: Page) => void }) {
         </div>
       </div></section>
 
-      <section className="sec"><div className="w trust">
+      <section className="sec" data-scroll-3d><div className="w trust">
         <div className="pic">👩‍💻🐶</div>
         <div><h2>전문적이고 신뢰할 수 있는 분석</h2>
           <p>우애영은 반려동물 영양학 데이터를 기반으로 영양제 성분을 정밀하게 분석합니다. 개와 고양이 각각의 권장 섭취량에 맞춰 비타민, 칼슘, 미네랄 등의 과부족을 한눈에 파악할 수 있습니다.</p>
           <p>여러 영양제를 동시에 급여할 때 성분이 중복되거나 부족한 부분을 자동으로 계산하여 총량을 확인할 수 있어, 보다 안전하고 효율적인 영양 관리가 가능합니다.</p>
           <button className="btn" onClick={() => go('records')}>반려동물 기록 시작</button></div>
       </div></section>
-    </>
+    </main>
   )
 }
