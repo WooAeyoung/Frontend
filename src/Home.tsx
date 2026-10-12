@@ -70,9 +70,9 @@ export default function Home({ go }: { go: (page: Page) => void }) {
 
       const gate = ScrollTrigger.create({ trigger: element, start: 'top top', end: '+=4200', onUpdate: (self: { progress: number; start: number; end: number; scroll: (value: number) => void }) => {
         element.dataset.step = self.progress < .35 ? '01' : self.progress < .68 ? '02' : '03'
-        const shouldGate = self.progress >= .43 && self.progress < .68 && !unlocked.current
+        const shouldGate = self.progress >= .52 && self.progress < .68 && !unlocked.current
         element.classList.toggle('story-gated', shouldGate)
-        if (shouldGate && self.progress > .445) self.scroll(self.start + (self.end - self.start) * .44)
+        if (shouldGate && self.progress > .535) self.scroll(self.start + (self.end - self.start) * .53)
       }})
       const stopForwardScroll = (event: WheelEvent) => {
         if (element.classList.contains('story-gated') && event.deltaY > 0) event.preventDefault()
