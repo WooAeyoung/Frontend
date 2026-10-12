@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import './story.css'
 
 declare global {
@@ -10,6 +10,33 @@ const days = [['월','14',true],['화','15',true],['수','16',true],['목','17',
 
 export default function Home({ go }: { go: (page: Page) => void }) {
   const root = useRef<HTMLElement>(null)
+  const unlocked = useRef(false)
+  const [name, setName] = useState('')
+  const [age, setAge] = useState('')
+  const [symptoms, setSymptoms] = useState<string[]>([])
+  const [analyzing, setAnalyzing] = useState(false)
+  const formValid = name.trim().length > 0 && Number(age) > 0 && symptoms.length > 0
+
+  const toggleSymptom = (value: string) => setSymptoms(current => current.includes(value) ? current.filter(item => item !== value) : [...current, value])
+
+  const startAnalysis = () => {
+    if (!formValid || analyzing || !root.current) return
+    setAnalyzing(true)
+    const gsap = window.gsap
+    if (!gsap) { unlocked.current = true; return }
+    const particles = root.current.querySelectorAll('.data-particle')
+    gsap.timeline({ onComplete: () => { unlocked.current = true; root.current?.classList.add('story-unlocked'); setAnalyzing(false) } })
+      .to('.form-fields', { opacity: 0, scale: .94, duration: .35, ease: 'power2.in' })
+      .to(particles, { opacity: 1, x: () => gsap.utils.random(-260, 260), y: () => gsap.utils.random(-210, 210), scale: () => gsap.utils.random(.7, 1.5), stagger: .035, duration: .75, ease: 'power3.out' }, .1)
+      .to(particles, { opacity: 0, scale: 0, duration: .35 }, .62)
+      .to('.input-panel', { opacity: 0, y: -35, pointerEvents: 'none', duration: .4 }, .55)
+      .to('.chapter-two', { opacity: 0, y: -35, duration: .35 }, .6)
+      .to('.analysis-screen', { opacity: 1, duration: .5 }, .72)
+      .fromTo('.chart-bar', { scaleY: 0 }, { scaleY: 1, stagger: .09, duration: .65, ease: 'back.out(1.7)' }, .78)
+      .fromTo('.score-ring', { '--score': 0 }, { '--score': 84, duration: .9, ease: 'power2.out' }, .76)
+      .fromTo('.metric-row i', { scaleX: 0 }, { scaleX: 1, stagger: .08, duration: .55 }, .85)
+      .to('.result-toast', { opacity: 1, y: 0, duration: .45 }, 1.08)
+  }
 
   useLayoutEffect(() => {
     const element = root.current
@@ -32,10 +59,7 @@ export default function Home({ go }: { go: (page: Page) => void }) {
         .to('.stage-word', { opacity: .055, xPercent: -8, duration: 1.3 }, .5)
         .to('.chapter-one', { opacity: 0, y: -38, duration: .55 }, 1.25)
         .to('.chapter-two', { opacity: 1, y: 0, duration: .65 }, 1.55)
-        .to('.analysis-screen', { opacity: 1, duration: .55 }, 1.55)
-        .fromTo('.chart-bar', { scaleY: 0 }, { scaleY: 1, stagger: .12, duration: .8 }, 1.7)
-        .fromTo('.score-ring', { '--score': 0 }, { '--score': 84, duration: 1 }, 1.65)
-        .fromTo('.metric-row i', { scaleX: 0 }, { scaleX: 1, stagger: .1, duration: .7 }, 1.72)
+        .to('.input-panel', { opacity: 1, y: 0, pointerEvents: 'auto', duration: .65 }, 1.6)
         .to('.chapter-two', { opacity: 0, y: -34, duration: .45 }, 2.65)
         .to('.device-shell', { x: '-32vw', rotateY: 6, scale: .86, duration: 1.1 }, 2.55)
         .to('.chapter-three', { opacity: 1, y: 0, duration: .7 }, 2.8)
@@ -44,9 +68,21 @@ export default function Home({ go }: { go: (page: Page) => void }) {
         .fromTo('.trend-line', { strokeDashoffset: 420 }, { strokeDashoffset: 0, duration: 1.1 }, 3.05)
         .to('.story-progress i', { scaleX: 1, duration: 3.65 }, 0)
 
-      ScrollTrigger.create({ trigger: element, start: 'top top', end: '+=4200', onUpdate: (self: { progress: number }) => {
+      const gate = ScrollTrigger.create({ trigger: element, start: 'top top', end: '+=4200', onUpdate: (self: { progress: number; start: number; end: number; scroll: (value: number) => void }) => {
         element.dataset.step = self.progress < .35 ? '01' : self.progress < .68 ? '02' : '03'
+        const shouldGate = self.progress >= .43 && self.progress < .68 && !unlocked.current
+        element.classList.toggle('story-gated', shouldGate)
+        if (shouldGate && self.progress > .445) self.scroll(self.start + (self.end - self.start) * .44)
       }})
+      const stopForwardScroll = (event: WheelEvent) => {
+        if (element.classList.contains('story-gated') && event.deltaY > 0) event.preventDefault()
+      }
+      const stopKeys = (event: KeyboardEvent) => {
+        if (element.classList.contains('story-gated') && ['PageDown', 'End', ' ', 'ArrowDown'].includes(event.key)) event.preventDefault()
+      }
+      window.addEventListener('wheel', stopForwardScroll, { passive: false })
+      window.addEventListener('keydown', stopKeys)
+      return () => { gate.kill(); window.removeEventListener('wheel', stopForwardScroll); window.removeEventListener('keydown', stopKeys) }
     }, element)
     return () => context.revert()
   }, [])
@@ -61,9 +97,12 @@ export default function Home({ go }: { go: (page: Page) => void }) {
 
       <div className="pet-visual" role="img" aria-label="햇살 아래 앉아 있는 반려견과 반려묘"><div className="sun-disc"/><div className="pet-art"><span className="dog">🐕</span><span className="cat">🐈</span></div><small>MOONGI &amp; HARU · 2026</small></div>
 
-      <div className="device-shell" aria-label="우애영 모바일 앱 미리보기"><div className="device-speaker"/><div className="device-screen"><div className="device-top"><b>우애영</b><span>•••</span></div><div className="device-pet"><span>🐕</span><div><small>오늘도 건강하게</small><b>몽이의 영양 리포트</b></div></div><div className="analysis-screen"><div className="analysis-head"><div><small>DAILY BALANCE</small><b>오늘의 영양 균형</b></div><div className="score-ring"><strong>84</strong><small>GOOD</small></div></div><div className="chart-card">{[1,2,3,4,5,6].map(n=><span className="chart-bar" key={n}/>)}</div><div className="metrics">{[['오메가 3','92%'],['칼슘','76%'],['비타민 D','68%']].map(([name,value])=><div className="metric-row" key={name}><span>{name}</span><b>{value}</b><em><i style={{width:value}}/></em></div>)}</div><div className="device-note"><span>✓</span><p><b>균형이 좋아요</b><small>칼슘 섭취량을 조금만 보충해 주세요.</small></p></div></div></div></div>
+      <div className="device-shell" aria-label="우애영 모바일 앱 미리보기"><div className="device-speaker"/><div className="device-screen"><div className="device-top"><b>우애영</b><span>•••</span></div><div className="device-pet"><span>🐕</span><div><small>오늘도 건강하게</small><b>{name || '우리 아이'}의 영양 리포트</b></div></div><div className="analysis-screen"><div className="analysis-head"><div><small>DAILY BALANCE</small><b>오늘의 영양 균형</b></div><div className="score-ring"><strong>84</strong><small>GOOD</small></div></div><div className="chart-card">{[1,2,3,4,5,6].map(n=><span className="chart-bar" key={n}/>)}</div><div className="metrics">{[['오메가 3','92%'],['칼슘','76%'],['비타민 D','68%']].map(([label,value])=><div className="metric-row" key={label}><span>{label}</span><b>{value}</b><em><i style={{width:value}}/></em></div>)}</div><div className="device-note"><span>✓</span><p><b>{name || '우리 아이'}에게 좋은 균형이에요</b><small>{symptoms[0] || '건강'} 케어 성분을 꾸준히 기록해 주세요.</small></p></div></div></div></div>
 
-      <div className="chapter-copy chapter-two"><p className="story-kicker">02 · NUTRITION INSIGHT</p><h2>복잡한 성분표를<br/><em>한눈에 이해하도록.</em></h2><p>사료와 영양제의 모든 성분을 함께 계산해<br/>부족과 과잉을 알기 쉽게 보여드려요.</p><button onClick={() => go('analysis')}>내 영양 균형 분석하기 <span>↗</span></button></div>
+      <div className="chapter-copy chapter-two"><p className="story-kicker">02 · NUTRITION INSIGHT</p><h2>우리 아이를<br/><em>먼저 알려주세요.</em></h2><p>입력을 마칠 때까지 이 화면은 고정됩니다.<br/>완료 후 맞춤 분석 결과가 이어집니다.</p></div>
+
+      <form className="input-panel" onSubmit={event => { event.preventDefault(); startAnalysis() }}><div className="form-fields"><div className="form-heading"><small>PERSONAL PROFILE</small><h3>맞춤 분석 정보</h3><span>필수 항목</span></div><label>반려동물 이름<input value={name} onChange={event => setName(event.target.value)} placeholder="예: 몽이" autoComplete="off"/></label><label>나이<input value={age} onChange={event => setAge(event.target.value.replace(/[^0-9]/g,''))} inputMode="numeric" placeholder="예: 4"/><i>살</i></label><fieldset><legend>걱정되는 증상 <small>하나 이상 선택</small></legend><div className="symptom-grid">{[['관절','🦴'],['피부·모질','✨'],['장 건강','◌'],['눈 건강','◉']].map(([label,icon])=><button type="button" key={label} className={symptoms.includes(label)?'selected':''} aria-pressed={symptoms.includes(label)} onClick={() => toggleSymptom(label)}><span>{icon}</span>{label}<i>✓</i></button>)}</div></fieldset><button className="analyze-button" disabled={!formValid || analyzing}>{analyzing?<><span className="loader"/>데이터를 분석하고 있어요</>:<>맞춤 분석 시작하기 <span>→</span></>}</button><p className="form-help">입력 정보는 맞춤 결과를 보여주는 데에만 사용됩니다.</p></div>{['NAME','AGE','CARE','DATA','BALANCE','HEALTH','84%','GOOD'].map(item=><span className="data-particle" key={item}>{item}</span>)}</form>
+      <div className="result-toast" aria-live="polite"><span>✓</span><p><b>분석이 완료됐어요</b><small>이제 스크롤해 건강 기록으로 이어가세요.</small></p></div>
 
       <div className="chapter-copy chapter-three"><p className="story-kicker">03 · DAILY RECORD</p><h2>작은 기록이 만드는<br/><em>분명한 건강 변화.</em></h2><p>섭취 여부와 컨디션을 매일 체크하고,<br/>우리 아이에게 맞는 루틴을 발견하세요.</p><button onClick={() => go('records')}>건강 기록 시작하기 <span>↗</span></button></div>
 
