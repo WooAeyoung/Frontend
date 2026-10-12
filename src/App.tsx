@@ -34,8 +34,9 @@ export function App(){
 
   return <div className="app">
     <header><a className="brand" href="#"><span><PawPrint size={21}/></span>우애영</a><div className="header-note">사료와 영양제를 함께 계산해요</div></header>
-    <main>
+    <main className={`journey-step-${step}`}>
       <div className="steps" aria-label="진행 단계">{['반려동물','급여 제품','분석 결과'].map((name,i)=><div key={name} className={`step ${step===i+1?'active':''} ${step>i+1?'done':''}`}><span>{step>i+1?<Check size={14}/>:i+1}</span>{name}</div>)}</div>
+      <JourneyBridge step={step}/>
       {error&&<div className="alert error" role="alert"><TriangleAlert size={18}/>{error}<button onClick={()=>setError('')}>닫기</button></div>}
       {step===1&&<ProfileStep profile={profile} update={updateProfile} valid={!!profileValid} next={saveProfile}/>}
       {step===2&&<ProductsStep query={query} setQuery={setQuery} products={visibleProducts} loading={productsLoading} retry={()=>setReloadProducts(x=>x+1)} items={items} add={addProduct} updateItems={setItems} back={()=>setStep(1)} run={run} busy={busy}/>}
@@ -43,6 +44,11 @@ export function App(){
     </main>
     <footer>시판 제품 정보: Open Pet Food Facts(ODbL) · 사용자 기여 데이터로 정확성·완전성이 보장되지 않습니다. 영양 정보는 수의학적 진단이나 처방을 대신하지 않습니다.</footer>
   </div>
+}
+
+function JourneyBridge({step}:{step:number}){
+  const journey=[['01','우리 아이','먼저 반려동물 정보를 알려주세요.','🐶'],['02','오늘의 급여','먹인 제품을 담고 영양을 계산해요.','🥣'],['03','영양 기록','결과를 확인하고 다음 기록으로 이어가요.','📈']]
+  return <div className="journey-bridge" aria-label="서비스 흐름"><div className="journey-orbit" aria-hidden="true"><span>{journey[step-1][3]}</span></div><div className="journey-copy"><small>{journey[step-1][0]} / 03</small><b>{journey[step-1][1]}</b><span>{journey[step-1][2]}</span></div><div className="journey-dots">{journey.map((item,index)=><i key={item[0]} className={index+1===step?'active':''}/>)}</div></div>
 }
 
 function ProfileStep({profile,update,valid,next}:{profile:Profile;update:<K extends keyof Profile>(key:K,value:Profile[K])=>void;valid:boolean;next:()=>void}){
