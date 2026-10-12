@@ -92,7 +92,7 @@ export default function Home({ go }: { go: (p: Page) => void }) {
           <button className={`lab-object food ${focus === 'food' ? 'active' : ''}`} onClick={() => setStoryFocus(0)} aria-label="급여 담기"><i/><i/><i/><span/></button>
           <button className={`lab-object laptop ${focus === 'data' ? 'active' : ''}`} onClick={() => setStoryFocus(1)} aria-label="영양 확인"><img src="./laptop.svg" alt="영양 수치가 표시된 노트북"/></button>
           <button className={`lab-object jar ${focus === 'safe' ? 'active' : ''}`} onClick={() => setStoryFocus(2)} aria-label="조합 점검"><b>+</b></button>
-          <div className="lab-pet">🐕</div><div className="lab-shadow"/>
+          <div className="lab-pet dog-pet" aria-hidden="true">🐕</div><div className="lab-pet cat-pet" aria-hidden="true">🐈</div><div className="lab-shadow"/>
         </div></div></section>
 
       <section className="sec" data-scroll-3d><div className="w">
