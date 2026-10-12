@@ -4,7 +4,9 @@ export type Page = 'home' | 'analysis' | 'records'
 
 export default function Home({ go }: { go: (p: Page) => void }) {
   const homeRef = useRef<HTMLElement>(null)
+  const storyStepRef = useRef(0)
   const [focus, setFocus] = useState<'food' | 'data' | 'safe'>('food')
+  const [storyStep, setStoryStep] = useState(0)
   const info = {
     food: ['오늘의 급여', '실제 시판 사료와 영양제를 하루 급여량으로 모아요.'],
     data: ['영양 신호', '칼슘·인·비타민의 부족과 과다를 한눈에 비교해요.'],
@@ -24,6 +26,12 @@ export default function Home({ go }: { go: (p: Page) => void }) {
         const rect = lab.getBoundingClientRect()
         const progress = Math.max(0, Math.min(1, (window.innerHeight - rect.top) / (window.innerHeight + rect.height)))
         root.style.setProperty('--lab-scroll', String(progress))
+        const nextStep = progress < .4 ? 0 : progress < .68 ? 1 : 2
+        if (storyStepRef.current !== nextStep) {
+          storyStepRef.current = nextStep
+          setStoryStep(nextStep)
+          setFocus((['food', 'data', 'safe'] as const)[nextStep])
+        }
       }
     }
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(update) }
@@ -44,7 +52,9 @@ export default function Home({ go }: { go: (p: Page) => void }) {
         <article className="intro-slide intro-two" data-scroll-3d><div className="pet-scene cat-play"><span className="pet cat">🐈</span><span className="toy yarn">●</span><span className="yarn-line"/><span className="ground"/></div><span>CURIOUS CAT</span><b>호기심 많은<br/>우리 고양이</b></article>
         <article className="intro-slide intro-three" data-scroll-3d><div className="pet-scene together"><span className="pet dog">🐕</span><span className="pet cat">🐈</span><span className="bowl-mini">♥</span><span className="ground"/></div><span>HEALTHY EVERY DAY</span><b>먹는 것까지<br/>함께 살펴봐요</b></article>
       </div></div></section>
-      <section className="lab-hero" data-scroll-3d><div className="w lab-grid"><div className="lab-copy"><span className="lab-kicker">INTERACTIVE NUTRITION LAB</span><h1>먹는 것을 올려두면,<br />영양 신호가 보여요.</h1><p>작업대의 오브젝트를 눌러 분석 과정을 살펴보세요.</p><div className="lab-info" aria-live="polite"><b>{info[0]}</b><span>{info[1]}</span></div><button className="btn lab-cta" onClick={() => go('analysis')}>영양 분석 시작하기</button></div>
+      <section className={`lab-hero story-step-${storyStep}`} data-scroll-3d><div className="w lab-grid"><div className="lab-copy"><span className="lab-kicker">SCROLL NUTRITION STORY</span><h1>먹는 것을 올려두면,<br />영양 신호가 보여요.</h1><p>아래로 스크롤하며 분석 과정을 순서대로 살펴보세요.</p><div className="lab-story" aria-label="영양 분석 과정">
+          {([['오늘의 급여', '하루 동안 먹는 제품과 양을 모아요.'], ['영양 신호', '성분별 총량과 기준을 비교해요.'], ['조합 확인', '중복·부족·과다 가능성을 다시 확인해요.']] as const).map((item, index) => <button key={item[0]} className={storyStep === index ? 'active' : ''} onClick={() => { storyStepRef.current = index; setStoryStep(index); setFocus((['food', 'data', 'safe'] as const)[index]) }}><i>{String(index + 1).padStart(2, '0')}</i><span><b>{item[0]}</b><small>{item[1]}</small></span></button>)}
+        </div><div className="lab-info" aria-live="polite"><b>{info[0]}</b><span>{info[1]}</span></div><button className="btn lab-cta" onClick={() => go('analysis')}>영양 분석 시작하기</button></div>
         <div className="lab-scene" aria-label="3D 영양 분석 작업대"><div className="lab-wall"><span>WOOAEYOUNG LAB</span></div><div className="lab-table"/>
           <button className={`lab-object food ${focus === 'food' ? 'active' : ''}`} onClick={() => setFocus('food')} aria-label="오늘의 급여"><i/><i/><i/><span/></button>
           <button className={`lab-object laptop ${focus === 'data' ? 'active' : ''}`} onClick={() => setFocus('data')} aria-label="영양 신호"><img src="./laptop.svg" alt="영양 수치가 표시된 노트북"/></button>
