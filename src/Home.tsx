@@ -5,8 +5,10 @@ export type Page = 'home' | 'analysis' | 'records'
 export default function Home({ go }: { go: (p: Page) => void }) {
   const homeRef = useRef<HTMLElement>(null)
   const storyStepRef = useRef(0)
+  const flowStepRef = useRef(0)
   const [focus, setFocus] = useState<'food' | 'data' | 'safe'>('food')
   const [storyStep, setStoryStep] = useState(0)
+  const [flowStep, setFlowStep] = useState(0)
   const info = {
     food: ['오늘의 급여', '오늘 먹은 제품과 양을 담았어요.'],
     data: ['영양 신호', '성분별 섭취량을 기준과 비교했어요.'],
@@ -25,7 +27,13 @@ export default function Home({ go }: { go: (p: Page) => void }) {
     const update = () => {
       frame = 0
       const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
-      root.style.setProperty('--page-scroll', String(window.scrollY / max))
+      const pageProgress = window.scrollY / max
+      root.style.setProperty('--page-scroll', String(pageProgress))
+      const nextFlowStep = Math.min(3, Math.floor(pageProgress * 4.2))
+      if (flowStepRef.current !== nextFlowStep) {
+        flowStepRef.current = nextFlowStep
+        setFlowStep(nextFlowStep)
+      }
       const lab = root.querySelector<HTMLElement>('.lab-hero')
       if (lab) {
         const rect = lab.getBoundingClientRect()
@@ -66,7 +74,7 @@ export default function Home({ go }: { go: (p: Page) => void }) {
 
   return (
     <main ref={homeRef} className="home-scroll3d">
-      <nav className="home-flow" aria-label="영양 관리 흐름"><span className="active">01 소개</span><i/><span>02 급여 담기</span><i/><span>03 영양 확인</span><i/><span>04 기록하기</span></nav>
+      <nav className="home-flow" aria-label="영양 관리 흐름"><span className={flowStep === 0 ? 'active' : ''}>01 소개</span><i/><span className={flowStep === 1 ? 'active' : ''}>02 급여 담기</span><i/><span className={flowStep === 2 ? 'active' : ''}>03 영양 확인</span><i/><span className={flowStep === 3 ? 'active' : ''}>04 기록하기</span></nav>
       <section className="welcome-intro" data-scroll-3d><div className="w"><div className="welcome-head"><span>01 · START WITH YOUR DAY</span><h1>우리 아이의 하루를<br/>먹는 것부터 기록해요.</h1></div><div className="welcome-scenes">
         <article className="intro-slide intro-one" data-scroll-3d><div className="pet-scene dog-play"><span className="pet dog">🐕</span><span className="toy ball">●</span><span className="ground"/></div><span>PLAY TIME</span><b>신나게 뛰어논<br/>우리 강아지</b></article>
         <article className="intro-slide intro-two" data-scroll-3d><div className="pet-scene cat-play"><span className="pet cat">🐈</span><span className="toy yarn">●</span><span className="yarn-line"/><span className="ground"/></div><span>CURIOUS CAT</span><b>호기심 많은<br/>우리 고양이</b></article>
