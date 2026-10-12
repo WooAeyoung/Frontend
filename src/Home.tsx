@@ -17,6 +17,11 @@ export default function Home({ go }: { go: (p: Page) => void }) {
     const root = homeRef.current
     if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     let frame = 0
+    let pointerFrame = 0
+    let pointerX = 0
+    let pointerY = 0
+    let smoothX = 0
+    let smoothY = 0
     const update = () => {
       frame = 0
       const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
@@ -35,6 +40,19 @@ export default function Home({ go }: { go: (p: Page) => void }) {
       }
     }
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(update) }
+    const easePointer = () => {
+      smoothX += (pointerX - smoothX) * .08
+      smoothY += (pointerY - smoothY) * .08
+      root.style.setProperty('--cursor-x', smoothX.toFixed(4))
+      root.style.setProperty('--cursor-y', smoothY.toFixed(4))
+      if (Math.abs(pointerX - smoothX) > .001 || Math.abs(pointerY - smoothY) > .001) pointerFrame = requestAnimationFrame(easePointer)
+      else pointerFrame = 0
+    }
+    const onPointerMove = (event: PointerEvent) => {
+      pointerX = event.clientX / Math.max(1, window.innerWidth) - .5
+      pointerY = event.clientY / Math.max(1, window.innerHeight) - .5
+      if (!pointerFrame) pointerFrame = requestAnimationFrame(easePointer)
+    }
     const observer = new IntersectionObserver(entries => {
       entries.forEach(entry => entry.target.classList.toggle('is-visible', entry.isIntersecting))
     }, { threshold: .16 })
@@ -42,7 +60,8 @@ export default function Home({ go }: { go: (p: Page) => void }) {
     update()
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll)
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) cancelAnimationFrame(frame); observer.disconnect() }
+    window.addEventListener('pointermove', onPointerMove, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); window.removeEventListener('pointermove', onPointerMove); if (frame) cancelAnimationFrame(frame); if (pointerFrame) cancelAnimationFrame(pointerFrame); observer.disconnect() }
   }, [])
 
   return (
