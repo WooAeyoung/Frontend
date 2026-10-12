@@ -11,7 +11,12 @@ export default function SiteApp() {
   const [page, setPage] = useState<Page>('home')
   const [tick, setTick] = useState(0)
   const [profileToLoad, setProfileToLoad] = useState<string>()
-  const go = (p: Page) => { setPage(p); window.scrollTo({ top: 0 }) }
+
+  const go = (p: Page) => {
+    setPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <>
       <header className="site-h"><div className="w">
