@@ -72,21 +72,12 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
         .fromTo('.trend-line', { strokeDashoffset: 420 }, { strokeDashoffset: 0, duration: 1.1 }, 3.05)
         .to('.story-progress i', { scaleX: 1, duration: 3.65 }, 0)
 
-      const gate = ScrollTrigger.create({ trigger: element, start: 'top top', end: '+=4200', onUpdate: (self: { progress: number; start: number; end: number; scroll: (value: number) => void }) => {
+      const gate = ScrollTrigger.create({ trigger: element, start: 'top top', end: '+=4200', onUpdate: (self: { progress: number }) => {
         element.dataset.step = self.progress < .35 ? '01' : self.progress < .68 ? '02' : '03'
         const shouldGate = self.progress >= .52 && self.progress < .68 && !unlocked.current
         element.classList.toggle('story-gated', shouldGate)
-        if (shouldGate && self.progress > .535) self.scroll(self.start + (self.end - self.start) * .53)
       }})
-      const stopForwardScroll = (event: WheelEvent) => {
-        if (element.classList.contains('story-gated') && event.deltaY > 0) event.preventDefault()
-      }
-      const stopKeys = (event: KeyboardEvent) => {
-        if (element.classList.contains('story-gated') && ['PageDown', 'End', ' ', 'ArrowDown'].includes(event.key)) event.preventDefault()
-      }
-      window.addEventListener('wheel', stopForwardScroll, { passive: false })
-      window.addEventListener('keydown', stopKeys)
-      return () => { gate.kill(); window.removeEventListener('wheel', stopForwardScroll); window.removeEventListener('keydown', stopKeys) }
+      return () => { gate.kill() }
     }, element)
     return () => context.revert()
   }, [])
