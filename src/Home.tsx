@@ -39,18 +39,21 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
       beginAnalysis({ name: name.trim(), species, weightKg: Number(weight), ageYears: Number(age), symptoms })
     }
     if (!gsap) { finish(); return }
-    const particles = root.current.querySelectorAll('.data-particle')
+    // 홈 안의 요소만 선택한다. 전역 셀렉터('.input-panel' 등)를 쓰면 마운트된 분석 화면의 STEP 1·2 패널까지 opacity:0이 된다.
+    const scope = root.current
+    const q = (selector: string) => scope.querySelectorAll(selector)
+    const particles = q('.data-particle')
     gsap.timeline({ onComplete: finish })
-      .to('.form-fields', { opacity: 0, scale: .94, duration: .35, ease: 'power2.in' })
+      .to(q('.form-fields'), { opacity: 0, scale: .94, duration: .35, ease: 'power2.in' })
       .to(particles, { opacity: 1, x: () => gsap.utils.random(-260, 260), y: () => gsap.utils.random(-210, 210), scale: () => gsap.utils.random(.7, 1.5), stagger: .035, duration: .75, ease: 'power3.out' }, .1)
       .to(particles, { opacity: 0, scale: 0, duration: .35 }, .62)
-      .to('.input-panel', { opacity: 0, y: -35, pointerEvents: 'none', duration: .4 }, .55)
-      .to('.chapter-two', { opacity: 0, y: -35, duration: .35 }, .6)
-      .to('.analysis-screen', { opacity: 1, duration: .5 }, .72)
-      .fromTo('.chart-bar', { scaleY: 0 }, { scaleY: 1, stagger: .09, duration: .65, ease: 'back.out(1.7)' }, .78)
-      .fromTo('.score-ring', { '--score': 0 }, { '--score': 84, duration: .9, ease: 'power2.out' }, .76)
-      .fromTo('.metric-row i', { scaleX: 0 }, { scaleX: 1, stagger: .08, duration: .55 }, .85)
-      .to('.result-toast', { opacity: 1, y: 0, duration: .45 }, 1.08)
+      .to(q('.input-panel'), { opacity: 0, y: -35, pointerEvents: 'none', duration: .4 }, .55)
+      .to(q('.chapter-two'), { opacity: 0, y: -35, duration: .35 }, .6)
+      .to(q('.analysis-screen'), { opacity: 1, duration: .5 }, .72)
+      .fromTo(q('.chart-bar'), { scaleY: 0 }, { scaleY: 1, stagger: .09, duration: .65, ease: 'back.out(1.7)' }, .78)
+      .fromTo(q('.score-ring'), { '--score': 0 }, { '--score': 84, duration: .9, ease: 'power2.out' }, .76)
+      .fromTo(q('.metric-row i'), { scaleX: 0 }, { scaleX: 1, stagger: .08, duration: .55 }, .85)
+      .to(q('.result-toast'), { opacity: 1, y: 0, duration: .45 }, 1.08)
   }
 
   useLayoutEffect(() => {
@@ -80,7 +83,9 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
         .to('.chapter-two', { opacity: 1, y: 0, duration: .65 }, 1.55)
         .to('.input-panel', { opacity: 1, y: 0, pointerEvents: 'auto', duration: .65 }, 1.6)
         .to('.chapter-two', { opacity: 0, y: -34, duration: .45 }, 2.65)
+        .to('.input-panel', { opacity: 0, y: -34, pointerEvents: 'none', duration: .45 }, 2.65)
         .to('.device-shell', { x: '-32vw', rotateY: 6, scale: .86, duration: 1.1 }, 2.55)
+        .to('.device-shell', { opacity: 0, duration: .7 }, 2.85)
         .to('.chapter-three', { opacity: 1, y: 0, duration: .7 }, 2.8)
         .fromTo('.calendar-dashboard', { opacity: 0, x: '60vw' }, { opacity: 1, x: 0, duration: 1.2 }, 2.55)
         .fromTo('.day-card', { opacity: 0, y: 32 }, { opacity: 1, y: 0, stagger: .08, duration: .55 }, 2.9)

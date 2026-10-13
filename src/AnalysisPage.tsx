@@ -1,8 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { analyze, getProducts, recommend } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation } from './api'
-import { loadProfiles, saveProfile, saveRecord } from './Records'
+import Records, { loadProfiles, saveProfile, saveRecord } from './Records'
 import type { AnalysisDraft } from './Home'
+
+const STEPS: [string, string][] = [['step-1', '반려동물 정보'], ['step-2', '사료·영양제 선택'], ['step-3', '직접 입력'], ['step-4', '분석 결과'], ['step-5', '기록']]
+
+function StepNav() {
+  const [active, setActive] = useState('step-1')
+  useEffect(() => {
+    const io = new IntersectionObserver(entries => {
+      const hit = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+      if (hit) setActive(hit.target.id)
+    }, { rootMargin: '-120px 0px -55% 0px' })
+    STEPS.forEach(([id]) => { const el = document.getElementById(id); if (el) io.observe(el) })
+    return () => io.disconnect()
+  }, [])
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  return <nav className="step-nav" aria-label="분석 진행 순서"><div>{STEPS.map(([id, label], i) => <button key={id} type="button" className={active === id ? 'on' : ''} aria-current={active === id ? 'step' : undefined} onClick={() => go(id)}><b>{i + 1}</b><span>{label}</span></button>)}</div></nav>
+}
 
 const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', ADEQUATE_NO_UPPER_LIMIT: '적정 · 상한 없음', NO_STANDARD: '기준 없음', CAUTION: '주의', EXCESS: '과다' }
 const RATIO: Record<string, string> = { LOW: '낮음', HIGH: '높음', ADEQUATE: '적정', UNAVAILABLE: '계산 불가' }
@@ -33,7 +49,7 @@ function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) 
   </div>
 }
 
-export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }: { onSaved: () => void; initialProfileId?: string; initialDraft?: AnalysisDraft }) {
+export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, loadSeq = 0, active = true }: { onSaved: () => void; initialProfileId?: string; initialDraft?: AnalysisDraft; loadSeq?: number; active?: boolean }) {
   const [name, setName] = useState('')
   const [species, setSpecies] = useState<'DOG' | 'CAT'>('DOG')
   const [weight, setWeight] = useState('')
@@ -54,6 +70,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
   const [saved, setSaved] = useState(false)
   const [profiles, setProfiles] = useState(loadProfiles)
   const [profileId, setProfileId] = useState('')
+  const [recTick, setRecTick] = useState(0)
   const [profileSaved, setProfileSaved] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
 
@@ -95,7 +112,9 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
 
   function loadProfile(id: string) {
     setProfileId(id)
-    const selected = profiles.find(item => item.id === id)
+    const fresh = loadProfiles()
+    setProfiles(fresh)
+    const selected = fresh.find(item => item.id === id)
     if (!selected) return
     setName(selected.name); setSpecies(selected.species); setWeight(String(selected.weightKg))
     setAgeValue(String(selected.age.value)); setAgeUnit(selected.age.unit)
@@ -109,9 +128,10 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
     const next = profileId ? profiles.map(item => item.id === savedProfile.id ? savedProfile : item) : [savedProfile, ...profiles]
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
   }
+  useEffect(() => { if (active) setProfiles(loadProfiles()) }, [active])
   useEffect(() => {
     if (initialProfileId) loadProfile(initialProfileId)
-  }, [initialProfileId])
+  }, [initialProfileId, loadSeq])
   useEffect(() => {
     if (!initialDraft || initialProfileId) return
     setName(initialDraft.name)
@@ -165,7 +185,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
   function save() {
     if (!analysis) return
     saveRecord({ id: analysis.traceId, profileId: profileId || undefined, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary })
-    setSaved(true); onSaved()
+    setSaved(true); setRecTick(t => t + 1); onSaved()
   }
 
   return (
@@ -174,15 +194,14 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
         <span className="analysis-kicker">DAILY NUTRITION CHECK</span>
         <h1>사료 · 영양제 분석</h1>
         <p>반려동물 정보와 먹는 제품을 입력하면 하루 영양 섭취량을 한눈에 비교해 드려요.</p>
-        <div className="analysis-flow" aria-label="분석 진행 순서">
-          <span><b>1</b> 반려동물 정보</span><i/><span><b>2</b> 급여 제품</span><i/><span><b>3</b> 직접 입력</span><i/><span><b>4</b> 분석 결과</span>
-        </div>
         {initialDraft?.symptoms.length ? <div className="concern-handoff"><b>선택한 관심 건강</b><span>{initialDraft.symptoms.join(' · ')}</span><small>아래에서 체중과 급여 제품을 추가하면 맞춤 분석을 시작할 수 있어요.</small></div> : null}
       </section>
 
+      <StepNav />
+
       <div className="analysis-grid">
 
-      <div className="panel input-panel profile-panel"><div className="panel-title"><span>STEP 1</span><div><h3>반려동물 정보</h3><p>한 번 저장하면 다음 분석에서 다시 사용할 수 있어요.</p></div></div>
+      <div id="step-1" className="panel input-panel profile-panel"><div className="panel-title"><span>STEP 1</span><div><h3>반려동물 정보</h3><p>한 번 저장하면 다음 분석에서 다시 사용할 수 있어요.</p></div></div>
         <div className="profile-actions"><label className="f">저장된 프로필 불러오기<select className="in" value={profileId} onChange={e => loadProfile(e.target.value)}><option value="">새 프로필 작성</option>{profiles.map(item => <option key={item.id} value={item.id}>{item.name} · {item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg</option>)}</select></label>{profileReady ? <button className="btn ghost reveal-action" onClick={saveCurrentProfile}>{profileSaved ? '프로필 저장됨' : profileId ? '프로필 수정 저장' : '프로필 저장'}</button> : <span className="action-hint">필수 칸을 입력하면 저장 버튼이 나타나요.</span>}</div>
         <div className="grid2">
           <label className="f">이름<input className="in" value={name} onChange={e => setName(e.target.value)} placeholder="예: 보리" /></label>
@@ -195,7 +214,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
         <label className="chk"><input type="checkbox" checked={completeFeed} onChange={e => setCompleteFeed(e.target.checked)} />주식으로 완전사료를 먹고 있어요</label>
       </div>
 
-      <div className="panel input-panel products-panel"><div className="panel-title"><span>STEP 2</span><div><h3>사료 · 영양제 입력</h3><p>현재 먹고 있는 제품과 하루 급여량을 알려주세요.</p></div></div>
+      <div id="step-2" className="panel input-panel products-panel"><div className="panel-title"><span>STEP 2</span><div><h3>사료 · 영양제 입력</h3><p>현재 먹고 있는 제품과 하루 급여량을 알려주세요.</p></div></div>
         <div className="product-choice-head"><div><b>등록 제품에서 선택</b><small>아래 제품을 선택하거나, 검색되지 않는 제품은 직접 입력할 수 있어요. 두 방식은 함께 사용 가능합니다.</small></div><span>선택 {items.length} · 직접 입력 {manualItems.length}</span></div>
         <input className="in" style={{ width: '100%' }} placeholder="제품 검색" value={query} onChange={e => setQuery(e.target.value)} />
         <ul className="plist">
@@ -217,7 +236,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
           </ul></>}
       </div></div>
 
-      <div className="panel manual-panel"><div className="panel-title compact"><span>STEP 3</span><div><h3>검색되지 않는 제품 직접 입력</h3><p>제품 라벨의 1회 제공량과 영양성분을 입력해 함께 계산할 수 있어요.</p></div></div>
+      <div id="step-3" className="panel manual-panel"><div className="panel-title compact"><span>STEP 3</span><div><h3>검색되지 않는 제품 직접 입력</h3><p>제품 라벨의 1회 제공량과 영양성분을 입력해 함께 계산할 수 있어요.</p></div></div>
         <div className="grid2"><label className="f">제품명<input className="in" value={manual.name} onChange={e => setManual({ ...manual, name: e.target.value })} placeholder="예: 우리집 관절 영양제" /></label><label className="f">구분<select className="in" value={manual.type} onChange={e => setManual({ ...manual, type: e.target.value as 'FEED' | 'SUPPLEMENT' })}><option value="SUPPLEMENT">영양제</option><option value="FEED">사료</option></select></label><label className="f">1회 제공량<input className="in" type="number" min="0.1" value={manual.amount} onChange={e => setManual({ ...manual, amount: e.target.value })} /></label><label className="f">단위<select className="in" value={manual.unit} onChange={e => setManual({ ...manual, unit: e.target.value })}><option value="TABLET">정</option><option value="CAPSULE">캡슐</option><option value="G">g</option></select></label><label className="f">하루 급여량<input className="in" type="number" min="0.1" value={manual.daily} onChange={e => setManual({ ...manual, daily: e.target.value })} /></label></div>
         <div className="grid2" style={{ marginTop: 12 }}>{[['CALCIUM','칼슘 (mg)'],['PHOSPHORUS','인 (mg)'],['VITAMIN_D','비타민 D (µg)'],['VITAMIN_E','비타민 E (mg)'],['OMEGA3','오메가3 (mg)'],['ZINC','아연 (mg)']].map(([id, label]) => <label className="f" key={id}>{label}<input className="in" type="number" min="0" value={manual.nutrients[id]} onChange={e => setManual({ ...manual, nutrients: { ...manual.nutrients, [id]: e.target.value } })} /></label>)}</div>
         {manualReady ? <button className="btn reveal-action" style={{ marginTop: 14 }} onClick={saveManual}>직접 입력 제품 저장</button> : <p className="action-hint inline">제품명과 영양성분을 입력하면 저장 버튼이 나타나요.</p>}
@@ -225,11 +244,12 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
         <div className="manual-skip"><span>검색 제품만으로 분석한다면 이 단계는 건너뛸 수 있어요.</span><button className="btn ghost" onClick={run} disabled={!profileReady || items.length === 0 || loading}>{loading ? '분석 중…' : '세 번째 단계 건너뛰고 분석하기 →'}</button></div>
       </div>
 
+      <section id="step-4" className="step-section">
       {error && <div className="err" role="alert">{error}</div>}
       <div className={`analysis-action ${analysisReady ? 'ready' : ''}`}><div className="analysis-readiness"><b>{analysisReady ? '분석 준비 완료' : '아직 필요한 정보가 있어요'}</b><span>{analysisReady ? `선택 제품 ${items.length}개와 직접 입력 제품 ${manualItems.length}개의 하루 총량을 함께 계산합니다.` : `${missingRequirements.join(' · ')}${missingRequirements.length ? '을(를) 입력해 주세요.' : ''}`}</span></div><button className="btn reveal-action" onClick={run} disabled={!analysisReady || loading}>{loading ? '분석 중…' : '맞춤 분석 시작하기'}</button></div>
 
       {analysis && (
-        <div className="panel result-panel" ref={resultRef} style={{ marginTop: 24 }}><div className="result-title"><span>STEP 3 · RESULT</span><h3>오늘의 영양 분석</h3><p>사료와 영양제의 하루 섭취량을 공식 기준과 비교했어요.</p></div>
+        <div className="panel result-panel" ref={resultRef} style={{ marginTop: 24 }}><div className="result-title"><span>STEP 4 · RESULT</span><h3>오늘의 영양 분석</h3><p>사료와 영양제의 하루 섭취량을 공식 기준과 비교했어요.</p></div>
           <div className={`verdict ${analysis.summary.excess || ratioNeedsAttention ? 'danger' : analysis.summary.caution ? 'warning' : analysis.summary.deficient ? 'check' : 'safe'}`} role="status">
             <span>{analysis.summary.excess ? '과다 성분이 있어요' : ratioNeedsAttention ? '칼슘:인 비율을 확인해 주세요' : analysis.summary.caution ? '주의가 필요한 성분이 있어요' : analysis.summary.deficient ? '부족한 성분을 확인해 주세요' : '현재 조합은 기준 범위 안이에요'}</span>
             <b>{analysis.summary.excess ? `${analysis.summary.excess}개 성분이 상한을 넘었어요. 급여 제품을 줄이거나 제외해 다시 분석해 보세요.` : ratioNeedsAttention ? `현재 칼슘:인 비율이 적용 범위보다 ${calciumPhosphorus?.status === 'LOW' ? '낮아요' : '높아요'}. 칼슘과 인 급여량을 조정해 주세요.` : analysis.summary.caution ? `${analysis.summary.caution}개 성분이 서비스 주의선에 도달했어요.` : analysis.summary.deficient ? `${analysis.summary.deficient}개 성분이 최소 권장량보다 낮아요.` : '적용 가능한 공식 기준에서 주의·과다가 확인되지 않았어요.'}</b>
@@ -270,6 +290,12 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
           {rec.excluded.length > 0 && <details><summary className="note">제외된 제품 {rec.excluded.length}개</summary><ul className="warns">{rec.excluded.map(x => <li key={x.productId}>{x.name}: {x.reason}</li>)}</ul></details>}
         </div>
       )}
+      {!analysis && <div className="panel result-placeholder"><div className="result-title"><span>STEP 4 · RESULT</span><h3>분석 결과</h3><p>위에서 정보를 입력하고 분석을 시작하면 이곳에 결과가 나타나요.</p></div></div>}
+      </section>
+
+      <section id="step-5" className="step-section records-section">
+        <Records key={`${recTick}-${active}`} go={() => {}} selectProfile={id => { loadProfile(id); document.getElementById('step-1')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} embedded />
+      </section>
       <p className="note">현재 영양 기준·제품 데이터는 기능 검증용 데모이며 수의학적 처방을 대체하지 않습니다.</p>
     </div>
   )

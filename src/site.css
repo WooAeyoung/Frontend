@@ -191,11 +191,42 @@ th:first-child,td:first-child{text-align:left}
 }
 
 @keyframes site-destination-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .site-main { animation: none; }
 }
 
+/* ===== 세로 스크롤 STEP 흐름: 단계 표시줄 + 결과/기록 섹션 ===== */
+/* 단계 표시줄(헤더 56px 아래 고정)만큼 스크롤 착지 위치를 내린다 */
+.analysis-page .analysis-grid > .panel,
+.analysis-page .analysis-grid > .analysis-action,
+.analysis-page .analysis-grid > .err,
+.analysis-page .analysis-grid > .input-panel,
+.analysis-page .products-panel,
+.analysis-page .manual-panel,
+.analysis-page .result-panel { scroll-margin-top: 128px; }
+.analysis-page .analysis-grid { max-width: 880px; margin-left: auto; margin-right: auto; }
+.step-section { scroll-margin-top: 128px; max-width: 880px; margin: 40px auto 0; }
+.result-placeholder { padding: 48px 24px; text-align: center; border-style: dashed !important; background: #f8fbf9 !important; }
+.records-section { margin-bottom: 48px; }
+.records-embedded { border: 1px solid #dfe7e2; border-radius: 8px; background: #fff; padding: 28px; box-shadow: 0 14px 40px rgba(32,72,54,.045); }
+.step-nav { position: sticky; top: 72px; z-index: 4; margin: -54px -32px 40px; padding: 10px 16px; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); border-bottom: 1px solid #edf1ee; }
+.step-nav > div { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.step-nav button { display: flex; align-items: center; gap: 7px; padding: 6px 12px; border: 1px solid transparent; border-radius: 99px; background: transparent; color: #6e7973; font-size: 12px; cursor: pointer; transition: all .25s; }
+.step-nav button b { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid #a8d6c2; border-radius: 50%; background: #fff; color: #159768; font-size: 11px; transition: all .25s; }
+.step-nav button.on { border-color: #a8d6c2; background: #eaf6f0; color: #159768; font-weight: 700; }
+.step-nav button.on b { background: #24a574; border-color: #24a574; color: #fff; }
+@media (max-width: 760px) {
+  .step-nav { margin: -32px -16px 28px; padding: 8px; }
+  .step-nav button span { display: none; }
+  .step-nav button.on span { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .step-nav button, .step-nav button b { transition: none; } }
+
+/* 홈 스토리(GSAP pin)는 전역 main 규칙(max-width/padding)의 영향을 받지 않아야 전체 화면으로 고정된다. */
+.site-main.page-home, .story-root { max-width: none; margin: 0; padding: 0; }
+
+.analysis-page .manual-panel{max-width:880px;margin-left:auto;margin-right:auto}
