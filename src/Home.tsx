@@ -8,16 +8,18 @@ declare global {
 export type Page = 'home' | 'analysis' | 'records'
 const days = [['월','14',true],['화','15',true],['수','16',true],['목','17',false],['금','18',false],['토','19',false],['일','20',false]] as const
 
-export type AnalysisDraft = { name: string; ageYears: number; symptoms: string[] }
+export type AnalysisDraft = { name: string; species: 'DOG' | 'CAT'; weightKg: number; ageYears: number; symptoms: string[] }
 
 export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; beginAnalysis: (draft: AnalysisDraft) => void }) {
   const root = useRef<HTMLElement>(null)
   const unlocked = useRef(false)
   const [name, setName] = useState('')
+  const [species, setSpecies] = useState<'DOG' | 'CAT'>('DOG')
+  const [weight, setWeight] = useState('')
   const [age, setAge] = useState('')
   const [symptoms, setSymptoms] = useState<string[]>([])
   const [analyzing, setAnalyzing] = useState(false)
-  const formValid = name.trim().length > 0 && Number(age) > 0 && symptoms.length > 0
+  const formValid = name.trim().length > 0 && Number(weight) > 0 && Number(age) > 0 && symptoms.length > 0
 
   const toggleSymptom = (value: string) => setSymptoms(current => current.includes(value) ? current.filter(item => item !== value) : [...current, value])
 
@@ -27,7 +29,7 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
     const gsap = window.gsap
     if (!gsap) { unlocked.current = true; return }
     const particles = root.current.querySelectorAll('.data-particle')
-    gsap.timeline({ onComplete: () => { unlocked.current = true; root.current?.classList.remove('story-gated'); root.current?.classList.add('story-unlocked'); setAnalyzing(false); beginAnalysis({ name: name.trim(), ageYears: Number(age), symptoms }) } })
+    gsap.timeline({ onComplete: () => { unlocked.current = true; root.current?.classList.remove('story-gated'); root.current?.classList.add('story-unlocked'); setAnalyzing(false); beginAnalysis({ name: name.trim(), species, weightKg: Number(weight), ageYears: Number(age), symptoms }) } })
       .to('.form-fields', { opacity: 0, scale: .94, duration: .35, ease: 'power2.in' })
       .to(particles, { opacity: 1, x: () => gsap.utils.random(-260, 260), y: () => gsap.utils.random(-210, 210), scale: () => gsap.utils.random(.7, 1.5), stagger: .035, duration: .75, ease: 'power3.out' }, .1)
       .to(particles, { opacity: 0, scale: 0, duration: .35 }, .62)
@@ -103,7 +105,7 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
 
       <div className="chapter-copy chapter-two"><p className="story-kicker">02 · NUTRITION INSIGHT</p><h2>우리 아이를<br/><em>먼저 알려주세요.</em></h2><p>입력을 마칠 때까지 이 화면은 고정됩니다.<br/>완료 후 맞춤 분석 결과가 이어집니다.</p></div>
 
-      <form className="input-panel" onSubmit={event => { event.preventDefault(); startAnalysis() }}><div className="form-fields"><div className="form-heading"><small>PERSONAL PROFILE</small><h3>맞춤 분석 정보</h3><span>필수 항목</span></div><label>반려동물 이름<input value={name} onChange={event => setName(event.target.value)} placeholder="예: 몽이" autoComplete="off"/></label><label>나이<input value={age} onChange={event => setAge(event.target.value.replace(/[^0-9]/g,''))} inputMode="numeric" placeholder="예: 4"/><i>살</i></label><fieldset><legend>걱정되는 증상 <small>하나 이상 선택</small></legend><div className="symptom-grid">{[['관절','🦴'],['피부·모질','✨'],['장 건강','◌'],['눈 건강','◉']].map(([label,icon])=><button type="button" key={label} className={symptoms.includes(label)?'selected':''} aria-pressed={symptoms.includes(label)} onClick={() => toggleSymptom(label)}><span>{icon}</span>{label}<i>✓</i></button>)}</div></fieldset><button className="analyze-button" disabled={!formValid || analyzing}>{analyzing?<><span className="loader"/>데이터를 분석하고 있어요</>:<>맞춤 분석 시작하기 <span>→</span></>}</button><p className="form-help">입력 정보는 맞춤 결과를 보여주는 데에만 사용됩니다.</p></div>{['NAME','AGE','CARE','DATA','BALANCE','HEALTH','84%','GOOD'].map(item=><span className="data-particle" key={item}>{item}</span>)}</form>
+      <form className="input-panel" onSubmit={event => { event.preventDefault(); startAnalysis() }}><div className="form-fields"><div className="form-heading"><small>PERSONAL PROFILE</small><h3>맞춤 분석 정보</h3><span>필수 항목</span></div><label>반려동물 이름<input value={name} onChange={event => setName(event.target.value)} placeholder="예: 몽이" autoComplete="off"/></label><div className="form-two"><label>종<select value={species} onChange={event => setSpecies(event.target.value as 'DOG' | 'CAT')}><option value="DOG">강아지</option><option value="CAT">고양이</option></select></label><label>체중<input value={weight} onChange={event => setWeight(event.target.value.replace(/[^0-9.]/g,''))} inputMode="decimal" placeholder="예: 4.5"/><i>kg</i></label></div><label>나이<input value={age} onChange={event => setAge(event.target.value.replace(/[^0-9]/g,''))} inputMode="numeric" placeholder="예: 4"/><i>살</i></label><fieldset><legend>걱정되는 증상 <small>하나 이상 선택</small></legend><div className="symptom-grid">{[['관절','🦴'],['피부·모질','✨'],['장 건강','◌'],['눈 건강','◉']].map(([label,icon])=><button type="button" key={label} className={symptoms.includes(label)?'selected':''} aria-pressed={symptoms.includes(label)} onClick={() => toggleSymptom(label)}><span>{icon}</span>{label}<i>✓</i></button>)}</div></fieldset><button className="analyze-button" disabled={!formValid || analyzing}>{analyzing?<><span className="loader"/>프로필을 저장하고 있어요</>:<>맞춤 분석 시작하기 <span>→</span></>}</button><p className="form-help">입력한 프로필은 한 번 저장되어 다음 분석에서 바로 불러옵니다.</p></div>{['NAME','AGE','CARE','DATA','BALANCE','HEALTH','84%','GOOD'].map(item=><span className="data-particle" key={item}>{item}</span>)}</form>
       <div className="result-toast" aria-live="polite"><span>✓</span><p><b>분석이 완료됐어요</b><small>이제 스크롤해 건강 기록으로 이어가세요.</small></p></div>
 
       <div className="chapter-copy chapter-three"><p className="story-kicker">03 · DAILY RECORD</p><h2>작은 기록이 만드는<br/><em>분명한 건강 변화.</em></h2><p>섭취 여부와 컨디션을 매일 체크하고,<br/>우리 아이에게 맞는 루틴을 발견하세요.</p><button onClick={() => go('records')}>건강 기록 시작하기 <span>↗</span></button></div>
