@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './site.css'
 import Home from './Home'
 import type { AnalysisDraft, Page } from './Home'
@@ -13,6 +13,7 @@ export default function SiteApp() {
   const [tick, setTick] = useState(0)
   const [profileToLoad, setProfileToLoad] = useState<string>()
   const [analysisDraft, setAnalysisDraft] = useState<AnalysisDraft>()
+  const firstPageRender = useRef(true)
 
   const go = (p: Page) => {
     setPage(p)
@@ -21,7 +22,9 @@ export default function SiteApp() {
   // Navigation is a destination jump, not part of the landing-page story scroll.
   // Run after the new page has rendered so the browser can animate to its actual top.
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    const behavior = firstPageRender.current ? 'auto' : 'smooth'
+    firstPageRender.current = false
+    window.scrollTo({ top: 0, behavior })
   }, [page])
 
   return (
