@@ -265,6 +265,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
           {analysis.standardSource && <div className="note">기준 출처: {analysis.standardSource}</div>}
           {analysis.cautionPolicy && <div className="note">주의선 정책: {analysis.cautionPolicy}</div>}
           <p className="note">현재 화면은 검증용 6종 성분을 지원합니다. 막대의 선은 하한·주의·상한이며, 각 성분의 실제값 또는 추정 여부를 함께 표시합니다.</p>
+          <aside className="analysis-scope" aria-label="분석 범위 안내"><b>분석 범위 안내</b><span>기준 버전 {analysis.standardVersion} · 검증용 6종 성분</span><span>{analysis.usesEstimatedFeed ? '일부 사료 성분은 최소 권장량을 사용한 추정값입니다.' : '입력·선택한 제품의 제공량과 하루 급여량을 기준으로 계산했습니다.'}</span><span>이 결과는 건강 상태의 진단·처방 또는 확정 급여 권고가 아닙니다.</span></aside>
           <div className="nutrient-bars">{analysis.nutrients.map(n => <NutrientBar key={n.nutrientId} nutrient={n} />)}</div>
           <div className="tw"><table>
             <thead><tr><th>영양소</th><th>데이터</th><th>사료</th><th>영양제</th><th>합계</th><th>최소</th><th>상한</th><th>상태</th></tr></thead>
