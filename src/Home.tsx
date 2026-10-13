@@ -5,7 +5,7 @@ declare global {
   interface Window { gsap?: any; ScrollTrigger?: any }
 }
 
-export type Page = 'home' | 'analysis' | 'records'
+export type Page = 'home' | 'analysis' | 'records' | 'support'
 const days = [['월','14',true],['화','15',true],['수','16',true],['목','17',false],['금','18',false],['토','19',false],['일','20',false]] as const
 
 export type AnalysisDraft = { name: string; species: 'DOG' | 'CAT'; weightKg: number; ageYears: number; symptoms: string[] }

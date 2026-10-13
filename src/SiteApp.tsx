@@ -4,9 +4,10 @@ import Home from './Home'
 import type { AnalysisDraft, Page } from './Home'
 import AnalysisPage from './AnalysisPage'
 import Records from './Records'
+import Support from './Support'
 import { saveProfile } from './Records'
 
-const MENU: [Page, string][] = [['home', '홈'], ['analysis', '영양제 분석'], ['records', '반려동물 기록']]
+const MENU: [Page, string][] = [['home', '홈'], ['analysis', '영양제 분석'], ['records', '반려동물 기록'], ['support', '고객센터']]
 
 export default function SiteApp() {
   const [page, setPage] = useState<Page>('home')
@@ -53,6 +54,7 @@ export default function SiteApp() {
         {/* 분석 화면은 계속 마운트해 두어 다른 화면에 다녀와도 입력값·결과가 유지된다. */}
         {analysisVisited && <div hidden={page !== 'analysis'}><AnalysisPage onSaved={() => setTick(tick + 1)} initialProfileId={profileToLoad} initialDraft={analysisDraft} loadSeq={loadSeq} active={page === 'analysis'} /></div>}
         {page === 'records' && <Records key={tick} go={go} selectProfile={id => { setAnalysisDraft(undefined); setProfileToLoad(id); setLoadSeq(n => n + 1); go('analysis') }} />}
+        {page === 'support' && <Support />}
       </main>
       <footer className="site-f"><b>우애영</b><br />반려동물 영양제 분석 서비스<br />© 2026 우애영. All rights reserved.</footer>
     </>
