@@ -60,9 +60,12 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
   useEffect(() => {
     let active = true
     setProductsLoading(true)
-    getProducts(query).then(r => { if (active) setFound(r.items) }).catch(() => { if (active) setFound([]) }).finally(() => { if (active) setProductsLoading(false) })
+    getProducts(query).then(r => {
+      if (!active) return
+      setFound(r.items.filter(product => product.id.includes('-cat') ? species === 'CAT' : product.id.includes('-dog') ? species === 'DOG' : true))
+    }).catch(() => { if (active) setFound([]) }).finally(() => { if (active) setProductsLoading(false) })
     return () => { active = false }
-  }, [query])
+  }, [query, species])
 
   const ageDays = ageUnit === 'WEEK' ? Number(ageValue) * 7 : Number(ageValue) * 30.4375
   const needSize = species === 'DOG' && ageDays > 0 && ageDays < 365
@@ -84,6 +87,11 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
   ].filter(Boolean)
   const calciumPhosphorus = analysis?.ratios.calciumPhosphorus
   const ratioNeedsAttention = Boolean(calciumPhosphorus && ['LOW', 'HIGH'].includes(calciumPhosphorus.status))
+  const compatibleProducts = found.filter(product => {
+    if (product.id.includes('-cat')) return species === 'CAT'
+    if (product.id.includes('-dog')) return species === 'DOG'
+    return true
+  })
 
   function loadProfile(id: string) {
     setProfileId(id)

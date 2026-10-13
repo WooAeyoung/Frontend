@@ -20,7 +20,6 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
   const [symptoms, setSymptoms] = useState<string[]>([])
   const [analyzing, setAnalyzing] = useState(false)
   const formValid = name.trim().length > 0 && Number(weight) > 0 && Number(age) > 0
-  const formHint = !name.trim() ? '이름을 입력해 주세요.' : !(Number(weight) > 0) ? '체중을 입력해 주세요.' : !(Number(age) > 0) ? '나이를 입력해 주세요.' : '입력 완료 · 증상 선택은 선택 사항입니다.'
 
   const toggleSymptom = (value: string) => setSymptoms(current => value === '특별한 증상 없음'
     ? (current.includes(value) ? [] : [value])
