@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { analyze, getProducts, recommend } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation } from './api'
 import { loadProfiles, saveProfile, saveRecord } from './Records'
+import type { AnalysisDraft } from './Home'
 
 const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', ADEQUATE_NO_UPPER_LIMIT: '적정 · 상한 없음', NO_STANDARD: '기준 없음', CAUTION: '주의', EXCESS: '과다' }
 const RATIO: Record<string, string> = { LOW: '낮음', HIGH: '높음', ADEQUATE: '적정', UNAVAILABLE: '계산 불가' }
@@ -32,7 +33,7 @@ function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) 
   </div>
 }
 
-export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: () => void; initialProfileId?: string }) {
+export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }: { onSaved: () => void; initialProfileId?: string; initialDraft?: AnalysisDraft }) {
   const [name, setName] = useState('')
   const [species, setSpecies] = useState<'DOG' | 'CAT'>('DOG')
   const [weight, setWeight] = useState('')
@@ -91,6 +92,12 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
   useEffect(() => {
     if (initialProfileId) loadProfile(initialProfileId)
   }, [initialProfileId])
+  useEffect(() => {
+    if (!initialDraft || initialProfileId) return
+    setName(initialDraft.name)
+    setAgeValue(String(initialDraft.ageYears * 12))
+    setAgeUnit('MONTH')
+  }, [initialDraft, initialProfileId])
 
   const add = (p: { id: string; name: string; type: 'FEED' | 'SUPPLEMENT'; servingUnit: string }, amount?: number) => {
     if (items.some(i => i.productId === p.id)) return
@@ -150,6 +157,7 @@ export default function AnalysisPage({ onSaved, initialProfileId }: { onSaved: (
         <div className="analysis-flow" aria-label="분석 진행 순서">
           <span><b>1</b> 반려동물 정보</span><i/><span><b>2</b> 급여 제품</span><i/><span><b>3</b> 분석 결과</span>
         </div>
+        {initialDraft?.symptoms.length ? <div className="concern-handoff"><b>선택한 관심 건강</b><span>{initialDraft.symptoms.join(' · ')}</span><small>아래에서 체중과 급여 제품을 추가하면 맞춤 분석을 시작할 수 있어요.</small></div> : null}
       </section>
 
       <div className="analysis-grid">

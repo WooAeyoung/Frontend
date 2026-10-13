@@ -8,7 +8,9 @@ declare global {
 export type Page = 'home' | 'analysis' | 'records'
 const days = [['월','14',true],['화','15',true],['수','16',true],['목','17',false],['금','18',false],['토','19',false],['일','20',false]] as const
 
-export default function Home({ go }: { go: (page: Page) => void }) {
+export type AnalysisDraft = { name: string; ageYears: number; symptoms: string[] }
+
+export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; beginAnalysis: (draft: AnalysisDraft) => void }) {
   const root = useRef<HTMLElement>(null)
   const unlocked = useRef(false)
   const [name, setName] = useState('')
@@ -25,7 +27,7 @@ export default function Home({ go }: { go: (page: Page) => void }) {
     const gsap = window.gsap
     if (!gsap) { unlocked.current = true; return }
     const particles = root.current.querySelectorAll('.data-particle')
-    gsap.timeline({ onComplete: () => { unlocked.current = true; root.current?.classList.remove('story-gated'); root.current?.classList.add('story-unlocked'); setAnalyzing(false) } })
+    gsap.timeline({ onComplete: () => { unlocked.current = true; root.current?.classList.remove('story-gated'); root.current?.classList.add('story-unlocked'); setAnalyzing(false); beginAnalysis({ name: name.trim(), ageYears: Number(age), symptoms }) } })
       .to('.form-fields', { opacity: 0, scale: .94, duration: .35, ease: 'power2.in' })
       .to(particles, { opacity: 1, x: () => gsap.utils.random(-260, 260), y: () => gsap.utils.random(-210, 210), scale: () => gsap.utils.random(.7, 1.5), stagger: .035, duration: .75, ease: 'power3.out' }, .1)
       .to(particles, { opacity: 0, scale: 0, duration: .35 }, .62)
