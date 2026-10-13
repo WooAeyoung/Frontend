@@ -146,6 +146,21 @@ th:first-child,td:first-child{text-align:left}
   scroll-margin-top: 72px;
 }
 
+/* The real workflow is a vertical sequence: profile → product → direct input. */
+.analysis-page .analysis-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+}
+.analysis-page .analysis-grid > .input-panel {
+  min-height: min(720px, calc(100vh - 104px));
+  scroll-margin-top: 72px;
+}
+.analysis-page .products-panel,
+.analysis-page .manual-panel,
+.analysis-page .result-panel {
+  scroll-margin-top: 72px;
+}
+
 .manual-skip {
   display: flex;
   align-items: center;
