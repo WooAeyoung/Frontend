@@ -27,9 +27,16 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
     if (!formValid || analyzing || !root.current) return
     setAnalyzing(true)
     const gsap = window.gsap
-    if (!gsap) { unlocked.current = true; return }
+    const finish = () => {
+      unlocked.current = true
+      root.current?.classList.remove('story-gated')
+      root.current?.classList.add('story-unlocked')
+      setAnalyzing(false)
+      beginAnalysis({ name: name.trim(), species, weightKg: Number(weight), ageYears: Number(age), symptoms })
+    }
+    if (!gsap) { finish(); return }
     const particles = root.current.querySelectorAll('.data-particle')
-    gsap.timeline({ onComplete: () => { unlocked.current = true; root.current?.classList.remove('story-gated'); root.current?.classList.add('story-unlocked'); setAnalyzing(false); beginAnalysis({ name: name.trim(), species, weightKg: Number(weight), ageYears: Number(age), symptoms }) } })
+    gsap.timeline({ onComplete: finish })
       .to('.form-fields', { opacity: 0, scale: .94, duration: .35, ease: 'power2.in' })
       .to(particles, { opacity: 1, x: () => gsap.utils.random(-260, 260), y: () => gsap.utils.random(-210, 210), scale: () => gsap.utils.random(.7, 1.5), stagger: .035, duration: .75, ease: 'power3.out' }, .1)
       .to(particles, { opacity: 0, scale: 0, duration: .35 }, .62)
