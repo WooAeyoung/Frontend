@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Profile } from './api'
 
 export type SavedRecord = { id: string; profileId?: string; date: string; name: string; species: string; items: string[]; summary: Record<string, number> }
@@ -10,7 +10,7 @@ export function loadRecords(): SavedRecord[] {
   try { return JSON.parse(localStorage.getItem(KEY) ?? '[]') } catch { return [] }
 }
 export function saveRecord(r: SavedRecord) {
-  try { localStorage.setItem(KEY, JSON.stringify([r, ...loadRecords()])) } catch { /* 저장 불가 환경 */ }
+  try { localStorage.setItem(KEY, JSON.stringify([r, ...loadRecords()])); window.dispatchEvent(new CustomEvent('wooaeyoung:records-changed')) } catch { /* 저장 불가 환경 */ }
 }
 export function loadProfiles(): SavedProfile[] {
   try { return JSON.parse(localStorage.getItem(PROFILE_KEY) ?? '[]') } catch { return [] }
@@ -21,6 +21,7 @@ export function saveProfile(profile: Profile, id?: string): SavedProfile {
     const profiles = loadProfiles()
     const updated = id ? profiles.map(item => item.id === id ? next : item) : [next, ...profiles]
     localStorage.setItem(PROFILE_KEY, JSON.stringify(updated))
+    window.dispatchEvent(new CustomEvent('wooaeyoung:profiles-changed'))
   } catch { /* 저장 불가 환경 */ }
   return next
 }
@@ -29,14 +30,22 @@ export default function Records({ selectProfile }: { go: (p: 'analysis') => void
   const [list, setList] = useState(loadRecords)
   const [profiles, setProfiles] = useState(loadProfiles)
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
+  useEffect(() => {
+    const refresh = () => { setProfiles(loadProfiles()); setList(loadRecords()) }
+    window.addEventListener('wooaeyoung:profiles-changed', refresh)
+    window.addEventListener('wooaeyoung:records-changed', refresh)
+    return () => { window.removeEventListener('wooaeyoung:profiles-changed', refresh); window.removeEventListener('wooaeyoung:records-changed', refresh) }
+  }, [])
   const removeRecord = (id: string) => {
     const next = list.filter(record => record.id !== id)
     try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* 저장 불가 환경 */ }
+    window.dispatchEvent(new CustomEvent('wooaeyoung:records-changed'))
     setList(next)
   }
   const removeProfile = (id: string) => {
     const next = profiles.filter(profile => profile.id !== id)
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(next)) } catch { /* 저장 불가 환경 */ }
+    window.dispatchEvent(new CustomEvent('wooaeyoung:profiles-changed'))
     setProfiles(next)
     if (selectedProfileId === id) setSelectedProfileId(null)
   }
