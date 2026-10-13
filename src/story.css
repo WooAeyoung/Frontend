@@ -40,6 +40,11 @@
   color: #536f62;
 }
 
+/* The service compares nutrition data; it does not collect or assess symptoms. */
+.story-root .input-panel fieldset {
+  display: none;
+}
+
 .form-two{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}.input-panel select{width:100%;height:3rem;padding:0 .85rem;border:1px solid #d8e0da;border-radius:.85rem;outline:0;background:#fff;color:var(--forest);font-size:.8rem}.input-panel select:focus{border-color:#4c8b63;box-shadow:0 0 0 3px #72aa7a20}@media(max-width:900px){.form-two{gap:.5rem}.input-panel select{height:2.55rem}}
 /* Interactive analysis gate */
 .story-gated .story-progress:after{content:"정보 입력 후 스크롤이 열립니다";position:absolute;right:1.2rem;top:1rem;padding:.45rem .75rem;border-radius:99px;background:#153c31;color:#fff;font-size:.58rem;font-weight:800;letter-spacing:.04em}
