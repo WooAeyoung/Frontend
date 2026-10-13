@@ -43,6 +43,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
   const [completeFeed, setCompleteFeed] = useState(true)
   const [query, setQuery] = useState('')
   const [found, setFound] = useState<Product[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
   const [items, setItems] = useState<FeedingItem[]>([])
   const [manualItems, setManualItems] = useState<ManualItem[]>([])
   const [manual, setManual] = useState({ name: '', type: 'SUPPLEMENT' as 'FEED' | 'SUPPLEMENT', amount: '1', unit: 'TABLET', daily: '1', nutrients: { CALCIUM: '', PHOSPHORUS: '', VITAMIN_D: '', VITAMIN_E: '', OMEGA3: '', ZINC: '' } as Record<string, string> })
@@ -57,7 +58,10 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
   const resultRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    getProducts(query).then(r => setFound(r.items)).catch(() => setFound([]))
+    let active = true
+    setProductsLoading(true)
+    getProducts(query).then(r => { if (active) setFound(r.items) }).catch(() => { if (active) setFound([]) }).finally(() => { if (active) setProductsLoading(false) })
+    return () => { active = false }
   }, [query])
 
   const ageDays = ageUnit === 'WEEK' ? Number(ageValue) * 7 : Number(ageValue) * 30.4375
@@ -70,6 +74,14 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
   const profileReady = Boolean(name.trim() && Number(weight) > 0 && Number(ageValue) > 0 && (!needSize || Number(expectedAdultWeight) >= Number(weight)))
   const manualReady = Boolean(manual.name.trim() && Number(manual.amount) > 0 && Number(manual.daily) > 0 && Object.values(manual.nutrients).some(value => value !== '' && Number(value) >= 0))
   const analysisReady = profileReady && (items.length > 0 || manualItems.length > 0) && items.every(item => item.dailyAmount > 0)
+  const missingRequirements = [
+    !name.trim() ? '이름' : '',
+    !(Number(weight) > 0) ? '체중' : '',
+    !(Number(ageValue) > 0) ? '나이' : '',
+    needSize && !(Number(expectedAdultWeight) >= Number(weight)) ? '예상 성체 체중' : '',
+    items.length === 0 && manualItems.length === 0 ? '급여 제품' : '',
+    items.some(item => item.dailyAmount <= 0) ? '올바른 급여량' : '',
+  ].filter(Boolean)
   const calciumPhosphorus = analysis?.ratios.calciumPhosphorus
   const ratioNeedsAttention = Boolean(calciumPhosphorus && ['LOW', 'HIGH'].includes(calciumPhosphorus.status))
 
@@ -176,13 +188,15 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
       </div>
 
       <div className="panel input-panel products-panel"><div className="panel-title"><span>STEP 2</span><div><h3>사료 · 영양제 입력</h3><p>현재 먹고 있는 제품과 하루 급여량을 알려주세요.</p></div></div>
+        <div className="product-choice-head"><div><b>등록 제품에서 선택</b><small>아래 제품을 선택하거나, 검색되지 않는 제품은 직접 입력할 수 있어요. 두 방식은 함께 사용 가능합니다.</small></div><span>선택 {items.length} · 직접 입력 {manualItems.length}</span></div>
         <input className="in" style={{ width: '100%' }} placeholder="제품 검색" value={query} onChange={e => setQuery(e.target.value)} />
         <ul className="plist">
+          {productsLoading && <li className="note">선택 가능한 제품을 불러오는 중…</li>}
           {found.map(p => (
             <li key={p.id}><span><span className="tag">{p.type === 'FEED' ? '사료' : '영양제'}</span>{p.name} <small>{p.brand}</small></span>
               <button className="btn ghost" onClick={() => add(p)} disabled={items.some(i => i.productId === p.id)}>추가</button></li>
           ))}
-          {found.length === 0 && <li className="note">검색 결과가 없습니다.</li>}
+          {!productsLoading && found.length === 0 && <li className="empty-product-result"><span>검색 결과가 없습니다.</span>{query && <button className="btn ghost" onClick={() => setQuery('')}>전체 제품 보기</button>}</li>}
         </ul>
         {items.length > 0 && <>
           <h3 style={{ marginTop: 18 }}>급여 목록 (하루)</h3>
@@ -203,7 +217,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft }
       </div>
 
       {error && <div className="err" role="alert">{error}</div>}
-      <div className={`analysis-action ${analysisReady ? 'ready' : ''}`}><span>{analysisReady ? `${items.length + manualItems.length}개 제품의 하루 총량을 계산할 준비가 됐어요.` : '프로필 필수 칸과 급여 제품을 입력하면 분석 버튼이 나타나요.'}</span>{analysisReady && <button className="btn reveal-action" onClick={run} disabled={loading}>{loading ? '분석 중…' : '분석하기'}</button>}</div>
+      <div className={`analysis-action ${analysisReady ? 'ready' : ''}`}><div className="analysis-readiness"><b>{analysisReady ? '분석 준비 완료' : '아직 필요한 정보가 있어요'}</b><span>{analysisReady ? `선택 제품 ${items.length}개와 직접 입력 제품 ${manualItems.length}개의 하루 총량을 함께 계산합니다.` : `${missingRequirements.join(' · ')}${missingRequirements.length ? '을(를) 입력해 주세요.' : ''}`}</span></div><button className="btn reveal-action" onClick={run} disabled={!analysisReady || loading}>{loading ? '분석 중…' : '맞춤 분석 시작하기'}</button></div>
 
       {analysis && (
         <div className="panel result-panel" ref={resultRef} style={{ marginTop: 24 }}><div className="result-title"><span>STEP 3 · RESULT</span><h3>오늘의 영양 분석</h3><p>사료와 영양제의 하루 섭취량을 공식 기준과 비교했어요.</p></div>
