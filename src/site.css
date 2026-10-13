@@ -158,6 +158,14 @@ th:first-child,td:first-child{text-align:left}
   font-size: 13px;
 }
 
+.manual-panel::before {
+  content: '하루 급여량은 하루 총량, 영양성분은 1회 제공량 기준으로 입력하세요.';
+  display: block;
+  margin: -8px 0 12px;
+  color: var(--sub, #77736a);
+  font-size: 12px;
+}
+
 .manual-skip .btn:disabled {
   opacity: .45;
   cursor: not-allowed;
