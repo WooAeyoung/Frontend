@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './site.css'
 import Home from './Home'
 import type { AnalysisDraft, Page } from './Home'
@@ -14,6 +14,11 @@ export default function SiteApp() {
   const [profileToLoad, setProfileToLoad] = useState<string>()
   const [analysisDraft, setAnalysisDraft] = useState<AnalysisDraft>()
   const firstPageRender = useRef(true)
+
+  useLayoutEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
+    window.scrollTo(0, 0)
+  }, [])
 
   const go = (p: Page) => {
     setPage(p)
