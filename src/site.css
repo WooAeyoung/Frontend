@@ -135,6 +135,27 @@ th:first-child,td:first-child{text-align:left}
   animation: site-destination-in 360ms cubic-bezier(.22, .8, .28, 1) both;
 }
 
+.manual-skip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line, #e7e4dc);
+  color: var(--muted, #77736a);
+  font-size: 13px;
+}
+
+.manual-skip .btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .manual-skip { align-items: stretch; flex-direction: column; }
+}
+
 @keyframes site-destination-in {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
