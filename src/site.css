@@ -135,6 +135,17 @@ th:first-child,td:first-child{text-align:left}
   animation: site-destination-in 360ms cubic-bezier(.22, .8, .28, 1) both;
 }
 
+/* Each analysis stage lands cleanly at the top of the viewport while scrolling. */
+.analysis-page .analysis-grid {
+  scroll-snap-type: y proximity;
+}
+.analysis-page .analysis-grid > .panel,
+.analysis-page .analysis-grid > .analysis-action,
+.analysis-page .analysis-grid > .err {
+  scroll-snap-align: start;
+  scroll-margin-top: 72px;
+}
+
 .manual-skip {
   display: flex;
   align-items: center;
