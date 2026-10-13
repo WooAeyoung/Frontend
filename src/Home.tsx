@@ -52,9 +52,13 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
   useLayoutEffect(() => {
     const element = root.current
     if (!element) return
+    // Browsers can restore the previous pinned-story offset after the app mounts.
+    // Reset the landing story itself so a fresh visit always starts at 01 · 만남.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    const resetScroll = window.setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' }), 120)
     const gsap = window.gsap
     const ScrollTrigger = window.ScrollTrigger
-    if (!gsap || !ScrollTrigger) return
+    if (!gsap || !ScrollTrigger) { element.dataset.step = '01'; return () => window.clearTimeout(resetScroll) }
     gsap.registerPlugin(ScrollTrigger)
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
@@ -84,9 +88,9 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
         const shouldGate = self.progress >= .52 && self.progress < .68 && !unlocked.current
         element.classList.toggle('story-gated', shouldGate)
       }})
-      return () => { gate.kill() }
+      return () => { gate.kill(); window.clearTimeout(resetScroll) }
     }, element)
-    return () => context.revert()
+    return () => { context.revert(); window.clearTimeout(resetScroll) }
   }, [])
 
   return <main ref={root} className="story-root" data-step="01">
