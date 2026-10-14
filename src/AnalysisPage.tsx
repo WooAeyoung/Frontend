@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { analyze, getProducts, recommend } from './api'
-import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation } from './api'
+import { analyze, getProducts, recommend, STANDARD_OPTIONS } from './api'
+import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation, StandardProfile } from './api'
 import Records, { loadProfiles, saveProfile, saveRecord } from './Records'
 import type { AnalysisDraft } from './Home'
 
@@ -66,6 +66,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [rec, setRec] = useState<Recommendation | null>(null)
   const [error, setError] = useState('')
+  const [standardProfile, setStandardProfile] = useState<StandardProfile>('FEDIAF_2025')
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [profiles, setProfiles] = useState(loadProfiles)
@@ -80,7 +81,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
     getProducts(query).then(r => {
       if (!active) return
       setFound(r.items.filter(product => product.id.includes('-cat') ? species === 'CAT' : product.id.includes('-dog') ? species === 'DOG' : true))
-    }).catch(() => { if (active) setFound([]) }).finally(() => { if (active) setProductsLoading(false) })
+    }).catch(e => { if (active) { setFound([]); setError(e instanceof Error ? e.message : '제품 목록을 불러오지 못했습니다.') } }).finally(() => { if (active) setProductsLoading(false) })
     return () => { active = false }
   }, [query, species])
 
@@ -151,7 +152,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
     setItems(nextItems)
     setLoading(true); setError(''); setSaved(false)
     try {
-      const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems, manualItems), recommend(profile, nextItems, manualItems)])
+      const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems, manualItems, standardProfile), recommend(profile, nextItems, manualItems, standardProfile)])
       setAnalysis(nextAnalysis); setRec(nextRecommendation)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
@@ -165,7 +166,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
     if (items.length === 0 && manualItems.length === 0) { setError('급여 중인 제품을 하나 이상 추가해 주세요.'); return }
     setLoading(true)
     try {
-      const [a, r] = await Promise.all([analyze(profile, items, manualItems), recommend(profile, items, manualItems)])
+      const [a, r] = await Promise.all([analyze(profile, items, manualItems, standardProfile), recommend(profile, items, manualItems, standardProfile)])
       setAnalysis(a); setRec(r)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
@@ -184,7 +185,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
 
   function save() {
     if (!analysis) return
-    saveRecord({ id: analysis.traceId, profileId: profileId || undefined, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary })
+    saveRecord({ id: analysis.traceId, profileId: profileId || undefined, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary, standardVersion: analysis.standardVersion, standardSource: analysis.standardSource })
     setSaved(true); setRecTick(t => t + 1); onSaved()
   }
 
@@ -245,7 +246,8 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
       </div>
 
       <section id="step-4" className="step-section">
-      {error && <div className="err" role="alert">{error}</div>}
+      <div className="panel standard-select"><b>영양 기준 선택</b><div role="radiogroup" aria-label="영양 기준 선택">{STANDARD_OPTIONS.map(option => <label key={option.id}><input type="radio" name="standardProfile" value={option.id} checked={standardProfile === option.id} disabled={!option.available || loading} onChange={() => { setStandardProfile(option.id); setAnalysis(null); setRec(null) }} /> {option.label} <small>{option.note}</small></label>)}</div></div>
+      {error && <div className="err" role="alert">{error}{analysisReady && <button className="btn ghost" onClick={run} disabled={loading}>다시 시도</button>}</div>}
       <div className={`analysis-action ${analysisReady ? 'ready' : ''}`}><div className="analysis-readiness"><b>{analysisReady ? '분석 준비 완료' : '아직 필요한 정보가 있어요'}</b><span>{analysisReady ? `선택 제품 ${items.length}개와 직접 입력 제품 ${manualItems.length}개의 하루 총량을 함께 계산합니다.` : `${missingRequirements.join(' · ')}${missingRequirements.length ? '을(를) 입력해 주세요.' : ''}`}</span></div><button className="btn reveal-action" onClick={run} disabled={!analysisReady || loading}>{loading ? '분석 중…' : '맞춤 분석 시작하기'}</button></div>
 
       {analysis && (
@@ -261,7 +263,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
             <div><b>{analysis.summary.noStandard ?? 0}</b>기준 없음</div>
           </div>
           <div className="note">분석 프로필: {profile.name || '우리 아이'} · {species === 'DOG' ? '강아지' : '고양이'} · {weight}kg · {ageValue}{ageUnit === 'MONTH' ? '개월' : '주'}</div>
-          <div className="note">하루 기준 에너지 약 {Math.round(analysis.referenceEnergyKcal)}kcal · 기준 {analysis.standardVersion}</div>
+          <div className="note">하루 기준 에너지 약 {Math.round(analysis.referenceEnergyKcal)}kcal · 선택 기준 {standardProfile} · 결과 기준 버전 {analysis.standardVersion}</div>
           {analysis.standardSource && <div className="note">기준 출처: {analysis.standardSource}</div>}
           {analysis.cautionPolicy && <div className="note">주의선 정책: {analysis.cautionPolicy}</div>}
           <p className="note">현재 화면은 검증용 6종 성분을 지원합니다. 막대의 선은 하한·주의·상한이며, 각 성분의 실제값 또는 추정 여부를 함께 표시합니다.</p>
