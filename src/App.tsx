@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Check, ChevronRight, Heart, Info, LoaderCircle, PawPrint, Plus, RefreshCw, Search, ShieldCheck, Trash2, TriangleAlert, X } from 'lucide-react'
+import Lenis from 'lenis'
 import { Analysis, FeedingItem, getProducts, Product, Profile, analyze } from './api'
 
 const initialProfile: Profile = {name:'',species:'DOG',weightKg:5,age:{value:24,unit:'MONTH'},completeFeed:true}
@@ -17,6 +18,15 @@ export function App(){
   const [error,setError]=useState('')
   const [productsLoading,setProductsLoading]=useState(true)
   const [reloadProducts,setReloadProducts]=useState(0)
+
+  useEffect(()=>{
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const lenis=new Lenis({lerp:.085,smoothWheel:true,syncTouch:false})
+    let frame=0
+    const raf=(time:number)=>{lenis.raf(time);frame=requestAnimationFrame(raf)}
+    frame=requestAnimationFrame(raf)
+    return()=>{cancelAnimationFrame(frame);lenis.destroy()}
+  },[])
 
   useEffect(()=>{localStorage.setItem('wooaeyoung-items',JSON.stringify(items))},[items])
   useEffect(()=>{
