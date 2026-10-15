@@ -7,12 +7,22 @@ export type ManualItem = {name:string;type:'FEED'|'SUPPLEMENT';servingAmount:num
 export type NutrientResult = {nutrientId:string;name:string;unit:string;fromFeed:number;fromSupplements:number;total:number;minimum:number|null;caution:number|null;upper:number|null;status:string;source:string}
 export type ProductContribution = {name:string;type:'FEED'|'SUPPLEMENT';source:'ACTUAL'|'ESTIMATED';nutrients:Record<string,number>}
 export type Analysis = {traceId:string;standardVersion:string;standardSource?:string;cautionPolicy?:string;lifeStage:string;referenceEnergyKcal:number;usesEstimatedFeed:boolean;summary:Record<string,number>;nutrients:NutrientResult[];contributions:ProductContribution[];ratios:Record<string,{value:number|null;status:string;minimum?:number;maximum?:number}>;warnings:string[]}
+export type StandardProfile = 'FEDIAF_2025'|'NIAS_V3'
+export const STANDARD_OPTIONS:{id:StandardProfile;label:string;available:boolean;note:string}[]=[
+  {id:'FEDIAF_2025',label:'FEDIAF 2025',available:true,note:'현재 백엔드가 지원하는 기준'},
+  {id:'NIAS_V3',label:'NIAS v3',available:false,note:'백엔드 지원 후 선택할 수 있어요'}
+]
 export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number}[];excluded:{productId:string;name:string;reason:string}[]}
 
 const API = import.meta.env.VITE_API_URL ?? ''
 const STATIC_MODE = import.meta.env.PROD && !API
 async function call<T>(path:string,init?:RequestInit):Promise<T>{
-  const response=await fetch(`${API}${path}`,{headers:{'Content-Type':'application/json'},...init})
+  let response:Response
+  try{
+    response=await fetch(`${API}${path}`,{headers:{'Content-Type':'application/json'},...init})
+  }catch{
+    throw new Error('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+  }
   if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.detail?.message??body.detail?.[0]?.msg??'요청을 처리하지 못했습니다.')}
   return response.json()
 }
@@ -26,11 +36,11 @@ export async function getProducts(query=''){
   }
   return call<{items:Product[]}>(`/api/v1/products?query=${encodeURIComponent(query)}&limit=20`)
 }
-export async function analyze(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[]){
+export async function analyze(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[],standardProfile:StandardProfile='FEDIAF_2025'){
   if(STATIC_MODE){const {localAnalyze}=await import('./localEngine');return localAnalyze(profile,items,manualItems)}
-  return call<Analysis>('/api/v1/analyses',{method:'POST',body:JSON.stringify({profile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems})})
+  return call<Analysis>('/api/v1/analyses',{method:'POST',body:JSON.stringify({profile,standardProfile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems})})
 }
-export async function recommend(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[]){
+export async function recommend(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[],standardProfile:StandardProfile='FEDIAF_2025'){
   if(STATIC_MODE){const {localRecommend}=await import('./localEngine');return localRecommend(profile,items,manualItems)}
-  return call<Recommendation>('/api/v1/recommendations',{method:'POST',body:JSON.stringify({profile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems,maxItems:3})})
+  return call<Recommendation>('/api/v1/recommendations',{method:'POST',body:JSON.stringify({profile,standardProfile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems,maxItems:3})})
 }
