@@ -10,7 +10,7 @@ export type Analysis = {traceId:string;standardVersion:string;standardSource?:st
 export type StandardProfile = 'FEDIAF_2025'|'NIAS_V3'
 export const STANDARD_OPTIONS:{id:StandardProfile;label:string;available:boolean;note:string}[]=[
   {id:'FEDIAF_2025',label:'FEDIAF 2025',available:true,note:'현재 기본 분석 기준이에요. 결과에 기준 버전과 출처를 함께 표시해요'},
-  {id:'NIAS_V3',label:'NIAS v3',available:false,note:'서버 연동은 준비됐지만 기준값 원문 대조 중이라 아직 선택할 수 없어요'}
+    {id:'FEDIAF_2025',label:'FEDIAF 2025',available:true,note:'현재 기본 분석 기준이에요. 결과에 기준 버전과 출처를 함께 표시해요'},
 ]
 export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number}[];excluded:{productId:string;name:string;reason:string}[]}
 
