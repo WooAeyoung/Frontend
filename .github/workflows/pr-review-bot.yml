@@ -3,6 +3,12 @@ name: PR review bot
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "검토할 열린 PR 번호"
+        required: true
+        type: number
 
 permissions:
   contents: read
@@ -10,10 +16,12 @@ permissions:
 
 jobs:
   validate:
-    if: github.event.pull_request.draft == false
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr_number) || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -25,7 +33,7 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
   review:
-    if: always() && github.event.pull_request.draft == false
+    if: always() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false)
     needs: validate
     runs-on: ubuntu-latest
     steps:
@@ -33,13 +41,15 @@ jobs:
         uses: actions/github-script@v7
         env:
           VALIDATION_RESULT: ${{ needs.validate.result }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
         with:
           script: |
             const marker = '<!-- wooaeyoung-pr-review-bot -->';
+            const pullNumber = Number(process.env.PR_NUMBER);
             const files = await github.paginate(github.rest.pulls.listFiles, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.issue.number,
+              pull_number: pullNumber,
               per_page: 100,
             });
             const names = files.map(file => file.filename);
@@ -73,12 +83,12 @@ jobs:
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: pullNumber,
               per_page: 100,
             });
             const previous = comments.find(comment => comment.user?.type === 'Bot' && comment.body?.includes(marker));
             if (previous) {
               await github.rest.issues.updateComment({owner: context.repo.owner, repo: context.repo.repo, comment_id: previous.id, body});
             } else {
-              await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body});
+              await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: pullNumber, body});
             }
