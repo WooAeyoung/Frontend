@@ -6,11 +6,11 @@ export type ManualNutrient = {nutrientId:string;amount:number;unit:string}
 export type ManualItem = {name:string;type:'FEED'|'SUPPLEMENT';servingAmount:number;servingUnit:string;dailyAmount:number;nutrients:ManualNutrient[]}
 export type NutrientResult = {nutrientId:string;name:string;unit:string;fromFeed:number;fromSupplements:number;total:number;minimum:number|null;caution:number|null;upper:number|null;status:string;source:string}
 export type ProductContribution = {name:string;type:'FEED'|'SUPPLEMENT';source:'ACTUAL'|'ESTIMATED';nutrients:Record<string,number>}
-export type Analysis = {traceId:string;standardVersion:string;standardSource?:string;cautionPolicy?:string;lifeStage:string;referenceEnergyKcal:number;usesEstimatedFeed:boolean;summary:Record<string,number>;nutrients:NutrientResult[];contributions:ProductContribution[];ratios:Record<string,{value:number|null;status:string;minimum?:number;maximum?:number}>;warnings:string[]}
+export type Analysis = {traceId:string;standardVersion:string;standardSource?:string;cautionPolicy?:string;lifeStage:string;referenceEnergyKcal:number|null;usesEstimatedFeed:boolean;summary:Record<string,number>;nutrients:NutrientResult[];contributions:ProductContribution[];ratios:Record<string,{value:number|null;status:string;minimum?:number;maximum?:number}>;warnings:string[]}
 export type StandardProfile = 'FEDIAF_2025'|'NIAS_V3'
 export const STANDARD_OPTIONS:{id:StandardProfile;label:string;available:boolean;note:string}[]=[
-  {id:'FEDIAF_2025',label:'FEDIAF 2025',available:true,note:'검증용으로 지원하는 기준이에요. 기준 버전은 분석 결과에, 출처는 저장된 기록에 함께 표시돼요'},
-  {id:'NIAS_V3',label:'NIAS v3',available:false,note:'출처 대조와 서버 지원 전이라 아직 선택할 수 없어요'}
+  {id:'FEDIAF_2025',label:'FEDIAF 2025',available:true,note:'현재 기본 분석 기준이에요. 결과에 기준 버전과 출처를 함께 표시해요'},
+  {id:'NIAS_V3',label:'NIAS v3',available:false,note:'서버 연동은 준비됐지만 기준값 원문 대조 중이라 아직 선택할 수 없어요'}
 ]
 export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number}[];excluded:{productId:string;name:string;reason:string}[]}
 

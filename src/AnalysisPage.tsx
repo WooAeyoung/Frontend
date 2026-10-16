@@ -263,7 +263,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
             <div><b>{analysis.summary.noStandard ?? 0}</b>기준 없음</div>
           </div>
           <div className="note">분석 프로필: {profile.name || '우리 아이'} · {species === 'DOG' ? '강아지' : '고양이'} · {weight}kg · {ageValue}{ageUnit === 'MONTH' ? '개월' : '주'}</div>
-          <div className="note">하루 기준 에너지 약 {Math.round(analysis.referenceEnergyKcal)}kcal · 선택 기준 {standardProfile} · 결과 기준 버전 {analysis.standardVersion}</div>
+          <div className="note">하루 기준 에너지 {analysis.referenceEnergyKcal == null ? '검증 대기' : `약 ${Math.round(analysis.referenceEnergyKcal)}kcal`} · 선택 기준 {standardProfile} · 결과 기준 버전 {analysis.standardVersion}</div>
           {analysis.standardSource && <div className="note">기준 출처: {analysis.standardSource}</div>}
           {analysis.cautionPolicy && <div className="note">주의선 정책: {analysis.cautionPolicy}</div>}
           <p className="note">현재 화면은 검증용 6종 성분을 지원합니다. 막대의 선은 하한·주의·상한이며, 각 성분의 실제값 또는 추정 여부를 함께 표시합니다.</p>
