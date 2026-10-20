@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   manage:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Notify at 7, 3 and 1 days before deadline
