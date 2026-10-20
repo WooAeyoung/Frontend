@@ -13,6 +13,8 @@ export const STANDARD_OPTIONS:{id:StandardProfile;label:string;available:boolean
   {id:'NIAS_V3',label:'NIAS v3',available:true,note:'성장기·18개 성분 기준을 포함하며 원문 검증 상태를 함께 표시해요'},
 ]
 export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number;margin?:number;overlap?:number;scoreBreakdown?:{fixedNutrients:number;margin:number;overlap:number}}[];excluded:{productId:string;name:string;reason:string}[]}
+export type StandardNutrient = {id:string;name:string;unit:string;implemented:boolean;minimum?:unknown;maximum?:unknown;caution?:unknown}
+export type StandardCatalog = {standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;items:StandardNutrient[]}
 
 const API = import.meta.env.VITE_API_URL ?? ''
 const STATIC_MODE = import.meta.env.PROD && !API
@@ -43,4 +45,10 @@ export async function analyze(profile:Profile,items:FeedingItem[],manualItems:Ma
 export async function recommend(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[],standardProfile:StandardProfile='FEDIAF_2025'){
   if(STATIC_MODE){const {localRecommend}=await import('./localEngine');return localRecommend(profile,items,manualItems)}
   return call<Recommendation>('/api/v1/recommendations',{method:'POST',body:JSON.stringify({profile,standardProfile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems,maxItems:3})})
+}
+export async function getStandardCatalog(standardProfile:StandardProfile):Promise<StandardCatalog>{
+  return call<StandardCatalog>(`/api/v2/standards/${standardProfile}`)
+}
+export async function getParameterCatalog(standardProfile:StandardProfile){
+  return call<{standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;verification:Record<string,string>;allowUnverified:boolean}>(`/api/v2/parameters/${standardProfile}`)
 }
