@@ -10,9 +10,9 @@ export type Analysis = {traceId:string;standardVersion:string;standardSource?:st
 export type StandardProfile = 'FEDIAF_2025'|'NIAS_V3'
 export const STANDARD_OPTIONS:{id:StandardProfile;label:string;available:boolean;note:string}[]=[
   {id:'FEDIAF_2025',label:'FEDIAF 2025',available:true,note:'현재 기본 분석 기준이에요. 결과에 기준 버전과 출처를 함께 표시해요'},
-    {id:'FEDIAF_2025',label:'FEDIAF 2025',available:true,note:'현재 기본 분석 기준이에요. 결과에 기준 버전과 출처를 함께 표시해요'},
+  {id:'NIAS_V3',label:'NIAS v3',available:true,note:'성장기·18개 성분 기준을 포함하며 원문 검증 상태를 함께 표시해요'},
 ]
-export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number}[];excluded:{productId:string;name:string;reason:string}[]}
+export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number;margin?:number;overlap?:number;scoreBreakdown?:{fixedNutrients:number;margin:number;overlap:number}}[];excluded:{productId:string;name:string;reason:string}[]}
 
 const API = import.meta.env.VITE_API_URL ?? ''
 const STATIC_MODE = import.meta.env.PROD && !API
