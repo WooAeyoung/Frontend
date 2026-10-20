@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bot, Mic, Send, Sparkles, X } from 'lucide-react'
-import type { Analysis } from './api'
+import { askJarvis, type Analysis } from './api'
 import type { Page } from './Home'
 import './jarvis.css'
 
@@ -51,13 +51,20 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
   useEffect(() => () => recognition.current?.stop(), [])
   useEffect(() => { if (open) endRef.current?.scrollIntoView({ block: 'nearest' }) }, [messages, open])
 
-  const submit = (value = input) => {
+  const submit = async (value = input) => {
     const text = value.trim()
     if (!text) return
-    const response = answerCommand(text, analysis)
-    setMessages(previous => [...previous, { from: 'user', text }, { from: 'assistant', text: response.answer }])
+    setMessages(previous => [...previous, { from: 'user', text }])
     setInput('')
-    if (response.page) onNavigate(response.page)
+    try {
+      const response = await askJarvis(text, analysis)
+      setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
+      if (response.page) onNavigate(response.page)
+    } catch {
+      const response = answerCommand(text, analysis)
+      setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
+      if (response.page) onNavigate(response.page)
+    }
   }
 
   const listen = () => {
@@ -67,7 +74,7 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
     if (!Constructor) { setMessages(previous => [...previous, { from: 'assistant', text: '이 브라우저에서는 음성 인식을 지원하지 않아요. 텍스트로 입력해 주세요.' }]); return }
     const next = new Constructor()
     next.lang = 'ko-KR'; next.continuous = false; next.interimResults = false
-    next.onresult = event => submit(event.results[0][0].transcript)
+    next.onresult = event => { void submit(event.results[0][0].transcript) }
     next.onerror = () => setMessages(previous => [...previous, { from: 'assistant', text: '음성을 인식하지 못했어요. 마이크 권한을 확인하고 다시 시도해 주세요.' }])
     next.onend = () => setListening(false)
     recognition.current = next
@@ -78,7 +85,7 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
     {open && <section className="jarvis-panel" aria-label="자비스 대화창">
       <header className="jarvis-top"><span><Bot size={19} /> JARVIS <small>우애영 케어 도우미</small></span><button type="button" onClick={() => setOpen(false)} aria-label="자비스 닫기"><X size={18} /></button></header>
       <div className="jarvis-messages" role="log" aria-live="polite">{messages.map((message, index) => <p key={index} className={`jarvis-msg ${message.from}`}>{message.text}</p>)}<div ref={endRef} /></div>
-      <form className="jarvis-form" onSubmit={event => { event.preventDefault(); submit() }}><button type="button" onClick={listen} aria-label={listening ? '음성 인식 중지' : '음성 인식 시작'} aria-pressed={listening} className={listening ? 'listening' : ''}><Mic size={19} /></button><input value={input} onChange={event => setInput(event.target.value)} placeholder="자비스에게 물어보기" aria-label="자비스 명령 입력" /><button type="submit" aria-label="메시지 보내기" disabled={!input.trim()}><Send size={18} /></button></form>
+      <form className="jarvis-form" onSubmit={event => { event.preventDefault(); void submit() }}><button type="button" onClick={listen} aria-label={listening ? '음성 인식 중지' : '음성 인식 시작'} aria-pressed={listening} className={listening ? 'listening' : ''}><Mic size={19} /></button><input value={input} onChange={event => setInput(event.target.value)} placeholder="자비스에게 물어보기" aria-label="자비스 명령 입력" /><button type="submit" aria-label="메시지 보내기" disabled={!input.trim()}><Send size={18} /></button></form>
       <small className="jarvis-note">분석 요약은 이 기기에서 완료한 최근 결과만 사용해요.</small>
     </section>}
     <button type="button" className="jarvis-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}><Sparkles size={19} /><span>JARVIS</span></button>

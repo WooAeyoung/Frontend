@@ -15,6 +15,7 @@ export const STANDARD_OPTIONS:{id:StandardProfile;label:string;available:boolean
 export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number;margin?:number;overlap?:number;scoreBreakdown?:{fixedNutrients:number;margin:number;overlap:number}}[];excluded:{productId:string;name:string;reason:string}[]}
 export type StandardNutrient = {id:string;name:string;unit:string;implemented:boolean;minimum?:unknown;maximum?:unknown;caution?:unknown}
 export type StandardCatalog = {standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;items:StandardNutrient[]}
+export type JarvisReply = {intent:string;page:'home'|'analysis'|'records'|'support'|null;answer:string}
 
 const API = import.meta.env.VITE_API_URL ?? ''
 const STATIC_MODE = import.meta.env.PROD && !API
@@ -51,4 +52,7 @@ export async function getStandardCatalog(standardProfile:StandardProfile):Promis
 }
 export async function getParameterCatalog(standardProfile:StandardProfile){
   return call<{standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;verification:Record<string,string>;allowUnverified:boolean}>(`/api/v2/parameters/${standardProfile}`)
+}
+export async function askJarvis(message:string,analysis:Analysis|null){
+  return call<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message,analysis})})
 }
