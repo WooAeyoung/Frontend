@@ -56,7 +56,7 @@ function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) 
   </div>
 }
 
-export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, loadSeq = 0, active = true }: { onSaved: () => void; initialProfileId?: string; initialDraft?: AnalysisDraft; loadSeq?: number; active?: boolean }) {
+export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, initialDraft, loadSeq = 0, active = true }: { onSaved: () => void; onAnalysis: (analysis: Analysis | null) => void; initialProfileId?: string; initialDraft?: AnalysisDraft; loadSeq?: number; active?: boolean }) {
   const [name, setName] = useState('')
   const [species, setSpecies] = useState<'DOG' | 'CAT'>('DOG')
   const [weight, setWeight] = useState('')
@@ -161,7 +161,7 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
     setLoading(true); setError(''); setSaved(false)
     try {
       const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems, manualItems, standardProfile), recommend(profile, nextItems, manualItems, standardProfile)])
-      setAnalysis(nextAnalysis); setRec(nextRecommendation)
+      setAnalysis(nextAnalysis); onAnalysis(nextAnalysis); setRec(nextRecommendation)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
       setError(e instanceof Error ? e.message : '추가한 제품을 다시 분석하지 못했습니다.')
@@ -175,10 +175,10 @@ export default function AnalysisPage({ onSaved, initialProfileId, initialDraft, 
     setLoading(true)
     try {
       const [a, r] = await Promise.all([analyze(profile, items, manualItems, standardProfile), recommend(profile, items, manualItems, standardProfile)])
-      setAnalysis(a); setRec(r)
+      setAnalysis(a); onAnalysis(a); setRec(r)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
-      setAnalysis(null); setRec(null)
+      setAnalysis(null); onAnalysis(null); setRec(null)
       setError(e instanceof Error ? e.message : '요청을 처리하지 못했습니다.')
     } finally { setLoading(false) }
   }
