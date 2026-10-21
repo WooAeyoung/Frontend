@@ -5,6 +5,7 @@ import type { AnalysisDraft, Page } from './Home'
 import AnalysisPage from './AnalysisPage'
 import Records from './Records'
 import Support from './Support'
+import RoamingPet from './RoamingPet'
 import { saveProfile } from './Records'
 import JarvisAssistant from './JarvisAssistant'
 import type { Analysis } from './api'
@@ -60,6 +61,7 @@ export default function SiteApp() {
         {page === 'support' && <Support />}
       </main>
       <footer className="site-f"><b>우애영</b><br />반려동물 영양제 분석 서비스<br />© 2026 우애영. All rights reserved.</footer>
+      <RoamingPet />
       <JarvisAssistant onNavigate={go} analysis={latestAnalysis} />
     </>
   )
