@@ -1,5 +1,5 @@
 :root{--bg:#fff;--alt:#f4f6f3;--ink:#26302b;--sub:#6b766f;--pt:#2b7a5c;--pt2:#e3f0ea;--line:#e4e9e5;--bad:#c2410c;--warn:#a16207;--ok:#2b7a5c}
-.web-pet-show{right:24px!important;bottom:24px!important;z-index:1001!important;padding:13px 17px;background:#123c33;color:#f1fff9;border-color:#70d7bb;box-shadow:0 12px 30px #0004;font-weight:800;letter-spacing:.04em}@media(max-width:600px){.web-pet-show{right:14px!important;bottom:14px!important}}
+.web-pet-show{right:150px!important;bottom:24px!important;z-index:1001!important;padding:13px 17px;background:#123c33;color:#f1fff9;border-color:#70d7bb;box-shadow:0 12px 30px #0004;font-weight:800;letter-spacing:.04em}@media(max-width:600px){.web-pet-show{right:118px!important;bottom:14px!important}}
 /* Fix the home hero pet scale so the full animals remain visible. */
 .roaming-pet .pet-body{position:absolute;left:48px;top:30px;width:38px;height:20px;border-radius:50%;background:#c98b62}.roaming-pet .pet-head{position:absolute;left:28px;top:2px;font-size:30px;font-style:normal}.roaming-pet .pet-leg{position:absolute;top:46px;width:6px;height:15px;border-radius:5px;background:#9d6646}
 .roaming-pet .pet-sprite{display:block;width:78px;height:78px;object-fit:contain;margin:0 auto;filter:drop-shadow(0 5px 4px #234b3830)}.roaming-pet .pet-art{height:82px}
