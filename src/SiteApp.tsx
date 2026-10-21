@@ -4,7 +4,6 @@ import Home from './Home'
 import type { AnalysisDraft, Page } from './Home'
 import AnalysisPage from './AnalysisPage'
 import Records from './Records'
-import RoamingPet from './RoamingPet'
 import Support from './Support'
 import { saveProfile } from './Records'
 import JarvisAssistant from './JarvisAssistant'
@@ -57,7 +56,7 @@ export default function SiteApp() {
         {page === 'home' && <Home go={go} beginAnalysis={draft => { const saved = saveProfile({ name: draft.name, species: draft.species, weightKg: draft.weightKg, age: { value: draft.ageYears * 12, unit: 'MONTH' }, completeFeed: true }); setAnalysisDraft(draft); setProfileToLoad(saved.id); setLoadSeq(n => n + 1); go('analysis') }} />}
         {/* 분석 화면은 계속 마운트해 두어 다른 화면에 다녀와도 입력값·결과가 유지된다. */}
         {analysisVisited && <div hidden={page !== 'analysis'}><AnalysisPage onSaved={() => setTick(tick + 1)} onAnalysis={setLatestAnalysis} initialProfileId={profileToLoad} initialDraft={analysisDraft} loadSeq={loadSeq} active={page === 'analysis'} /></div>}
-        {page === 'records' && <><RoamingPet /><Records key={tick} go={go} selectProfile={id => { setAnalysisDraft(undefined); setProfileToLoad(id); setLoadSeq(n => n + 1); go('analysis') }} /></>}
+        {page === 'records' && <Records key={tick} go={go} selectProfile={id => { setAnalysisDraft(undefined); setProfileToLoad(id); setLoadSeq(n => n + 1); go('analysis') }} />}
         {page === 'support' && <Support />}
       </main>
       <footer className="site-f"><b>우애영</b><br />반려동물 영양제 분석 서비스<br />© 2026 우애영. All rights reserved.</footer>
