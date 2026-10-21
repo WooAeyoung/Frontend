@@ -1,6 +1,7 @@
 :root{--bg:#fff;--alt:#f4f6f3;--ink:#26302b;--sub:#6b766f;--pt:#2b7a5c;--pt2:#e3f0ea;--line:#e4e9e5;--bad:#c2410c;--warn:#a16207;--ok:#2b7a5c}
 /* Fix the home hero pet scale so the full animals remain visible. */
 .roaming-pet .pet-body{position:absolute;left:48px;top:30px;width:38px;height:20px;border-radius:50%;background:#c98b62}.roaming-pet .pet-head{position:absolute;left:28px;top:2px;font-size:30px;font-style:normal}.roaming-pet .pet-leg{position:absolute;top:46px;width:6px;height:15px;border-radius:5px;background:#9d6646}
+.records-page:not(:has(.profile-records)) .roaming-pet{display:none}
 .pet-visual .pet-art{inset:20% 0 12%!important;align-items:center!important}.pet-visual .pet-art .dog{font-size:clamp(8rem,12vw,14rem)!important}.pet-visual .pet-art .cat{font-size:clamp(4rem,7vw,8rem)!important}
 /* The landing animation uses .input-panel as an overlay. Keep the full analysis form panels in normal flow. */
 .profile-card-main .profile-avatar{animation:record-pet-bob 2.4s ease-in-out infinite}.profile-card-main:hover .profile-avatar{animation:record-pet-turn .7s ease-in-out infinite alternate}@keyframes record-pet-bob{50%{transform:translateY(-4px) rotate(-4deg)}}@keyframes record-pet-turn{to{transform:rotate(10deg) translateX(3px)}}
