@@ -16,8 +16,10 @@ export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{pr
 export type StandardNutrient = {id:string;name:string;unit:string;implemented:boolean;minimum?:unknown;maximum?:unknown;caution?:unknown}
 export type StandardCatalog = {standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;items:StandardNutrient[]}
 export type JarvisReply = {intent:string;page:'home'|'analysis'|'records'|'support'|null;answer:string}
+export type VetClinic = {id:string;name:string;address:string;lat:number;lon:number;phone?:string;distanceKm:number;mapUrl:string}
+export type NearbyVets = {origin:{lat:number;lon:number};clinics:VetClinic[]}
 
-const API = import.meta.env.VITE_API_URL ?? ''
+const API = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? 'https://wooaeyoung-backend.onrender.com' : '')
 const STATIC_MODE = import.meta.env.PROD && !API
 async function call<T>(path:string,init?:RequestInit):Promise<T>{
   let response:Response
@@ -55,4 +57,9 @@ export async function getParameterCatalog(standardProfile:StandardProfile){
 }
 export async function askJarvis(message:string,analysis:Analysis|null){
   return call<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message,analysis})})
+}
+export async function getNearestVets(lat:number,lon:number,limit=5){
+  const request = call<NearbyVets>(`/api/v1/vets/nearest?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limit=${limit}`)
+  const timeout = new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('동물병원 서버 응답이 늦습니다. 잠시 후 다시 시도해 주세요.')), 15000))
+  return Promise.race([request, timeout])
 }
