@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { analyze, getProducts, recommend, STANDARD_OPTIONS } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation, StandardProfile } from './api'
-import Records, { saveRecord } from './Records'
+import { loadRecords, saveRecord, type SavedRecord } from './Records'
 import { loadAnalysisProfiles, saveAnalysisProfile } from './analysisProfiles'
 import type { AnalysisDraft } from './Home'
 import PetCompanion from './PetCompanion'
@@ -80,8 +80,9 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [profiles, setProfiles] = useState(loadAnalysisProfiles)
+  const [analysisRecords, setAnalysisRecords] = useState<SavedRecord[]>(loadRecords)
+  const [openAnalysisProfileId, setOpenAnalysisProfileId] = useState<string | null>(null)
   const [profileId, setProfileId] = useState('')
-  const [recTick, setRecTick] = useState(0)
   const [profileSaved, setProfileSaved] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
 
@@ -140,6 +141,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
   }
   useEffect(() => { if (active) setProfiles(loadAnalysisProfiles()) }, [active])
+  useEffect(() => { const refresh = () => setAnalysisRecords(loadRecords()); window.addEventListener('wooaeyoung:records-changed', refresh); return () => window.removeEventListener('wooaeyoung:records-changed', refresh) }, [])
   useEffect(() => {
     if (initialProfileId) loadProfile(initialProfileId)
   }, [initialProfileId, loadSeq])
@@ -196,7 +198,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   function save() {
     if (!analysis) return
     saveRecord({ id: analysis.traceId, profileId: profileId || undefined, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary, standardVersion: analysis.standardVersion, standardSource: analysis.standardSource })
-    setSaved(true); setRecTick(t => t + 1); onSaved()
+    setSaved(true); setAnalysisRecords(loadRecords()); onSaved()
   }
 
   return (
@@ -212,6 +214,8 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
       <StepNav />
 
       <div className="analysis-grid">
+
+      <section className="panel analysis-profile-panel"><div className="panel-title"><span>PROFILE</span><div><h3>저장된 반려동물 프로필</h3><p>분석 페이지 전용 카드입니다. 기록은 버튼을 눌렀을 때만 펼쳐집니다.</p></div></div>{profiles.length === 0 ? <p className="note">저장된 프로필이 없습니다.</p> : <div className="analysis-profile-grid">{profiles.map(item => { const records = analysisRecords.filter(record => record.profileId ? record.profileId === item.id : record.name === item.name); const open = openAnalysisProfileId === item.id; return <article className={`analysis-profile-card ${open ? 'open' : ''}`} key={item.id}><div className="analysis-profile-main"><span className="profile-avatar">{item.species === 'DOG' ? '🐶' : '🐱'}</span><span><b>{item.name}</b><small>{item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg · {item.age.value}{item.age.unit === 'MONTH' ? '개월' : '주'}</small><em>저장된 분석 {records.length}건</em></span></div><div className="analysis-profile-actions"><button className="btn ghost" onClick={() => loadProfile(item.id)}>이 프로필로 분석</button><button className="btn ghost" aria-expanded={open} onClick={() => setOpenAnalysisProfileId(open ? null : item.id)}>{open ? '기록 닫기' : '기록 보기'}</button></div>{open && <div className="analysis-profile-records">{records.length === 0 ? <p className="empty-record">저장된 분석 기록이 없습니다.</p> : records.map(record => <article className="record-card" key={record.id}><div><b>{new Date(record.date).toLocaleString('ko-KR')}</b><span>부족 {record.summary.deficient ?? 0} · 적정 {record.summary.adequate ?? 0} · 주의 {record.summary.caution ?? 0} · 과다 {record.summary.excess ?? 0}</span><small>{record.items.join(', ')}</small></div></article>)}</div>}</article> })}</div>}</section>
 
       <div id="step-1" className="panel input-panel profile-panel"><div className="panel-title"><span>STEP 1</span><div><h3>반려동물 정보</h3><p>한 번 저장하면 다음 분석에서 다시 사용할 수 있어요.</p></div></div>
         <div className="profile-actions"><label className="f">저장된 프로필 불러오기<select className="in" value={profileId} onChange={e => loadProfile(e.target.value)}><option value="">새 프로필 작성</option>{profiles.map(item => <option key={item.id} value={item.id}>{item.name} · {item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg</option>)}</select></label>{profileReady ? <button className="btn ghost reveal-action" onClick={saveCurrentProfile}>{profileSaved ? '프로필 저장됨' : profileId ? '프로필 수정 저장' : '프로필 저장'}</button> : <span className="action-hint">필수 칸을 입력하면 저장 버튼이 나타나요.</span>}</div>
@@ -308,7 +312,6 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
       </section>
 
       <section id="step-5" className="step-section records-section">
-        <Records key={`${recTick}-${active}`} go={() => {}} selectProfile={id => { loadProfile(id); document.getElementById('step-1')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} embedded />
       </section>
       <p className="note">현재 영양 기준·제품 데이터는 기능 검증용 데모이며 수의학적 처방을 대체하지 않습니다.</p>
     </div>
