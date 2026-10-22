@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { analyze, getProducts, recommend, STANDARD_OPTIONS } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation, StandardProfile } from './api'
-import Records, { loadProfiles, saveProfile, saveRecord } from './Records'
+import Records, { saveRecord } from './Records'
+import { loadAnalysisProfiles, saveAnalysisProfile } from './analysisProfiles'
 import type { AnalysisDraft } from './Home'
 import PetCompanion from './PetCompanion'
 
@@ -78,7 +79,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [standardProfile, setStandardProfile] = useState<StandardProfile>('FEDIAF_2025')
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [profiles, setProfiles] = useState(loadProfiles)
+  const [profiles, setProfiles] = useState(loadAnalysisProfiles)
   const [profileId, setProfileId] = useState('')
   const [recTick, setRecTick] = useState(0)
   const [profileSaved, setProfileSaved] = useState(false)
@@ -122,7 +123,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
 
   function loadProfile(id: string) {
     setProfileId(id)
-    const fresh = loadProfiles()
+    const fresh = loadAnalysisProfiles()
     setProfiles(fresh)
     const selected = fresh.find(item => item.id === id)
     if (!selected) return
@@ -134,11 +135,11 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   function saveCurrentProfile() {
     if (!name.trim() || !(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('프로필을 저장하려면 이름, 체중, 나이를 입력해 주세요.'); return }
     if (needSize && (!(Number(expectedAdultWeight) >= Number(weight)))) { setError('성장기 강아지는 현재 체중 이상인 예상 성체 체중을 입력해 주세요.'); return }
-    const savedProfile = saveProfile(profile, profileId || undefined)
+    const savedProfile = saveAnalysisProfile(profile, profileId || undefined)
     const next = profileId ? profiles.map(item => item.id === savedProfile.id ? savedProfile : item) : [savedProfile, ...profiles]
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
   }
-  useEffect(() => { if (active) setProfiles(loadProfiles()) }, [active])
+  useEffect(() => { if (active) setProfiles(loadAnalysisProfiles()) }, [active])
   useEffect(() => {
     if (initialProfileId) loadProfile(initialProfileId)
   }, [initialProfileId, loadSeq])
