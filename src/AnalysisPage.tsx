@@ -3,6 +3,7 @@ import { analyze, getProducts, recommend, STANDARD_OPTIONS } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation, StandardProfile } from './api'
 import Records, { loadProfiles, saveProfile, saveRecord } from './Records'
 import type { AnalysisDraft } from './Home'
+import PetCompanion from './PetCompanion'
 
 const STEPS: [string, string][] = [['step-1', '반려동물 정보'], ['step-2', '사료·영양제 선택'], ['step-3', '직접 입력'], ['step-4', '분석 결과'], ['step-5', '기록']]
 
@@ -204,6 +205,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
         <h1>사료 · 영양제 분석</h1>
         <p>반려동물 정보와 먹는 제품을 입력하면 하루 영양 섭취량을 한눈에 비교해 드려요.</p>
         {initialDraft?.symptoms.length ? <div className="concern-handoff"><b>선택한 관심 건강</b><span>{initialDraft.symptoms.join(' · ')}</span><small>아래에서 체중과 급여 제품을 추가하면 맞춤 분석을 시작할 수 있어요.</small></div> : null}
+        <PetCompanion />
       </section>
 
       <StepNav />
