@@ -42,6 +42,7 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
   const [profiles, setProfiles] = useState<SavedProfile[]>(loadProfiles)
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
   useEffect(() => { const refresh = () => { setList(loadRecords()); setProfiles(loadProfiles()) }; window.addEventListener('wooaeyoung:records-changed', refresh); window.addEventListener('wooaeyoung:profiles-changed', refresh); return () => { window.removeEventListener('wooaeyoung:records-changed', refresh); window.removeEventListener('wooaeyoung:profiles-changed', refresh) } }, [])
+  useEffect(() => { if (!selectedProfileId && profiles.length) setSelectedProfileId(profiles[0].id) }, [profiles, selectedProfileId])
   const selectedProfile = profiles.find(profile => profile.id === selectedProfileId)
   const selectedRecords = selectedProfile ? list.filter(record => record.profileId ? record.profileId === selectedProfile.id : record.name === selectedProfile.name) : []
   const removeRecord = (id: string) => { const next = list.filter(record => record.id !== id); localStorage.setItem(KEY, JSON.stringify(next)); setList(next) }
