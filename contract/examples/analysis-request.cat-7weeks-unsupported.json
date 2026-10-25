@@ -1,0 +1,13 @@
+{
+  "pet": {
+    "species": "CAT",
+    "weightKg": 1.2,
+    "ageValue": 7,
+    "ageUnit": "WEEK",
+    "sizeClass": null
+  },
+  "feeding": {
+    "feedGramsPerDay": null,
+    "supplements": []
+  }
+}

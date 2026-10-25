@@ -1,48 +1,54 @@
-# 우애영 Frontend
+# 우애영 Frontend (React · TypeScript · Vite)
 
-반려동물 프로필과 하루 급여 제품을 바탕으로 6종 영양소의 총량·상태·추천 후보를 보여 주는 React/Vite 데모입니다.
+`프론트엔드_구현계획_v1.md` 의 1차(검증·요청·응답) + 2차(최종 화면)를 구현한 것입니다.
+API 형식은 `contract/openapi.yaml` (= `src/types/api.ts`) 을 그대로 따릅니다.
 
-**공개 데모:** https://wooaeyoung.github.io/Frontend/
+## 실행
 
-## 실행 모드
-
-| 모드 | 실행 방법 | 데이터·계산 |
-| --- | --- | --- |
-| 공개 데모 | GitHub Pages 링크 | Render Backend API, API 실패 시 브라우저 내장 데모 목록 |
-| 로컬 통합 | `npm run dev` + FastAPI | `/api` 프록시를 통한 backend API |
-
-```powershell
-npm install
-npm run dev
+```bash
+npm ci
+npm run dev          # http://localhost:5173  (기본: 가짜 응답 모드)
+npm test             # 단위 테스트 116개
+npm run build        # dist/ 생성
 ```
 
-다른 백엔드 주소를 사용할 때는 `.env.example`을 `.env`로 복사한 뒤 `VITE_API_URL`을 설정합니다.
+## 백엔드(Spring) 연결
 
-## 데이터 사용 원칙
+1. 백엔드를 `http://localhost:8080` 에서 실행
+2. 이 폴더에 `.env.local` 파일을 만들고:
+   ```
+   VITE_USE_MOCK=false
+   # 백엔드가 다른 PC에 있으면 (선택)
+   # VITE_PROXY_TARGET=http://192.168.0.10:8080
+   ```
+3. `npm run dev` 다시 실행 → 화면 오른쪽 위가 "서버 연결" 로 바뀝니다.
 
-- Open Pet Food Facts는 실제 제품명·브랜드·바코드 검색에 사용합니다. 데이터는 ODbL이며 사용자 기여형이라 정확성과 완전성이 보장되지 않습니다.
-- 추적하는 칼슘, 인, 비타민 D, 비타민 E, 오메가3, 아연 **6종이 모두 있는 사료만** 실제값으로 합산합니다.
-- 6종 중 하나라도 빠진 사료는 일부 값을 0으로 취급하지 않고, 완전사료 선택 시 최소 권장량 추정으로 표시합니다.
-- 기준선은 FEDIAF Nutritional Guidelines 2025의 생애주기별 1000 kcal ME 값을 사용합니다. 추천 제품 수치는 기능 검증용 데모이며 수의학적 처방이나 실제 급여 결정을 대신하지 않습니다.
+- `.env.development` 가 없어도 기본은 가짜 응답 모드입니다 (`env.development.example` 참고).
+- 화면은 `/api/v1/...` 로 요청하고 Vite proxy 가 백엔드로 넘깁니다 (CORS 설정 불필요).
+- 쓰는 API: `GET /nutrients`, `GET /size-classes`, `POST /units/convert`(환산 미리보기), `POST /analyses`
+- 요청 JSON 에는 계약에 있는 필드만 들어갑니다 (백엔드 `fail-on-unknown-properties: true` 대응, 테스트로 확인).
+- 400 의 `fieldErrors[].field` 경로가 그대로 해당 입력칸에 표시됩니다. 501(백엔드 미구현)은 "개발 중" 배너로 표시됩니다.
 
-데이터 출처: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/
+## 배포 (jar 하나로)
 
-영양 기준 출처: https://europeanpetfood.org/wp-content/uploads/2025/09/FEDIAF-Nutritional-Guidelines_2025-ONLINE.pdf
+`npm run build` 후 `dist/` 안의 내용을 `backend/src/main/resources/static/` 에 복사하면 Spring 이 화면까지 제공합니다 (같은 주소이므로 추가 설정 없음).
 
-## 구현 범위
+## contract 폴더
 
-- 프로필 저장·불러오기, 급여 제품 검색·추가·하루 급여량 편집
-- 검색되지 않는 제품의 영양성분 직접 입력
-- 영양상태 요약, 성분별 합계, 기준선, 추정값·경고, 칼슘:인 비율
-- 안전성 재평가 기반 추천과 제외 사유
-- 분석 기록의 개별·전체 삭제
+`@contract/...` 로 가져옵니다. 저장소 구조(`wooaeyoung/frontend` 옆에 `wooaeyoung/contract`)에 넣으면 그쪽을, 아니면 이 폴더의 `contract/` 사본을 씁니다 (`vite.config.ts`, `tsconfig.json` paths).
 
-사진 인식(OCR), 최저가 비교, 처방·진단 기능은 이 데모 범위에 포함하지 않습니다.
+## 가짜 응답 모드에서 시나리오 확인
 
-## 검증
+- S7 서버 단위 오류: 영양제 이름을 `#unit-error` 로 하고 분석
+- 결과 숫자는 `contract/examples` 예시이며 입력값으로 계산한 것이 아닙니다.
 
-```powershell
-npm run build
-```
+## 폴더 (담당 구분 유지)
 
-발표용 설계·자료구조·한계와 데모 순서는 [docs/presentation-guide.md](docs/presentation-guide.md)를 참고하세요.
+| 경로 | 내용 |
+|---|---|
+| `src/features/pet/` (A) | 반려동물 검증·변환·입력 화면 |
+| `src/features/feeding/` (B) | 사료·영양제 검증·변환·단위 정규화·입력 화면 |
+| `src/features/analysis/` (C) | 요청 흐름(`useAnalysis`, `analysisFlow`), 결과 정리(`resultView`), `NutrientBar`, 결과 화면 |
+| `src/pages/AnalysisPage.tsx` (C) | 통합 페이지 |
+| `src/components/` (A) | 공통 UI |
+| `src/styles/global.css` | 색·글꼴·간격 공통 값 |

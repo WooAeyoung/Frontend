@@ -1,0 +1,11 @@
+{
+  "code": "VALIDATION_ERROR",
+  "message": "입력값을 확인하세요.",
+  "fieldErrors": [
+    {
+      "field": "pet.sizeClass",
+      "code": "SIZE_CLASS_REQUIRED",
+      "message": "12개월 미만 강아지는 예상 성체 체급을 골라 주세요."
+    }
+  ]
+}

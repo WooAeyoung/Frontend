@@ -1,0 +1,36 @@
+{
+  "pet": {
+    "species": "DOG",
+    "weightKg": 10,
+    "ageValue": 12,
+    "ageUnit": "WEEK",
+    "sizeClass": "S"
+  },
+  "feeding": {
+    "feedGramsPerDay": 200,
+    "supplements": [
+      {
+        "label": "칼슘 파우더",
+        "servingsPerDay": 1,
+        "ingredients": [
+          {
+            "nutrientId": "CA",
+            "amount": 5000,
+            "unit": "mg"
+          }
+        ]
+      },
+      {
+        "label": "비타민A",
+        "servingsPerDay": 1,
+        "ingredients": [
+          {
+            "nutrientId": "VIT_A",
+            "amount": 20000,
+            "unit": "IU"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "pet": {
+    "species": "DOG",
+    "weightKg": 10,
+    "ageValue": 36,
+    "ageUnit": "MONTH",
+    "sizeClass": null
+  },
+  "feeding": {
+    "feedGramsPerDay": 120,
+    "supplements": [
+      {
+        "label": "비타민D 츄",
+        "servingsPerDay": 1,
+        "ingredients": [
+          {
+            "nutrientId": "VIT_D",
+            "amount": 10,
+            "unit": "µg"
+          }
+        ]
+      }
+    ]
+  }
+}

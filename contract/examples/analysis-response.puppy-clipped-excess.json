@@ -1,0 +1,471 @@
+{
+  "lifeStage": "DOG_EARLY_GROWTH",
+  "energy": {
+    "k": 189.0667827612665,
+    "energyKcal": 1063.2006516744646,
+    "intakeKcal": 720.0,
+    "energyRatio": 0.6772004878533998,
+    "growthRatio": 48.172753510172974,
+    "estimatedAdultKg": 20.758622398215685,
+    "estimatedAdultKgClipped": 7.0,
+    "weightClipped": true
+  },
+  "energyRatioText": "섭취 열량 720.0 kcal / 필요 열량 1,063 kcal (67.7%)",
+  "bars": [
+    {
+      "nutrientId": "TAURINE",
+      "nutrientName": "타우린 (건사료)",
+      "unit": "g",
+      "feedValue": null,
+      "supplementValue": 0.0,
+      "total": null,
+      "lower": null,
+      "caution": null,
+      "upper": null,
+      "status": "NO_STANDARD"
+    },
+    {
+      "nutrientId": "EPA_DHA",
+      "nutrientName": "EPA+DHA (오메가-3)",
+      "unit": "g",
+      "feedValue": 0.072,
+      "supplementValue": 0.0,
+      "total": 0.072,
+      "lower": 0.10632006516744646,
+      "caution": null,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "CA",
+      "nutrientName": "칼슘",
+      "unit": "g",
+      "feedValue": 1.7999999999999998,
+      "supplementValue": 5.0,
+      "total": 6.8,
+      "lower": 2.6580016291861615,
+      "caution": 4.983753054724053,
+      "upper": 6.645004072965404,
+      "status": "EXCESS"
+    },
+    {
+      "nutrientId": "P",
+      "nutrientName": "인",
+      "unit": "g",
+      "feedValue": 1.6199999999999999,
+      "supplementValue": 0.0,
+      "total": 1.6199999999999999,
+      "lower": 2.392201466267545,
+      "caution": null,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "CU",
+      "nutrientName": "구리 (건사료)",
+      "unit": "mg",
+      "feedValue": 1.98,
+      "supplementValue": 0.0,
+      "total": 1.98,
+      "lower": 2.9238017921047774,
+      "caution": 7.4424045617212515,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "I",
+      "nutrientName": "요오드",
+      "unit": "mg",
+      "feedValue": 0.18,
+      "supplementValue": 0.0,
+      "total": 0.18,
+      "lower": 0.26580016291861613,
+      "caution": 2.192851344078583,
+      "upper": 2.9238017921047774,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "FE",
+      "nutrientName": "철",
+      "unit": "mg",
+      "feedValue": 15.84,
+      "supplementValue": 0.0,
+      "total": 15.84,
+      "lower": 23.39041433683822,
+      "caution": 181.22255107791247,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "MN",
+      "nutrientName": "망간",
+      "unit": "mg",
+      "feedValue": 1.008,
+      "supplementValue": 0.0,
+      "total": 1.008,
+      "lower": 1.4884809123442502,
+      "caution": 45.18602769616474,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "SE",
+      "nutrientName": "셀레늄",
+      "unit": "µg",
+      "feedValue": 64.8,
+      "supplementValue": 0.0,
+      "total": 64.8,
+      "lower": 95.6880586507018,
+      "caution": 398.7002443779242,
+      "upper": 531.6003258372323,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "ZN",
+      "nutrientName": "아연",
+      "unit": "mg",
+      "feedValue": 18.0,
+      "supplementValue": 0.0,
+      "total": 18.0,
+      "lower": 26.580016291861615,
+      "caution": 60.33663698252586,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "VIT_A",
+      "nutrientName": "비타민 A",
+      "unit": "IU",
+      "feedValue": 900.0,
+      "supplementValue": 20000.0,
+      "total": 20900.0,
+      "lower": 1329.0008145930806,
+      "caution": 66450.04072965404,
+      "upper": 106320.06516744646,
+      "status": "ADEQUATE"
+    },
+    {
+      "nutrientId": "VIT_D",
+      "nutrientName": "비타민 D",
+      "unit": "IU",
+      "feedValue": 90.0,
+      "supplementValue": 0.0,
+      "total": 90.0,
+      "lower": 132.90008145930807,
+      "caution": 637.9203910046788,
+      "upper": 850.5605213395717,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "VIT_E",
+      "nutrientName": "비타민 E",
+      "unit": "IU",
+      "feedValue": 9.0,
+      "supplementValue": 0.0,
+      "total": 9.0,
+      "lower": 13.290008145930807,
+      "caution": null,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "VIT_B1",
+      "nutrientName": "비타민 B1 (티아민)",
+      "unit": "mg",
+      "feedValue": 0.324,
+      "supplementValue": 0.0,
+      "total": 0.324,
+      "lower": 0.47844029325350906,
+      "caution": null,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "VIT_B6",
+      "nutrientName": "비타민 B6 (피리독신)",
+      "unit": "mg",
+      "feedValue": 0.216,
+      "supplementValue": 0.0,
+      "total": 0.216,
+      "lower": 0.31896019550233934,
+      "caution": null,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "VIT_B12",
+      "nutrientName": "비타민 B12 (시아노코발아민)",
+      "unit": "µg",
+      "feedValue": 5.04,
+      "supplementValue": 0.0,
+      "total": 5.04,
+      "lower": 7.4424045617212515,
+      "caution": null,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "VIT_B9",
+      "nutrientName": "비타민 B9 (엽산)",
+      "unit": "µg",
+      "feedValue": 38.879999999999995,
+      "supplementValue": 0.0,
+      "total": 38.879999999999995,
+      "lower": 57.412835190421085,
+      "caution": null,
+      "upper": null,
+      "status": "DEFICIENT"
+    },
+    {
+      "nutrientId": "VIT_B7",
+      "nutrientName": "비타민 B7 (비오틴)",
+      "unit": "µg",
+      "feedValue": null,
+      "supplementValue": 0.0,
+      "total": null,
+      "lower": null,
+      "caution": null,
+      "upper": null,
+      "status": "NO_STANDARD"
+    }
+  ],
+  "caPRatio": {
+    "value": 4.197530864197531,
+    "status": "HIGH"
+  },
+  "caPRatioText": "칼슘:인 = 4.20 : 1 (비율 높음) 인에 비해 칼슘이 많습니다. 칼슘 영양제가 겹치지 않는지 확인하세요. 개의 칼슘:인 권장 비율은 1:1~2:1입니다(농촌진흥청 반려동물 사료 영양표준). 고양이는 기준이 없어 표시하지 않습니다.",
+  "guide": [
+    {
+      "nutrientId": "ZN",
+      "nutrientName": "아연",
+      "unit": "mg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": 0.2983262061028193,
+      "needAmount": 8.580016291861615,
+      "addableAmount": 42.33663698252586,
+      "reduceAmount": null,
+      "noUpper": false,
+      "text": "아연: 하루 8.58mg 더 필요합니다(추정). 최대 42.3mg까지 더해도 주의 구간에 들지 않습니다."
+    },
+    {
+      "nutrientId": "CU",
+      "nutrientName": "구리 (건사료)",
+      "unit": "mg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": 0.26604304879954993,
+      "needAmount": 0.9438017921047774,
+      "addableAmount": 5.462404561721252,
+      "reduceAmount": null,
+      "noUpper": false,
+      "text": "구리 (건사료): 하루 0.944mg 더 필요합니다(추정). 최대 5.46mg까지 더해도 주의 구간에 들지 않습니다."
+    },
+    {
+      "nutrientId": "SE",
+      "nutrientName": "셀레늄",
+      "unit": "µg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": 0.16252811708481596,
+      "needAmount": 30.888058650701808,
+      "addableAmount": 333.9002443779242,
+      "reduceAmount": null,
+      "noUpper": false,
+      "text": "셀레늄: 하루 30.9µg 더 필요합니다(추정). 최대 333.9µg까지 더해도 주의 구간에 들지 않습니다."
+    },
+    {
+      "nutrientId": "VIT_D",
+      "nutrientName": "비타민 D",
+      "unit": "IU",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": 0.14108343496945827,
+      "needAmount": 42.90008145930807,
+      "addableAmount": 547.9203910046788,
+      "reduceAmount": null,
+      "noUpper": false,
+      "text": "비타민 D: 하루 42.9IU 더 필요합니다(추정). 최대 547.9IU까지 더해도 주의 구간에 들지 않습니다."
+    },
+    {
+      "nutrientId": "FE",
+      "nutrientName": "철",
+      "unit": "mg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": 0.08740634046802462,
+      "needAmount": 7.5504143368382195,
+      "addableAmount": 165.38255107791247,
+      "reduceAmount": null,
+      "noUpper": false,
+      "text": "철: 하루 7.55mg 더 필요합니다(추정). 최대 165.4mg까지 더해도 주의 구간에 들지 않습니다."
+    },
+    {
+      "nutrientId": "I",
+      "nutrientName": "요오드",
+      "unit": "mg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": 0.08208490761859391,
+      "needAmount": 0.08580016291861614,
+      "addableAmount": 2.012851344078583,
+      "reduceAmount": null,
+      "noUpper": false,
+      "text": "요오드: 하루 0.0858mg 더 필요합니다(추정). 최대 2.01mg까지 더해도 주의 구간에 들지 않습니다."
+    },
+    {
+      "nutrientId": "MN",
+      "nutrientName": "망간",
+      "unit": "mg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466001,
+      "cautionRatio": 0.022307780776347288,
+      "needAmount": 0.48048091234425017,
+      "addableAmount": 44.17802769616474,
+      "reduceAmount": null,
+      "noUpper": false,
+      "text": "망간: 하루 0.480mg 더 필요합니다(추정). 최대 44.2mg까지 더해도 주의 구간에 들지 않습니다."
+    },
+    {
+      "nutrientId": "EPA_DHA",
+      "nutrientName": "EPA+DHA (오메가-3)",
+      "unit": "g",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466003,
+      "cautionRatio": null,
+      "needAmount": 0.03432006516744647,
+      "addableAmount": null,
+      "reduceAmount": null,
+      "noUpper": true,
+      "text": "EPA+DHA (오메가-3): 하루 0.0343g 더 필요합니다(추정)."
+    },
+    {
+      "nutrientId": "P",
+      "nutrientName": "인",
+      "unit": "g",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": null,
+      "needAmount": 0.7722014662675452,
+      "addableAmount": null,
+      "reduceAmount": null,
+      "noUpper": true,
+      "text": "인: 하루 0.772g 더 필요합니다(추정)."
+    },
+    {
+      "nutrientId": "VIT_E",
+      "nutrientName": "비타민 E",
+      "unit": "IU",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": null,
+      "needAmount": 4.290008145930807,
+      "addableAmount": null,
+      "reduceAmount": null,
+      "noUpper": true,
+      "text": "비타민 E: 하루 4.29IU 더 필요합니다(추정)."
+    },
+    {
+      "nutrientId": "VIT_B1",
+      "nutrientName": "비타민 B1 (티아민)",
+      "unit": "mg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.3227995121466002,
+      "cautionRatio": null,
+      "needAmount": 0.15444029325350905,
+      "addableAmount": null,
+      "reduceAmount": null,
+      "noUpper": true,
+      "text": "비타민 B1 (티아민): 하루 0.154mg 더 필요합니다(추정)."
+    },
+    {
+      "nutrientId": "VIT_B6",
+      "nutrientName": "비타민 B6 (피리독신)",
+      "unit": "mg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.32279951214660013,
+      "cautionRatio": null,
+      "needAmount": 0.10296019550233934,
+      "addableAmount": null,
+      "reduceAmount": null,
+      "noUpper": true,
+      "text": "비타민 B6 (피리독신): 하루 0.103mg 더 필요합니다(추정)."
+    },
+    {
+      "nutrientId": "VIT_B12",
+      "nutrientName": "비타민 B12 (시아노코발아민)",
+      "unit": "µg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.32279951214660013,
+      "cautionRatio": null,
+      "needAmount": 2.4024045617212515,
+      "addableAmount": null,
+      "reduceAmount": null,
+      "noUpper": true,
+      "text": "비타민 B12 (시아노코발아민): 하루 2.40µg 더 필요합니다(추정)."
+    },
+    {
+      "nutrientId": "VIT_B9",
+      "nutrientName": "비타민 B9 (엽산)",
+      "unit": "µg",
+      "status": "DEFICIENT",
+      "shortageRatio": 0.32279951214660024,
+      "cautionRatio": null,
+      "needAmount": 18.53283519042109,
+      "addableAmount": null,
+      "reduceAmount": null,
+      "noUpper": true,
+      "text": "비타민 B9 (엽산): 하루 18.5µg 더 필요합니다(추정)."
+    },
+    {
+      "nutrientId": "CA",
+      "nutrientName": "칼슘",
+      "unit": "g",
+      "status": "EXCESS",
+      "shortageRatio": 0.0,
+      "cautionRatio": 1.36443357552685,
+      "needAmount": null,
+      "addableAmount": 0.0,
+      "reduceAmount": 0.1549959270345962,
+      "noUpper": false,
+      "text": "칼슘: 상한보다 0.155g 많습니다. 이 성분이 든 영양제를 줄이세요."
+    },
+    {
+      "nutrientId": "VIT_A",
+      "nutrientName": "비타민 A",
+      "unit": "IU",
+      "status": "ADEQUATE",
+      "shortageRatio": 0.0,
+      "cautionRatio": 0.314522004358579,
+      "needAmount": null,
+      "addableAmount": 45550.040729654036,
+      "reduceAmount": null,
+      "noUpper": false,
+      "text": "비타민 A: 적정. 45,550IU까지 더할 수 있습니다."
+    }
+  ],
+  "notices": [
+    {
+      "code": "NOTICE_NO_UPPER",
+      "message": "상한 기준 없음은 안전하다는 뜻이 아니라 데이터가 없다는 뜻입니다."
+    },
+    {
+      "code": "NOTICE_FEED_ESTIMATE",
+      "message": "사료 몫은 완전사료가 최소 권장량 기준을 충족한다고 보고 추정한 값이며, 실제 함량은 더 높을 수 있습니다."
+    },
+    {
+      "code": "NOTICE_UNSUPPORTED",
+      "message": "임신·수유 중이거나 8주 미만인 개체는 지원하지 않습니다."
+    },
+    {
+      "code": "NOTICE_REFERENCE",
+      "message": "결과는 참고용이며 수의학적 진단·처방을 대신하지 않습니다. 기준: 농촌진흥청 국립축산과학원 「반려동물 사료 영양표준」 표 2-17."
+    }
+  ],
+  "warnings": [
+    {
+      "code": "WEIGHT_CLIPPED",
+      "message": "체급 또는 체중을 확인하세요."
+    }
+  ]
+}

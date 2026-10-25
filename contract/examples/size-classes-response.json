@@ -1,0 +1,56 @@
+[
+  {
+    "code": "S",
+    "label": "7 kg 이하",
+    "minKg": 0.0,
+    "maxKg": 7.0,
+    "exampleBreeds": [
+      "말티즈",
+      "포메라니안",
+      "치와와",
+      "토이푸들"
+    ]
+  },
+  {
+    "code": "M",
+    "label": "7~15 kg",
+    "minKg": 7.0,
+    "maxKg": 15.0,
+    "exampleBreeds": [
+      "비글",
+      "시바견",
+      "코커스패니얼"
+    ]
+  },
+  {
+    "code": "L",
+    "label": "15~27.5 kg",
+    "minKg": 15.0,
+    "maxKg": 27.5,
+    "exampleBreeds": [
+      "보더콜리",
+      "진돗개"
+    ]
+  },
+  {
+    "code": "XL",
+    "label": "27.5~47.5 kg",
+    "minKg": 27.5,
+    "maxKg": 47.5,
+    "exampleBreeds": [
+      "골든리트리버",
+      "래브라도",
+      "저먼셰퍼드"
+    ]
+  },
+  {
+    "code": "XXL",
+    "label": "47.5 kg 초과",
+    "minKg": 47.5,
+    "maxKg": null,
+    "exampleBreeds": [
+      "그레이트데인",
+      "세인트버나드"
+    ]
+  }
+]

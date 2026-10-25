@@ -1,0 +1,35 @@
+{
+  "pet": {
+    "species": "CAT",
+    "weightKg": 4,
+    "ageValue": 3,
+    "ageUnit": "MONTH",
+    "sizeClass": null
+  },
+  "feeding": {
+    "feedGramsPerDay": null,
+    "supplements": [
+      {
+        "label": "종합 영양제",
+        "servingsPerDay": 2,
+        "ingredients": [
+          {
+            "nutrientId": "TAURINE",
+            "amount": 100,
+            "unit": "mg"
+          },
+          {
+            "nutrientId": "VIT_E",
+            "amount": 5,
+            "unit": "mg"
+          },
+          {
+            "nutrientId": "ZN",
+            "amount": 3,
+            "unit": "mg"
+          }
+        ]
+      }
+    ]
+  }
+}

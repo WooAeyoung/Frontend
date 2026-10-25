@@ -1,0 +1,45 @@
+{
+  "lifeStage": "UNSUPPORTED",
+  "energy": {
+    "k": null,
+    "energyKcal": null,
+    "intakeKcal": null,
+    "energyRatio": null,
+    "growthRatio": null,
+    "estimatedAdultKg": null,
+    "estimatedAdultKgClipped": null,
+    "weightClipped": false
+  },
+  "energyRatioText": null,
+  "bars": [],
+  "caPRatio": {
+    "value": null,
+    "status": "NOT_APPLICABLE"
+  },
+  "caPRatioText": null,
+  "guide": [],
+  "notices": [
+    {
+      "code": "NOTICE_NO_UPPER",
+      "message": "상한 기준 없음은 안전하다는 뜻이 아니라 데이터가 없다는 뜻입니다."
+    },
+    {
+      "code": "NOTICE_FEED_ESTIMATE",
+      "message": "사료 몫은 완전사료가 최소 권장량 기준을 충족한다고 보고 추정한 값이며, 실제 함량은 더 높을 수 있습니다."
+    },
+    {
+      "code": "NOTICE_UNSUPPORTED",
+      "message": "임신·수유 중이거나 8주 미만인 개체는 지원하지 않습니다."
+    },
+    {
+      "code": "NOTICE_REFERENCE",
+      "message": "결과는 참고용이며 수의학적 진단·처방을 대신하지 않습니다. 기준: 농촌진흥청 국립축산과학원 「반려동물 사료 영양표준」 표 2-17."
+    }
+  ],
+  "warnings": [
+    {
+      "code": "UNSUPPORTED_AGE",
+      "message": "8주 미만은 계산하지 않습니다."
+    }
+  ]
+}

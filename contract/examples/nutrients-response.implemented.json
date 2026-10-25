@@ -1,0 +1,209 @@
+[
+  {
+    "index": 13,
+    "id": "TAURINE",
+    "name": "타우린 (건사료)",
+    "category": "단백질·아미노산",
+    "baseUnit": "g",
+    "units": [
+      "g",
+      "mg"
+    ]
+  },
+  {
+    "index": 18,
+    "id": "EPA_DHA",
+    "name": "EPA+DHA (오메가-3)",
+    "category": "지방·지방산",
+    "baseUnit": "g",
+    "units": [
+      "g",
+      "mg"
+    ]
+  },
+  {
+    "index": 19,
+    "id": "CA",
+    "name": "칼슘",
+    "category": "미네랄",
+    "baseUnit": "g",
+    "units": [
+      "g",
+      "mg"
+    ]
+  },
+  {
+    "index": 20,
+    "id": "P",
+    "name": "인",
+    "category": "미네랄",
+    "baseUnit": "g",
+    "units": [
+      "g",
+      "mg"
+    ]
+  },
+  {
+    "index": 25,
+    "id": "CU",
+    "name": "구리 (건사료)",
+    "category": "미량 원소",
+    "baseUnit": "mg",
+    "units": [
+      "mg",
+      "g",
+      "µg"
+    ]
+  },
+  {
+    "index": 26,
+    "id": "I",
+    "name": "요오드",
+    "category": "미량 원소",
+    "baseUnit": "mg",
+    "units": [
+      "mg",
+      "g",
+      "µg"
+    ]
+  },
+  {
+    "index": 27,
+    "id": "FE",
+    "name": "철",
+    "category": "미량 원소",
+    "baseUnit": "mg",
+    "units": [
+      "mg",
+      "g",
+      "µg"
+    ]
+  },
+  {
+    "index": 28,
+    "id": "MN",
+    "name": "망간",
+    "category": "미량 원소",
+    "baseUnit": "mg",
+    "units": [
+      "mg",
+      "g",
+      "µg"
+    ]
+  },
+  {
+    "index": 29,
+    "id": "SE",
+    "name": "셀레늄",
+    "category": "미량 원소",
+    "baseUnit": "µg",
+    "units": [
+      "µg",
+      "mg"
+    ]
+  },
+  {
+    "index": 30,
+    "id": "ZN",
+    "name": "아연",
+    "category": "미량 원소",
+    "baseUnit": "mg",
+    "units": [
+      "mg",
+      "g",
+      "µg"
+    ]
+  },
+  {
+    "index": 31,
+    "id": "VIT_A",
+    "name": "비타민 A",
+    "category": "비타민·기타",
+    "baseUnit": "IU",
+    "units": [
+      "IU",
+      "µg",
+      "mg"
+    ]
+  },
+  {
+    "index": 32,
+    "id": "VIT_D",
+    "name": "비타민 D",
+    "category": "비타민·기타",
+    "baseUnit": "IU",
+    "units": [
+      "IU",
+      "µg",
+      "mg"
+    ]
+  },
+  {
+    "index": 33,
+    "id": "VIT_E",
+    "name": "비타민 E",
+    "category": "비타민·기타",
+    "baseUnit": "IU",
+    "units": [
+      "IU",
+      "mg"
+    ]
+  },
+  {
+    "index": 34,
+    "id": "VIT_B1",
+    "name": "비타민 B1 (티아민)",
+    "category": "비타민·기타",
+    "baseUnit": "mg",
+    "units": [
+      "mg",
+      "g",
+      "µg"
+    ]
+  },
+  {
+    "index": 37,
+    "id": "VIT_B6",
+    "name": "비타민 B6 (피리독신)",
+    "category": "비타민·기타",
+    "baseUnit": "mg",
+    "units": [
+      "mg",
+      "g",
+      "µg"
+    ]
+  },
+  {
+    "index": 38,
+    "id": "VIT_B12",
+    "name": "비타민 B12 (시아노코발아민)",
+    "category": "비타민·기타",
+    "baseUnit": "µg",
+    "units": [
+      "µg",
+      "mg"
+    ]
+  },
+  {
+    "index": 40,
+    "id": "VIT_B9",
+    "name": "비타민 B9 (엽산)",
+    "category": "비타민·기타",
+    "baseUnit": "µg",
+    "units": [
+      "µg",
+      "mg"
+    ]
+  },
+  {
+    "index": 41,
+    "id": "VIT_B7",
+    "name": "비타민 B7 (비오틴)",
+    "category": "비타민·기타",
+    "baseUnit": "µg",
+    "units": [
+      "µg",
+      "mg"
+    ]
+  }
+]

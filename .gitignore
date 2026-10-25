@@ -1,10 +1,4 @@
-node_modules/
-dist/
-.env
-.DS_Store
-*.tsbuildinfo
-vite.config.js
-vite.config.d.ts
-
-
-.vercel
+node_modules
+dist
+.env.local
+*.log

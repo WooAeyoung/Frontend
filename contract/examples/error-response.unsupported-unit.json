@@ -1,0 +1,11 @@
+{
+  "code": "UNSUPPORTED_UNIT",
+  "message": "입력값을 확인하세요.",
+  "fieldErrors": [
+    {
+      "field": "feeding.supplements[0].ingredients[0].unit",
+      "code": "UNSUPPORTED_UNIT",
+      "message": "칼슘에는 IU 단위를 쓸 수 없습니다."
+    }
+  ]
+}

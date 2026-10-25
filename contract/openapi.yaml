@@ -1,0 +1,366 @@
+openapi: 3.1.0
+info:
+  title: 우애영 API
+  version: 1.0.0
+  description: |
+    반려동물 사료·영양제 조합 영양성분 판정 및 성분별 보충량 안내 API.
+    이 파일이 화면(React)과 백엔드(Spring) 사이의 형식 기준이다.
+    바꿀 때는 docs/CONTRACT.md 절차를 따른다 (이 파일 + frontend/src/types/api.ts + backend web/dto + contract/examples 를 한 PR에서 함께 수정).
+
+    공통 규칙
+    - 필드명 camelCase, 숫자는 반올림하지 않은 실수, 값이 없으면 null (0으로 바꾸지 않는다).
+    - 단위 기호의 마이크로는 U+00B5 "µ". 서버는 μ(U+03BC)·mcg·ug 도 µg 로 받아 준다.
+servers:
+  - url: /api/v1
+
+paths:
+  /nutrients:
+    get:
+      summary: 입력 화면용 성분 목록과 성분별 단위 목록
+      parameters:
+        - name: implemented
+          in: query
+          required: false
+          schema: { type: boolean, default: true }
+          description: true면 1차 구현 18개만, false면 44개 전부
+      responses:
+        "200":
+          description: 성분 목록 (index 오름차순)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NutrientOption" }
+  /nutrients/{id}/units:
+    get:
+      summary: 한 성분의 입력 가능 단위
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/NutrientId" }
+      responses:
+        "200":
+          description: 단위 목록 (첫 번째가 기본 선택)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnitOptions" }
+        "404":
+          description: NUTRIENT_NOT_FOUND
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /size-classes:
+    get:
+      summary: 예상 성체 체급 5단계와 대표 품종
+      responses:
+        "200":
+          description: S, M, L, XL, XXL 순
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SizeClassOption" }
+  /units/convert:
+    post:
+      summary: (선택) 입력 중 환산값 미리보기
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UnitConvertRequest" }
+      responses:
+        "200":
+          description: 기준 단위로 환산한 값
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnitConvertResponse" }
+        "400":
+          description: UNSUPPORTED_UNIT, NUTRIENT_NOT_IMPLEMENTED, VALIDATION_ERROR
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /analyses:
+    post:
+      summary: 분석 요청 (핵심)
+      description: |
+        8주 미만은 오류가 아니라 200 + lifeStage UNSUPPORTED 로 응답한다.
+        사료 급여량이 null 또는 0이면 필요 열량(E)만큼 먹는다고 보고 계산하고 warnings 에 FEED_ASSUMED 를 넣는다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnalysisRequest" }
+      responses:
+        "200":
+          description: 분석 결과
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnalysisResponse" }
+        "400":
+          description: VALIDATION_ERROR, UNSUPPORTED_UNIT, NUTRIENT_NOT_IMPLEMENTED
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+components:
+  schemas:
+    # ---------- enums ----------
+    Species:
+      type: string
+      enum: [DOG, CAT]
+    AgeUnit:
+      type: string
+      enum: [WEEK, MONTH]
+    SizeClass:
+      type: string
+      enum: [S, M, L, XL, XXL]
+      description: "S 7 kg 이하 / M 7~15 / L 15~27.5 / XL 27.5~47.5 / XXL 47.5 kg 초과"
+    LifeStage:
+      type: string
+      enum: [UNSUPPORTED, DOG_EARLY_GROWTH, DOG_LATE_GROWTH, DOG_ADULT, CAT_GROWTH_1, CAT_GROWTH_2, CAT_GROWTH_3, CAT_ADULT]
+    JudgeStatus:
+      type: string
+      enum: [UNSUPPORTED, NO_STANDARD, DEFICIENT, EXCESS, CAUTION, ADEQUATE, ADEQUATE_NO_UPPER]
+      description: "미지원 / 기준 없음 / 부족 / 과다 / 주의 / 적정 / 적정(상한 기준 없음)"
+    RatioStatus:
+      type: string
+      enum: [LOW, ADEQUATE, HIGH, NOT_APPLICABLE]
+    BaseUnit:
+      type: string
+      enum: [g, mg, µg, IU]
+    NutrientId:
+      type: string
+      enum: [PROTEIN, ARG, HIS, ILE, LEU, LYS, MET, MET_CYS, PHE, PHE_TYR, THR, TRP, VAL, TAURINE,
+             FAT, LA, ARA, ALA, EPA_DHA, CA, P, K, NA, CL, MG, CU, I, FE, MN, SE, ZN,
+             VIT_A, VIT_D, VIT_E, VIT_B1, VIT_B2, VIT_B5, VIT_B6, VIT_B12, VIT_B3, VIT_B9, VIT_B7, CHOLINE, VIT_K]
+    NoticeCode:
+      type: string
+      enum: [NOTICE_NO_UPPER, NOTICE_FEED_ESTIMATE, NOTICE_UNSUPPORTED, NOTICE_REFERENCE]
+    WarningCode:
+      type: string
+      enum: [WEIGHT_CLIPPED, UNSUPPORTED_AGE, FEED_ASSUMED, WEIGHT_UNUSUAL, AGE_UNUSUAL]
+    ErrorCode:
+      type: string
+      enum: [VALIDATION_ERROR, UNSUPPORTED_UNIT, NUTRIENT_NOT_IMPLEMENTED, NUTRIENT_NOT_FOUND, INTERNAL_ERROR]
+    FieldErrorCode:
+      type: string
+      enum: [REQUIRED, WEIGHT_RANGE, AGE_RANGE, SIZE_CLASS_REQUIRED, SERVINGS_RANGE, AMOUNT_RANGE,
+             FEED_RANGE, INGREDIENTS_EMPTY, UNSUPPORTED_UNIT, NUTRIENT_NOT_IMPLEMENTED, LABEL_LENGTH]
+
+    # ---------- 목록 ----------
+    NutrientOption:
+      type: object
+      additionalProperties: false
+      required: [index, id, name, category, baseUnit, units]
+      properties:
+        index: { type: integer, minimum: 0, maximum: 43 }
+        id: { $ref: "#/components/schemas/NutrientId" }
+        name: { type: string, example: "비타민 D" }
+        category: { type: string, example: "비타민·기타" }
+        baseUnit: { $ref: "#/components/schemas/BaseUnit" }
+        units:
+          type: array
+          items: { type: string }
+          minItems: 1
+          description: 입력 가능 단위. 첫 번째가 기본 선택
+    UnitOptions:
+      type: object
+      additionalProperties: false
+      required: [id, baseUnit, units]
+      properties:
+        id: { $ref: "#/components/schemas/NutrientId" }
+        baseUnit: { $ref: "#/components/schemas/BaseUnit" }
+        units: { type: array, items: { type: string }, minItems: 1 }
+    SizeClassOption:
+      type: object
+      additionalProperties: false
+      required: [code, label, minKg, maxKg, exampleBreeds]
+      properties:
+        code: { $ref: "#/components/schemas/SizeClass" }
+        label: { type: string, example: "7 kg 이하" }
+        minKg: { type: number, description: "초과" }
+        maxKg: { type: [number, "null"], description: "이하. XXL은 null" }
+        exampleBreeds: { type: array, items: { type: string } }
+    UnitConvertRequest:
+      type: object
+      additionalProperties: false
+      required: [nutrientId, amount, unit]
+      properties:
+        nutrientId: { $ref: "#/components/schemas/NutrientId" }
+        amount: { type: number, minimum: 0 }
+        unit: { type: string }
+    UnitConvertResponse:
+      type: object
+      additionalProperties: false
+      required: [nutrientId, baseAmount, baseUnit]
+      properties:
+        nutrientId: { $ref: "#/components/schemas/NutrientId" }
+        baseAmount: { type: number }
+        baseUnit: { $ref: "#/components/schemas/BaseUnit" }
+
+    # ---------- 분석 요청 ----------
+    AnalysisRequest:
+      type: object
+      additionalProperties: false
+      required: [pet, feeding]
+      properties:
+        pet: { $ref: "#/components/schemas/PetInput" }
+        feeding: { $ref: "#/components/schemas/FeedingInput" }
+    PetInput:
+      type: object
+      additionalProperties: false
+      required: [species, weightKg, ageValue, ageUnit, sizeClass]
+      properties:
+        species: { $ref: "#/components/schemas/Species" }
+        weightKg: { type: number, exclusiveMinimum: 0 }
+        ageValue: { type: number, exclusiveMinimum: 0 }
+        ageUnit: { $ref: "#/components/schemas/AgeUnit" }
+        sizeClass:
+          anyOf:
+            - { $ref: "#/components/schemas/SizeClass" }
+            - { type: "null" }
+          description: 12개월 미만 개만 필수. 그 외에는 null (보내도 무시)
+    FeedingInput:
+      type: object
+      additionalProperties: false
+      required: [feedGramsPerDay, supplements]
+      properties:
+        feedGramsPerDay:
+          type: [number, "null"]
+          minimum: 0
+          description: 사료 1일 급여량(g). null 또는 0이면 필요 열량만큼 먹는다고 가정
+        supplements:
+          type: array
+          items: { $ref: "#/components/schemas/SupplementInput" }
+          description: 개수 제한 없음. 영양제가 없으면 빈 배열
+    SupplementInput:
+      type: object
+      additionalProperties: false
+      required: [label, servingsPerDay, ingredients]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 30 }
+        servingsPerDay: { type: number, exclusiveMinimum: 0 }
+        ingredients:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/IngredientInput" }
+    IngredientInput:
+      type: object
+      additionalProperties: false
+      required: [nutrientId, amount, unit]
+      properties:
+        nutrientId: { $ref: "#/components/schemas/NutrientId" }
+        amount: { type: number, minimum: 0, description: 1회 함량 }
+        unit: { type: string, description: "그 성분의 units 중 하나" }
+
+    # ---------- 분석 응답 ----------
+    AnalysisResponse:
+      type: object
+      additionalProperties: false
+      required: [lifeStage, energy, energyRatioText, bars, caPRatio, caPRatioText, guide, notices, warnings]
+      properties:
+        lifeStage: { $ref: "#/components/schemas/LifeStage" }
+        energy: { $ref: "#/components/schemas/EnergyInfo" }
+        energyRatioText: { type: [string, "null"], description: "미지원이면 null" }
+        bars:
+          type: array
+          items: { $ref: "#/components/schemas/ChartBar" }
+          description: 1차 구현 18개, 성분 index 순. 미지원이면 빈 배열
+        caPRatio: { $ref: "#/components/schemas/CaPRatio" }
+        caPRatioText: { type: [string, "null"] }
+        guide:
+          type: array
+          items: { $ref: "#/components/schemas/GuideItem" }
+          description: 보충이 급한 순서 (부족 비율 → 주의선 대비 비율 → 성분 번호). 기준 없음·미지원 성분 제외
+        notices:
+          type: array
+          items: { $ref: "#/components/schemas/Message" }
+        warnings:
+          type: array
+          items: { $ref: "#/components/schemas/Warning" }
+    EnergyInfo:
+      type: object
+      additionalProperties: false
+      required: [k, energyKcal, intakeKcal, energyRatio, growthRatio, estimatedAdultKg, estimatedAdultKgClipped, weightClipped]
+      properties:
+        k: { type: [number, "null"], description: "kcal / 대사체중 1 kg. 미지원이면 null" }
+        energyKcal: { type: [number, "null"], description: "기준 열량 E (kcal/일)" }
+        intakeKcal: { type: [number, "null"], description: "섭취 열량. 급여량 없으면 E와 같음" }
+        energyRatio: { type: [number, "null"], description: "intakeKcal ÷ energyKcal" }
+        growthRatio: { type: [number, "null"], description: "강아지 성장곡선 비율(%). 그 외 null" }
+        estimatedAdultKg: { type: [number, "null"], description: "강아지 예상 성체 체중(절단 전)" }
+        estimatedAdultKgClipped: { type: [number, "null"], description: "체급 범위로 절단한 값. 칼슘 4.5 판정에 사용" }
+        weightClipped: { type: boolean }
+    ChartBar:
+      type: object
+      additionalProperties: false
+      required: [nutrientId, nutrientName, unit, feedValue, supplementValue, total, lower, caution, upper, status]
+      properties:
+        nutrientId: { $ref: "#/components/schemas/NutrientId" }
+        nutrientName: { type: string }
+        unit: { $ref: "#/components/schemas/BaseUnit" }
+        feedValue: { type: [number, "null"], description: "사료 몫(추정). 하한이 없는 성분은 null" }
+        supplementValue: { type: number, description: "영양제 합계. 없으면 0" }
+        total: { type: [number, "null"], description: "사료 몫과 영양제가 모두 없으면 null" }
+        lower: { type: [number, "null"], description: "최소 권장량" }
+        caution: { type: [number, "null"], description: "주의 시작" }
+        upper: { type: [number, "null"], description: "상한" }
+        status: { $ref: "#/components/schemas/JudgeStatus" }
+    CaPRatio:
+      type: object
+      additionalProperties: false
+      required: [value, status]
+      properties:
+        value: { type: [number, "null"], description: "칼슘 ÷ 인. 고양이·계산 불가면 null" }
+        status: { $ref: "#/components/schemas/RatioStatus" }
+    GuideItem:
+      type: object
+      additionalProperties: false
+      required: [nutrientId, nutrientName, unit, status, shortageRatio, cautionRatio, needAmount, addableAmount, reduceAmount, noUpper, text]
+      properties:
+        nutrientId: { $ref: "#/components/schemas/NutrientId" }
+        nutrientName: { type: string }
+        unit: { $ref: "#/components/schemas/BaseUnit" }
+        status: { $ref: "#/components/schemas/JudgeStatus" }
+        shortageRatio: { type: number, description: "부족이면 (하한−총량)÷하한, 아니면 0" }
+        cautionRatio: { type: [number, "null"], description: "총량 ÷ 주의선. 주의선 없으면 null" }
+        needAmount: { type: [number, "null"], description: "보충 필요량 (부족일 때)" }
+        addableAmount: { type: [number, "null"], description: "추가 가능량 = max(0, 주의선 − 총량). 주의선 없으면 null" }
+        reduceAmount: { type: [number, "null"], description: "감량 필요량 (과다일 때)" }
+        noUpper: { type: boolean, description: "주의선·상한 모두 없음" }
+        text: { type: string, description: "서버가 만든 안내 문장 (숫자는 표시 규칙으로 반올림)" }
+    Message:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { $ref: "#/components/schemas/NoticeCode" }
+        message: { type: string }
+    Warning:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { $ref: "#/components/schemas/WarningCode" }
+        message: { type: string }
+
+    # ---------- 오류 ----------
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message, fieldErrors]
+      properties:
+        code: { $ref: "#/components/schemas/ErrorCode" }
+        message: { type: string }
+        fieldErrors:
+          type: array
+          items: { $ref: "#/components/schemas/FieldError" }
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, code, message]
+      properties:
+        field: { type: string, description: "예: pet.sizeClass, feeding.supplements[0].ingredients[1].unit" }
+        code: { $ref: "#/components/schemas/FieldErrorCode" }
+        message: { type: string }
