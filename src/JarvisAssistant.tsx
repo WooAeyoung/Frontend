@@ -45,6 +45,9 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
   const [input, setInput] = useState('')
   const [listening, setListening] = useState(false)
   const [messages, setMessages] = useState<Message[]>([{ from: 'assistant', text: WELCOME }])
+  const [provider, setProvider] = useState<'grok'|'ollama'>('grok')
+  const [loading, setLoading] = useState(false)
+  const [speak, setSpeak] = useState(false)
   const recognition = useRef<Recognition | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -56,15 +59,15 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
     if (!text) return
     setMessages(previous => [...previous, { from: 'user', text }])
     setInput('')
+    setLoading(true)
     try {
-      const response = await askJarvis(text, analysis)
+      const response = await askJarvis(text, analysis, provider)
       setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
+      if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.answer))
       if (response.page) onNavigate(response.page)
     } catch {
-      const response = answerCommand(text, analysis)
-      setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
-      if (response.page) onNavigate(response.page)
-    }
+      setMessages(previous => [...previous, { from: 'assistant', text: 'AI 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.' }])
+    } finally { setLoading(false) }
   }
 
   const listen = () => {
@@ -83,9 +86,9 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
 
   return <aside className="jarvis-root" aria-label="우애영 AI 도우미">
     {open && <section className="jarvis-panel" aria-label="자비스 대화창">
-      <header className="jarvis-top"><span><Bot size={19} /> JARVIS <small>우애영 케어 도우미</small></span><button type="button" onClick={() => setOpen(false)} aria-label="자비스 닫기"><X size={18} /></button></header>
+      <header className="jarvis-top"><span><Bot size={19} /> JARVIS <small>우애영 케어 도우미</small></span><div><select aria-label="AI 제공자" value={provider} onChange={e => setProvider(e.target.value as 'grok'|'ollama')}><option value="grok">Grok</option><option value="ollama">Ollama</option></select><button type="button" onClick={() => setSpeak(value => !value)} aria-pressed={speak} title="음성 답변">{speak ? '🔊' : '🔇'}</button><button type="button" onClick={() => setOpen(false)} aria-label="자비스 닫기"><X size={18} /></button></div></header>
       <div className="jarvis-messages" role="log" aria-live="polite">{messages.map((message, index) => <p key={index} className={`jarvis-msg ${message.from}`}>{message.text}</p>)}<div ref={endRef} /></div>
-      <form className="jarvis-form" onSubmit={event => { event.preventDefault(); void submit() }}><button type="button" onClick={listen} aria-label={listening ? '음성 인식 중지' : '음성 인식 시작'} aria-pressed={listening} className={listening ? 'listening' : ''}><Mic size={19} /></button><input value={input} onChange={event => setInput(event.target.value)} placeholder="자비스에게 물어보기" aria-label="자비스 명령 입력" /><button type="submit" aria-label="메시지 보내기" disabled={!input.trim()}><Send size={18} /></button></form>
+      <form className="jarvis-form" onSubmit={event => { event.preventDefault(); void submit() }}><button type="button" onClick={listen} aria-label={listening ? '음성 인식 중지' : '음성 인식 시작'} aria-pressed={listening} className={listening ? 'listening' : ''}><Mic size={19} /></button><input value={input} onChange={event => setInput(event.target.value)} placeholder={loading ? '답변 생성 중…' : '자비스에게 물어보기'} aria-label="자비스 명령 입력" disabled={loading} /><button type="submit" aria-label="메시지 보내기" disabled={!input.trim() || loading}>{loading ? '…' : <Send size={18} />}</button></form>
       <small className="jarvis-note">분석 요약은 이 기기에서 완료한 최근 결과만 사용해요.</small>
     </section>}
     <button type="button" className="jarvis-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}><Sparkles size={19} /><span>JARVIS</span></button>

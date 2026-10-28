@@ -4,13 +4,13 @@ export type Profile = {name:string;species:'DOG'|'CAT';weightKg:number;age:{valu
 export type FeedingItem = {productId:string;name:string;type:'FEED'|'SUPPLEMENT';dailyAmount:number;unit:string}
 export type ManualNutrient = {nutrientId:string;amount:number;unit:string}
 export type ManualItem = {name:string;type:'FEED'|'SUPPLEMENT';servingAmount:number;servingUnit:string;dailyAmount:number;nutrients:ManualNutrient[]}
-export type NutrientResult = {nutrientId:string;name:string;unit:string;fromFeed:number;fromSupplements:number;total:number;minimum:number|null;caution:number|null;upper:number|null;status:string;source:string}
+export type NutrientResult = {nutrientId:string;name:string;unit:string;fromFeed:number;fromSupplements:number;total:number;minimum:number|null;caution:number|null;upper:number|null;status:string;source:string;unknownContribution?:boolean}
 export type ProductContribution = {name:string;type:'FEED'|'SUPPLEMENT';source:'ACTUAL'|'ESTIMATED';nutrients:Record<string,number>}
 export type Analysis = {traceId:string;standardVersion:string;standardSource?:string;cautionPolicy?:string;lifeStage:string;referenceEnergyKcal:number|null;usesEstimatedFeed:boolean;summary:Record<string,number>;nutrients:NutrientResult[];contributions:ProductContribution[];ratios:Record<string,{value:number|null;status:string;minimum?:number;maximum?:number}>;warnings:string[]}
 export type StandardProfile = 'FEDIAF_2025'|'NIAS_V3'
 export const STANDARD_OPTIONS:{id:StandardProfile;label:string;available:boolean;note:string}[]=[
   {id:'FEDIAF_2025',label:'FEDIAF 2025',available:true,note:'현재 기본 분석 기준이에요. 결과에 기준 버전과 출처를 함께 표시해요'},
-  {id:'NIAS_V3',label:'NIAS v3',available:true,note:'성장기·18개 성분 기준을 포함하며 원문 검증 상태를 함께 표시해요'},
+  {id:'NIAS_V3',label:'FEDIAF · NIAS v3',available:true,note:'성장기 기준을 포함한 통합 18개 성분을 분석해요'},
 ]
 export type Recommendation = {message:string;usesEstimatedFeed:boolean;items:{productId:string;name:string;dailyAmount:number;unit:string;score:number;fixedNutrients:number;margin?:number;overlap?:number;scoreBreakdown?:{fixedNutrients:number;margin:number;overlap:number}}[];excluded:{productId:string;name:string;reason:string}[]}
 export type StandardNutrient = {id:string;name:string;unit:string;implemented:boolean;minimum?:unknown;maximum?:unknown;caution?:unknown}
@@ -55,8 +55,8 @@ export async function getStandardCatalog(standardProfile:StandardProfile):Promis
 export async function getParameterCatalog(standardProfile:StandardProfile){
   return call<{standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;verification:Record<string,string>;allowUnverified:boolean}>(`/api/v2/parameters/${standardProfile}`)
 }
-export async function askJarvis(message:string,analysis:Analysis|null){
-  return call<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message,analysis})})
+export async function askJarvis(message:string,analysis:Analysis|null,provider:'grok'|'ollama'='grok'){
+  return call<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message,analysis,provider})})
 }
 export async function getNearestVets(lat:number,lon:number,limit=5){
   const request = call<NearbyVets>(`/api/v1/vets/nearest?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limit=${limit}`)
