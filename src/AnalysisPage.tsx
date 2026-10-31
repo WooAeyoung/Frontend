@@ -5,8 +5,10 @@ import { loadRecords, saveRecord, type SavedRecord } from './Records'
 import { loadAnalysisProfiles, saveAnalysisProfile } from './analysisProfiles'
 import type { AnalysisDraft } from './Home'
 import PetCompanion from './PetCompanion'
+import { formatNumber } from './format/number'
+import { hasUnjudgedNutrients, nutrientSourceLabel } from './analysisSafety'
 
-const STEPS: [string, string][] = [['step-1', '반려동물 정보'], ['step-2', '사료·영양제 선택'], ['step-3', '직접 입력'], ['step-4', '분석 결과'], ['step-5', '기록']]
+const STEPS: [string, string][] = [['step-1', '반려동물 정보'], ['step-2', '직접 입력'], ['step-3', '분석 결과']]
 
 function StepNav() {
   const [active, setActive] = useState('step-1')
@@ -22,20 +24,32 @@ function StepNav() {
   return <nav className="step-nav" aria-label="분석 진행 순서"><div>{STEPS.map(([id, label], i) => <button key={id} type="button" className={active === id ? 'on' : ''} aria-current={active === id ? 'step' : undefined} onClick={() => go(id)}><b>{i + 1}</b><span>{label}</span></button>)}</div></nav>
 }
 
-const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', ADEQUATE_NO_UPPER_LIMIT: '적정 · 상한 없음', NO_STANDARD: '기준 없음', CAUTION: '주의', EXCESS: '과다' }
+const STATUS: Record<string, string> = { DEFICIENT: '부족', ADEQUATE: '적정', ADEQUATE_NO_UPPER_LIMIT: '적정 · 상한 없음', NO_STANDARD: '기준 없음', CAUTION: '주의', EXCESS: '과다', UNSUPPORTED: '분석 불가', UNVERIFIED_STANDARD: '기준 검증 대기', INSUFFICIENT_DATA: '정보 부족', UNIT_CONVERSION_UNSUPPORTED: '단위 환산 불가' }
 const RATIO: Record<string, string> = { LOW: '낮음', HIGH: '높음', ADEQUATE: '적정', UNAVAILABLE: '계산 불가' }
 const UNIT: Record<string, string> = { TABLET: '정', CAPSULE: '캡슐', G: 'g', MG: 'mg', ML: 'mL' }
 const MANUAL_NUTRIENTS: [string, string, string][] = [
-  ['TAURINE', '타우린', 'G'], ['EPA_DHA', 'EPA+DHA', 'G'], ['CALCIUM', '칼슘', 'MG'], ['PHOSPHORUS', '인', 'MG'],
-  ['COPPER', '구리', 'MG'], ['IODINE', '요오드', 'MG'], ['IRON', '철', 'MG'], ['MANGANESE', '망간', 'MG'],
-  ['SELENIUM', '셀레늄', 'UG'], ['ZINC', '아연', 'MG'], ['VITAMIN_A', '비타민 A', 'IU'], ['VITAMIN_D', '비타민 D', 'IU'],
-  ['VITAMIN_E', '비타민 E', 'MG'], ['VITAMIN_B1', '비타민 B1', 'MG'], ['VITAMIN_B6', '비타민 B6', 'MG'],
-  ['VITAMIN_B12', '비타민 B12', 'UG'], ['VITAMIN_B9', '비타민 B9', 'UG'], ['VITAMIN_B7', '비타민 B7', 'UG'],
+  ['TAURINE', '타우린 (건사료)', 'G'], ['EPA_DHA', 'EPA+DHA', 'G'],
+  ['CALCIUM', '칼슘', 'MG'], ['PHOSPHORUS', '인', 'MG'], ['COPPER', '구리 (건사료)', 'MG'],
+  ['IODINE', '요오드', 'MG'], ['IRON', '철', 'MG'], ['MANGANESE', '망간', 'MG'],
+  ['SELENIUM', '셀레늄', 'UG'], ['ZINC', '아연', 'MG'], ['VITAMIN_A', '비타민 A', 'IU'],
+  ['VITAMIN_D', '비타민 D', 'UG'], ['VITAMIN_E', '비타민 E', 'MG'],
+  ['VITAMIN_B1', '비타민 B1', 'MG'], ['VITAMIN_B6', '비타민 B6', 'MG'],
+  ['VITAMIN_B12', '비타민 B12', 'UG'], ['VITAMIN_B9', '엽산', 'UG'], ['VITAMIN_B7', '비오틴', 'UG'],
 ]
-const fmt = (v: number | null) => (v === null ? '-' : v.toFixed(1))
+const FEDIAF_IDS = new Set(['CALCIUM', 'PHOSPHORUS', 'VITAMIN_D', 'VITAMIN_E', 'OMEGA3', 'ZINC'])
+const nutrientOptions = (_standard: StandardProfile): [string, string, string][] =>
+  MANUAL_NUTRIENTS.map(([id, label, unit]) => [id, label, ['VITAMIN_A', 'VITAMIN_D', 'VITAMIN_E'].includes(id) ? 'IU' : unit])
+const VITAMIN_FORMS: Record<string, [string, string][]> = {
+  VITAMIN_A: [['RETINOL', '레티놀'], ['RETINYL_ACETATE', '레티닐 아세테이트'], ['RETINYL_PROPIONATE', '레티닐 프로피오네이트'], ['RETINYL_PALMITATE', '레티닐 팔미테이트'], ['RETINOL_EQUIVALENT', '레티놀 당량']],
+  VITAMIN_D: [['CHOLECALCIFEROL', '비타민 D3']],
+  VITAMIN_E: [['DL_ALPHA_TOCOPHERYL_ACETATE', 'dl-α 토코페릴 아세테이트'], ['D_ALPHA_TOCOPHEROL', 'd-α 토코페롤'], ['D_ALPHA_TOCOPHERYL_ACETATE', 'd-α 토코페릴 아세테이트'], ['DL_ALPHA_TOCOPHEROL', 'dl-α 토코페롤']],
+}
+const fmt = formatNumber
+const ADULT_SIZE_WEIGHT: Record<string, number> = { S: 7, M: 15, L: 27.5, XL: 47.5, XXL: 60 }
+const adultSizeFromWeight = (weight?: number) => weight === 7 ? 'S' : weight === 15 ? 'M' : weight === 27.5 ? 'L' : weight === 47.5 ? 'XL' : weight === 60 ? 'XXL' : ''
 
 function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) {
-  const ceiling = nutrient.upper ?? nutrient.caution ?? Math.max(nutrient.minimum ?? 0, nutrient.total, 1)
+  const ceiling = Math.max(nutrient.upper ?? 0, nutrient.caution ?? 0, nutrient.minimum ?? 0, nutrient.total ?? 0, 1)
   const percent = (value: number | null) => value === null ? null : Math.min(100, Math.max(0, value / ceiling * 100))
   const total = percent(nutrient.total) ?? 0
   const feed = percent(nutrient.fromFeed) ?? 0
@@ -43,7 +57,8 @@ function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) 
   const minimum = percent(nutrient.minimum)
   const caution = percent(nutrient.caution)
   const upper = percent(nutrient.upper)
-  const source = nutrient.source === 'ESTIMATED' ? '사료 추정 포함' : '성분표 실제값'
+  const source = nutrientSourceLabel(nutrient)
+  const partial = Boolean(nutrient.unknownContribution)
   return <div className={`nutrient-bar-row ${nutrient.source === 'ESTIMATED' ? 'estimated' : ''}`}>
     <div className="nutrient-bar-head"><b>{nutrient.name}{nutrient.source === 'ESTIMATED' && <em className="estimate-badge">추정</em>}</b><span>{source} · {STATUS[nutrient.status] ?? nutrient.status}</span></div>
     <div className="nutrient-track" role="img" aria-label={`${nutrient.name}: ${fmt(nutrient.total)} ${nutrient.unit}, ${source}, ${STATUS[nutrient.status] ?? nutrient.status}`}>
@@ -54,7 +69,7 @@ function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) 
       {caution !== null && <i className="nutrient-marker caution" style={{ left: `${caution}%` }} title={`주의 ${fmt(nutrient.caution)}`} />}
       {upper !== null && <i className="nutrient-marker upper" style={{ left: `${upper}%` }} title={`상한 ${fmt(nutrient.upper)}`} />}
     </div>
-    <div className="nutrient-bar-scale"><span>사료 {fmt(nutrient.fromFeed)} · 영양제 {fmt(nutrient.fromSupplements)} · 합계 {fmt(nutrient.total)} {nutrient.unit.toLowerCase()}</span><span>하한 {fmt(nutrient.minimum)} · 주의 {fmt(nutrient.caution)} · 상한 {fmt(nutrient.upper)}</span></div>
+    <div className="nutrient-bar-scale"><span>사료 {fmt(nutrient.fromFeed)} · 영양제 {fmt(nutrient.fromSupplements)} · {partial ? '확인된 양만' : '합계'} {fmt(nutrient.total)} {nutrient.unit.toLowerCase()}</span><span>하한 {fmt(nutrient.minimum)} · 주의 {fmt(nutrient.caution)} · 상한 {fmt(nutrient.upper)}</span></div>
   </div>
 }
 
@@ -64,6 +79,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [weight, setWeight] = useState('')
   const [ageValue, setAgeValue] = useState('')
   const [ageUnit, setAgeUnit] = useState<'WEEK' | 'MONTH'>('MONTH')
+  const [adultSize, setAdultSize] = useState('')
   const [expectedAdultWeight, setExpectedAdultWeight] = useState('')
   const [completeFeed, setCompleteFeed] = useState(true)
   const [query, setQuery] = useState('')
@@ -71,12 +87,15 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [productsLoading, setProductsLoading] = useState(true)
   const [items, setItems] = useState<FeedingItem[]>([])
   const [manualItems, setManualItems] = useState<ManualItem[]>([])
+  const [ingredientRows, setIngredientRows] = useState<string[]>([''])
+  const [dailyFrequency, setDailyFrequency] = useState('1')
   const emptyNutrients = () => Object.fromEntries(MANUAL_NUTRIENTS.map(([id]) => [id, ''])) as Record<string, string>
-  const [manual, setManual] = useState({ name: '', type: 'SUPPLEMENT' as 'FEED' | 'SUPPLEMENT', amount: '1', unit: 'TABLET', daily: '1', nutrients: emptyNutrients() })
+  const [manual, setManual] = useState({ name: '', type: 'SUPPLEMENT' as 'FEED' | 'SUPPLEMENT', amount: '1', unit: 'TABLET', daily: '1', nutrients: emptyNutrients(), units: {} as Record<string, string>, forms: {} as Record<string, string> })
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [rec, setRec] = useState<Recommendation | null>(null)
   const [error, setError] = useState('')
-  const [standardProfile, setStandardProfile] = useState<StandardProfile>('FEDIAF_2025')
+  const [standardProfile] = useState<StandardProfile>('NIAS_V3')
+  const setStandardProfile = (_value: StandardProfile) => undefined
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [profiles, setProfiles] = useState(loadAnalysisProfiles)
@@ -101,20 +120,25 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const profile: Profile = {
     name: name || '우리 아이', species, weightKg: Number(weight),
     age: { value: Number(ageValue), unit: ageUnit }, completeFeed,
-    ...(needSize ? { expectedAdultWeightKg: Number(expectedAdultWeight) } : {}),
+    ...(needSize ? { adultSize, expectedAdultWeightKg: Number(expectedAdultWeight) } : {}),
   }
-  const profileReady = Boolean(name.trim() && Number(weight) > 0 && Number(ageValue) > 0 && (!needSize || Number(expectedAdultWeight) >= Number(weight)))
-  const manualReady = Boolean(manual.name.trim() && Number(manual.amount) > 0 && Number(manual.daily) > 0 && Object.values(manual.nutrients).some(value => value !== '' && Number(value) >= 0))
-  const analysisReady = profileReady && (items.length > 0 || manualItems.length > 0) && items.every(item => item.dailyAmount > 0)
+  const profileReady = Boolean(name.trim() && Number.isFinite(Number(weight)) && Number(weight) > 0 && Number(weight) <= 100 && Number.isFinite(Number(ageValue)) && Number(ageValue) > 0 && (!needSize || (adultSize && Number.isFinite(Number(expectedAdultWeight)) && Number(expectedAdultWeight) >= Number(weight) && Number(expectedAdultWeight) <= 100)))
+  const enteredNutrients = Object.values(manual.nutrients).filter(value => value.trim() !== '')
+  const manualReady = Boolean(manual.name.trim() && Number.isFinite(Number(manual.amount)) && Number(manual.amount) > 0 && Number.isFinite(Number(manual.daily)) && Number(manual.daily) > 0 && enteredNutrients.length > 0 && enteredNutrients.every(value => Number.isFinite(Number(value)) && Number(value) >= 0))
+  const allowedIds = new Set(nutrientOptions(standardProfile).map(([id]) => id))
+  const incompatibleItems = manualItems.filter(item => item.nutrients.some(n => !allowedIds.has(n.nutrientId) || (['VITAMIN_D', 'VITAMIN_E'].includes(n.nutrientId) && (standardProfile === 'NIAS_V3') !== (n.unit === 'IU'))))
+  const analysisReady = incompatibleItems.length === 0 && profileReady && (items.length > 0 || manualItems.length > 0) && items.every(item => item.dailyAmount > 0)
   const missingRequirements = [
+    incompatibleItems.length ? '선택한 기준과 맞지 않는 직접 입력 제품을 삭제하고 다시 입력' : '',
     !name.trim() ? '이름' : '',
     !(Number(weight) > 0) ? '체중' : '',
     !(Number(ageValue) > 0) ? '나이' : '',
-    needSize && !(Number(expectedAdultWeight) >= Number(weight)) ? '예상 성체 체중' : '',
+    needSize && (!adultSize || !(Number(expectedAdultWeight) >= Number(weight))) ? '예상 성체 체급' : '',
     items.length === 0 && manualItems.length === 0 ? '급여 제품' : '',
     items.some(item => item.dailyAmount <= 0) ? '올바른 급여량' : '',
   ].filter(Boolean)
   const calciumPhosphorus = analysis?.ratios.calciumPhosphorus
+  const hasUnjudged = analysis ? hasUnjudgedNutrients(analysis.nutrients) : false
   const ratioNeedsAttention = Boolean(calciumPhosphorus && ['LOW', 'HIGH'].includes(calciumPhosphorus.status))
   const compatibleProducts = found.filter(product => {
     if (product.id.includes('-cat')) return species === 'CAT'
@@ -130,12 +154,15 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     if (!selected) return
     setName(selected.name); setSpecies(selected.species); setWeight(String(selected.weightKg))
     setAgeValue(String(selected.age.value)); setAgeUnit(selected.age.unit)
-    setExpectedAdultWeight(selected.expectedAdultWeightKg ? String(selected.expectedAdultWeightKg) : ''); setCompleteFeed(selected.completeFeed)
+    const savedAdultSize = selected.adultSize || adultSizeFromWeight(selected.expectedAdultWeightKg)
+    setAdultSize(savedAdultSize)
+    setExpectedAdultWeight(selected.expectedAdultWeightKg ? String(selected.expectedAdultWeightKg) : savedAdultSize ? String(ADULT_SIZE_WEIGHT[savedAdultSize]) : '')
+    setCompleteFeed(selected.completeFeed)
     setProfileSaved(false); setError('')
   }
   function saveCurrentProfile() {
     if (!name.trim() || !(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('프로필을 저장하려면 이름, 체중, 나이를 입력해 주세요.'); return }
-    if (needSize && (!(Number(expectedAdultWeight) >= Number(weight)))) { setError('성장기 강아지는 현재 체중 이상인 예상 성체 체중을 입력해 주세요.'); return }
+    if (needSize && (!adultSize || !(Number(expectedAdultWeight) >= Number(weight)))) { setError('성장기 강아지는 현재 체중에 맞는 예상 성체 체급을 선택해 주세요.'); return }
     const savedProfile = saveAnalysisProfile(profile, profileId || undefined)
     const next = profileId ? profiles.map(item => item.id === savedProfile.id ? savedProfile : item) : [savedProfile, ...profiles]
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
@@ -174,6 +201,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
 
   async function run() {
     setError(''); setSaved(false)
+    if (incompatibleItems.length) { setError('선택한 기준과 맞지 않는 직접 입력 제품을 삭제하고 다시 입력해 주세요.'); return }
     if (!(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('체중과 나이를 입력해 주세요.'); return }
     if (items.length === 0 && manualItems.length === 0) { setError('급여 중인 제품을 하나 이상 추가해 주세요.'); return }
     setLoading(true)
@@ -188,16 +216,19 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   }
 
   function saveManual() {
-    const nutrients = Object.entries(manual.nutrients).filter(([, value]) => Number(value) >= 0 && value !== '').map(([nutrientId, value]) => ({ nutrientId, amount: Number(value), unit: MANUAL_NUTRIENTS.find(([id]) => id === nutrientId)?.[2] ?? 'MG' }))
+    if (!manualReady) { setError('제품명, 제공량, 하루 급여량과 0 이상의 올바른 성분 함량을 입력해 주세요.'); return }
+    const nutrients = Object.entries(manual.nutrients).filter(([, value]) => value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0).map(([nutrientId, value]) => ({ nutrientId, amount: Number(value), unit: manual.units[nutrientId] || nutrientOptions(standardProfile).find(([id]) => id === nutrientId)?.[2] || 'MG', ...(standardProfile === 'NIAS_V3' && manual.forms[nutrientId] ? { form: manual.forms[nutrientId] } : {}) }))
     if (!manual.name.trim() || !nutrients.length || Number(manual.amount) <= 0 || Number(manual.daily) <= 0) { setError('직접 입력 제품명, 급여량, 영양성분을 하나 이상 입력해 주세요.'); return }
     setManualItems([...manualItems, { name: manual.name.trim(), type: manual.type, servingAmount: Number(manual.amount), servingUnit: manual.unit, dailyAmount: Number(manual.daily), nutrients }])
-    setManual({ ...manual, name: '', nutrients: emptyNutrients() })
+    setManual({ ...manual, name: '', nutrients: emptyNutrients(), units: {}, forms: {} })
+    setIngredientRows([''])
+    setDailyFrequency('1')
     setError('')
   }
 
   function save() {
     if (!analysis) return
-    saveRecord({ id: analysis.traceId, profileId: profileId || undefined, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary, standardVersion: analysis.standardVersion, standardSource: analysis.standardSource })
+    saveRecord({ id: analysis.traceId, profileId: profileId || undefined, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary, standardVersion: analysis.standardVersion, standardSource: analysis.standardSource, analysisSnapshot: analysis, profileSnapshot: profile })
     setSaved(true); setAnalysisRecords(loadRecords()); onSaved()
   }
 
@@ -219,79 +250,58 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
         <div className="profile-actions"><label className="f">저장된 프로필 불러오기<select className="in" value={profileId} onChange={e => loadProfile(e.target.value)}><option value="">새 프로필 작성</option>{profiles.map(item => <option key={item.id} value={item.id}>{item.name} · {item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg</option>)}</select></label>{profileReady ? <button className="btn ghost reveal-action" onClick={saveCurrentProfile}>{profileSaved ? '프로필 저장됨' : profileId ? '프로필 수정 저장' : '프로필 저장'}</button> : <span className="action-hint">필수 칸을 입력하면 저장 버튼이 나타나요.</span>}</div>
         <div className="grid2">
           <label className="f">이름<input className="in" value={name} onChange={e => setName(e.target.value)} placeholder="예: 보리" /></label>
-          <label className="f">종<select className="in" value={species} onChange={e => setSpecies(e.target.value as 'DOG' | 'CAT')}><option value="DOG">강아지</option><option value="CAT">고양이</option></select></label>
+          <fieldset className="f species-field"><legend>종</legend><div className="species-segment" role="radiogroup" aria-label="반려동물 종"><label><input type="radio" name="analysis-species" value="DOG" checked={species === 'DOG'} onChange={() => setSpecies('DOG')} /><span>🐶 강아지</span></label><label><input type="radio" name="analysis-species" value="CAT" checked={species === 'CAT'} onChange={() => setSpecies('CAT')} /><span>🐱 고양이</span></label></div></fieldset>
           <label className="f">체중(kg)<input className="in" type="number" min="0" step="0.1" value={weight} onChange={e => setWeight(e.target.value)} /></label>
           <label className="f">나이<input className="in" type="number" min="0" value={ageValue} onChange={e => setAgeValue(e.target.value)} /></label>
           <label className="f">나이 단위<select className="in" value={ageUnit} onChange={e => setAgeUnit(e.target.value as 'WEEK' | 'MONTH')}><option value="MONTH">개월</option><option value="WEEK">주</option></select></label>
-          {needSize && <label className="f">예상 성체 체중(kg)<input className="in" type="number" min={weight || '0.1'} step="0.1" value={expectedAdultWeight} onChange={e => setExpectedAdultWeight(e.target.value)} /><small className="note">성장기 열량 계산에 사용합니다.</small></label>}
+          {needSize && <label className="f size-choice">예상 성체 체급<select className="in" value={adultSize} onChange={e => { const size = e.target.value; setAdultSize(size); setExpectedAdultWeight(size ? String(ADULT_SIZE_WEIGHT[size]) : '') }}><option value="">체급을 선택해 주세요</option><option value="S">S · 7kg 이하</option><option value="M">M · 7~15kg</option><option value="L">L · 15~27.5kg</option><option value="XL">XL · 27.5~47.5kg</option><option value="XXL">XXL · 47.5kg 초과</option></select><small className="note">12개월 미만 강아지는 다 자랐을 때의 체급으로 필요 열량을 계산합니다.</small><small className="size-examples">S 말티즈·포메라니안·치와와·토이푸들<br/>M 비글·시바견·코커스패니얼 · L 보더콜리·진돗개<br/>XL 골든리트리버·래브라도·저먼셰퍼드 · XXL 그레이트데인·세인트버나드</small></label>}
         </div>
         <label className="chk"><input type="checkbox" checked={completeFeed} onChange={e => setCompleteFeed(e.target.checked)} />주식으로 완전사료를 먹고 있어요</label>
       </div>
-
-      <div id="step-2" className="panel input-panel products-panel"><div className="panel-title"><span>STEP 2</span><div><h3>사료 · 영양제 입력</h3><p>현재 먹고 있는 제품과 하루 급여량을 알려주세요.</p></div></div>
-        <div className="product-choice-head"><div><b>등록 제품에서 선택</b><small>아래 제품을 선택하거나, 검색되지 않는 제품은 직접 입력할 수 있어요. 두 방식은 함께 사용 가능합니다.</small></div><span>선택 {items.length} · 직접 입력 {manualItems.length}</span></div>
-        <input className="in" style={{ width: '100%' }} placeholder="제품 검색" value={query} onChange={e => setQuery(e.target.value)} />
-        <ul className="plist">
-          {productsLoading && <li className="note">선택 가능한 제품을 불러오는 중…</li>}
-          {found.map(p => (
-            <li key={p.id}><span><span className="tag">{p.type === 'FEED' ? '사료' : '영양제'}</span>{p.name} <small>{p.brand}</small></span>
-              <button className="btn ghost" onClick={() => add(p)} disabled={items.some(i => i.productId === p.id)}>추가</button></li>
-          ))}
-          {!productsLoading && found.length === 0 && <li className="empty-product-result"><span>검색 결과가 없습니다.</span>{query && <button className="btn ghost" onClick={() => setQuery('')}>전체 제품 보기</button>}</li>}
-        </ul>
-        {items.length > 0 && <>
-          <h3 style={{ marginTop: 18 }}>급여 목록 (하루)</h3>
-          <ul className="plist">
-            {items.map(i => (
-              <li key={i.productId}><span><span className="tag">{i.type === 'FEED' ? '사료' : '영양제'}</span>{i.name}</span>
-                <span className="amount-editor"><button className="amount-step" aria-label={`${i.name} 급여량 줄이기`} onClick={() => adjustAmount(i.productId, i.type === 'FEED' ? -10 : -1)}>−</button><input className="in amt" aria-label={`${i.name} 하루 급여량`} type="number" min="0.1" step="any" value={i.dailyAmount} onChange={e => setAmount(i.productId, e.target.value)} /><span className="amount-unit">{i.unit}</span><button className="amount-step" aria-label={`${i.name} 급여량 늘리기`} onClick={() => adjustAmount(i.productId, i.type === 'FEED' ? 10 : 1)}>+</button>
-                  <button className="btn ghost" onClick={() => setItems(items.filter(x => x.productId !== i.productId))}>삭제</button></span></li>
-            ))}
-          </ul></>}
-      </div></div>
-
-      <div id="step-3" className="panel manual-panel"><div className="panel-title compact"><span>STEP 3</span><div><h3>검색되지 않는 제품 직접 입력</h3><p>제품 라벨의 1회 제공량과 영양성분을 입력해 함께 계산할 수 있어요.</p></div></div>
-        <div className="grid2"><label className="f">제품명<input className="in" value={manual.name} onChange={e => setManual({ ...manual, name: e.target.value })} placeholder="예: 우리집 관절 영양제" /></label><label className="f">구분<select className="in" value={manual.type} onChange={e => setManual({ ...manual, type: e.target.value as 'FEED' | 'SUPPLEMENT' })}><option value="SUPPLEMENT">영양제</option><option value="FEED">사료</option></select></label><label className="f">1회 제공량<input className="in" type="number" min="0.1" value={manual.amount} onChange={e => setManual({ ...manual, amount: e.target.value })} /></label><label className="f">단위<select className="in" value={manual.unit} onChange={e => setManual({ ...manual, unit: e.target.value })}><option value="TABLET">정</option><option value="CAPSULE">캡슐</option><option value="G">g</option></select></label><label className="f">하루 급여량<input className="in" type="number" min="0.1" value={manual.daily} onChange={e => setManual({ ...manual, daily: e.target.value })} /></label></div>
-        <div className="grid2" style={{ marginTop: 12 }}>{MANUAL_NUTRIENTS.map(([id, label, unit]) => <label className="f" key={id}>{label} ({unit.toLowerCase()})<input className="in" type="number" min="0" value={manual.nutrients[id]} onChange={e => setManual({ ...manual, nutrients: { ...manual.nutrients, [id]: e.target.value } })} /></label>)}</div>
-        {manualReady ? <button className="btn reveal-action" style={{ marginTop: 14 }} onClick={saveManual}>직접 입력 제품 저장</button> : <p className="action-hint inline">제품명과 영양성분을 입력하면 저장 버튼이 나타나요.</p>}
-        {manualItems.length > 0 && <ul className="plist">{manualItems.map((item, index) => <li key={`${item.name}-${index}`}><span><span className="tag">직접 입력</span>{item.name}</span><button className="btn ghost" onClick={() => setManualItems(manualItems.filter((_, i) => i !== index))}>삭제</button></li>)}</ul>}
-        <div className="manual-skip"><span>검색 제품만으로 분석한다면 이 단계는 건너뛸 수 있어요.</span><button className="btn ghost" onClick={run} disabled={!profileReady || items.length === 0 || loading}>{loading ? '분석 중…' : '세 번째 단계 건너뛰고 분석하기 →'}</button></div>
+      <div className="panel standard-select"><b>영양 기준 · FEDIAF + NIAS v3</b><p className="manual-support-note">FEDIAF와 NIAS v3 기준을 통합해 성장기 기준을 포함한 총 18개 성분을 분석합니다.</p><div role="radiogroup" aria-label="영양 기준 선택">{STANDARD_OPTIONS.map(option => <label key={option.id}><input type="radio" name="standardProfile" value={option.id} checked={standardProfile === option.id} disabled={!option.available || loading} onChange={() => { setStandardProfile(option.id); setIngredientRows(['']); setManual({ ...manual, nutrients: emptyNutrients(), units: {}, forms: {} }); setAnalysis(null); setRec(null); setError('') }} /> {option.label} <small>{option.note}</small></label>)}</div></div>
+      <div id="step-2" className="panel manual-panel"><div className="panel-title compact"><span>STEP 2</span><div><h3>검색되지 않는 제품 직접 입력</h3><p>제품 라벨의 1회 제공량과 영양성분을 입력해 함께 계산할 수 있어요.</p></div></div>
+        {manualItems.map((item, index) => <article className="manual-card saved-manual-card" key={`${item.name}-${index}`}><div className="manual-card__head"><b>{item.type === 'FEED' ? '사료' : '영양제'} {index + 1} · {item.name}</b><button className="btn ghost" onClick={() => setManualItems(manualItems.filter((_, i) => i !== index))}>삭제</button></div><p>1회 {item.servingAmount}{item.servingUnit} · 하루 {item.dailyAmount}{item.servingUnit}</p><p>{item.nutrients.map(n => `${MANUAL_NUTRIENTS.find(([id]) => id === n.nutrientId)?.[1] || n.nutrientId} ${n.amount} ${n.unit}`).join(' · ')}</p></article>)}
+        <div className="manual-card"><div className="manual-card__head"><b>{manual.type === 'FEED' ? '사료' : '영양제'} {manualItems.length + 1}</b></div>
+          <div className="grid2"><label className="f">제품명<input className="in" value={manual.name} onChange={e => setManual({ ...manual, name: e.target.value })} placeholder="예: 우리집 관절 영양제" /></label><label className="f">구분<select className="in" value={manual.type} onChange={e => setManual({ ...manual, type: e.target.value as 'FEED' | 'SUPPLEMENT' })}><option value="SUPPLEMENT">영양제</option><option value="FEED">사료</option></select></label><label className="f">1회 제공량<input className="in" type="number" min="0.1" value={manual.amount} onChange={e => setManual({ ...manual, amount: e.target.value, daily: String(Number(e.target.value) * Number(dailyFrequency)) })} /></label><label className="f">단위<select className="in" value={manual.unit} onChange={e => setManual({ ...manual, unit: e.target.value })}><option value="TABLET">정</option><option value="CAPSULE">캡슐</option><option value="G">g</option></select></label><label className="f">하루 횟수<input className="in" type="number" min="0.1" step="any" value={dailyFrequency} onChange={e => { setDailyFrequency(e.target.value); setManual({ ...manual, daily: String(Number(manual.amount) * Number(e.target.value)) }) }} /><small className="note">하루 총 급여량: {Number(manual.daily) || 0} {manual.unit === 'TABLET' ? '정' : manual.unit === 'CAPSULE' ? '캡슐' : 'g'}</small></label></div>
+          <p className="manual-support-note">{standardProfile === 'NIAS_V3' ? '18개 성분을 입력할 수 있습니다. NIAS 기준과 열량 매개변수는 원문 검증 대기 상태로, 검증 전에는 부족·과다 판정을 제공하지 않습니다.' : 'FEDIAF 기준은 6개 성분을 지원합니다. 18개 성분 입력은 위에서 NIAS v3를 선택해 주세요.'}</p><div className="ingredient-list"><b>성분 (1회 제공량 기준)</b>{ingredientRows.map((id, index) => { const unit = nutrientOptions(standardProfile).find(([key]) => key === id)?.[2] || 'MG'; return <div className="ingredient-row" key={index}><label className="f ingredient-name">성분<select className="in" value={id} onChange={e => { const next = e.target.value; if (next && ingredientRows.includes(next)) return; const nutrients = { ...manual.nutrients }; if (id) nutrients[id] = ''; setManual({ ...manual, nutrients }); setIngredientRows(ingredientRows.map((row, i) => i === index ? next : row)) }}><option value="">성분 선택</option>{nutrientOptions(standardProfile).map(([key, label]) => <option key={key} value={key} disabled={key !== id && ingredientRows.includes(key)}>{label}</option>)}</select></label><label className="f">1회 함량<input className="in" type="number" min="0" disabled={!id} value={id ? manual.nutrients[id] : ''} onChange={e => setManual({ ...manual, nutrients: { ...manual.nutrients, [id]: e.target.value } })} /></label><label className="f">단위<select className="in" disabled={!id} value={manual.units[id] || unit} onChange={e => setManual({ ...manual, units: { ...manual.units, [id]: e.target.value } })}>{(unit === 'IU' ? ['IU'] : [unit, ...['G', 'MG', 'UG'].filter(value => value !== unit)]).map(value => <option key={value} value={value}>{value}</option>)}</select></label><button className="btn ghost" aria-label="성분 삭제" onClick={() => { const nutrients = { ...manual.nutrients }; if (id) nutrients[id] = ''; setManual({ ...manual, nutrients }); setIngredientRows(ingredientRows.filter((_, i) => i !== index)) }}>삭제</button>{false && standardProfile === 'NIAS_V3' && VITAMIN_FORMS[id] && (manual.units[id] || unit) !== 'IU' && <label className="f">원료 형태<select className="in" value={manual.forms[id] || ''} onChange={e => setManual({ ...manual, forms: { ...manual.forms, [id]: e.target.value } })}><option value="">모름 (정보 부족으로 표시)</option>{VITAMIN_FORMS[id].map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>}</div> })}</div>
+          <button className="btn ingredient-add" onClick={() => setIngredientRows([...ingredientRows, ''])}>＋ 성분 추가</button>
+          {manualReady ? <button className="btn reveal-action" style={{ marginTop: 14 }} onClick={saveManual}>제품 저장 및 추가</button> : <p className="action-hint inline">제품명과 영양성분을 입력하면 저장 버튼이 나타나요.</p>}
+        </div>
       </div>
 
-      <section id="step-4" className="step-section">
-      <div className="panel standard-select"><b>영양 기준 선택</b><div role="radiogroup" aria-label="영양 기준 선택">{STANDARD_OPTIONS.map(option => <label key={option.id}><input type="radio" name="standardProfile" value={option.id} checked={standardProfile === option.id} disabled={!option.available || loading} onChange={() => { setStandardProfile(option.id); setAnalysis(null); setRec(null) }} /> {option.label} <small>{option.note}</small></label>)}</div></div>
+      <section id="step-3" className="step-section">
       {error && <div className="err" role="alert">{error}{analysisReady && <button className="btn ghost" onClick={run} disabled={loading}>다시 시도</button>}</div>}
       <div className={`analysis-action ${analysisReady ? 'ready' : ''}`}><div className="analysis-readiness"><b>{analysisReady ? '분석 준비 완료' : '아직 필요한 정보가 있어요'}</b><span>{analysisReady ? `선택 제품 ${items.length}개와 직접 입력 제품 ${manualItems.length}개의 하루 총량을 함께 계산합니다.` : `${missingRequirements.join(' · ')}${missingRequirements.length ? '을(를) 입력해 주세요.' : ''}`}</span></div><button className="btn reveal-action" onClick={run} disabled={!analysisReady || loading}>{loading ? '분석 중…' : '맞춤 분석 시작하기'}</button></div>
 
       {analysis && (
-        <div className="panel result-panel" ref={resultRef} style={{ marginTop: 24 }}><div className="result-title"><span>STEP 4 · RESULT</span><h3>오늘의 영양 분석</h3><p>사료와 영양제의 하루 섭취량을 공식 기준과 비교했어요.</p></div>
-          <div className={`verdict ${analysis.summary.excess || ratioNeedsAttention ? 'danger' : analysis.summary.caution ? 'warning' : analysis.summary.deficient ? 'check' : 'safe'}`} role="status">
-            <span>{analysis.summary.excess ? '과다 성분이 있어요' : ratioNeedsAttention ? '칼슘:인 비율을 확인해 주세요' : analysis.summary.caution ? '주의가 필요한 성분이 있어요' : analysis.summary.deficient ? '부족한 성분을 확인해 주세요' : '현재 조합은 기준 범위 안이에요'}</span>
-            <b>{analysis.summary.excess ? `${analysis.summary.excess}개 성분이 상한을 넘었어요. 급여 제품을 줄이거나 제외해 다시 분석해 보세요.` : ratioNeedsAttention ? `현재 칼슘:인 비율이 적용 범위보다 ${calciumPhosphorus?.status === 'LOW' ? '낮아요' : '높아요'}. 칼슘과 인 급여량을 조정해 주세요.` : analysis.summary.caution ? `${analysis.summary.caution}개 성분이 서비스 주의선에 도달했어요.` : analysis.summary.deficient ? `${analysis.summary.deficient}개 성분이 최소 권장량보다 낮아요.` : '적용 가능한 공식 기준에서 주의·과다가 확인되지 않았어요.'}</b>
+        <div className="panel result-panel" ref={resultRef} style={{ marginTop: 24 }}><div className="result-title"><span>STEP 3 · RESULT</span><h3>오늘의 영양 분석</h3><p>확인된 섭취량과 적용 가능한 기준을 보여 드려요.</p></div>
+          <div className={`verdict ${analysis.summary.excess || ratioNeedsAttention ? 'danger' : analysis.summary.caution || hasUnjudged ? 'warning' : analysis.summary.deficient ? 'check' : 'safe'}`} role="status">
+            <span>{analysis.summary.excess ? '과다 성분이 있어요' : ratioNeedsAttention ? '칼슘:인 비율을 확인해 주세요' : analysis.summary.caution ? '주의가 필요한 성분이 있어요' : analysis.summary.deficient ? '부족한 성분을 확인해 주세요' : hasUnjudged ? '판정하지 못한 성분이 있어요' : '현재 조합은 기준 범위 안이에요'}</span>
+            <b>{analysis.summary.excess ? `${analysis.summary.excess}개 성분이 상한을 넘었어요. 급여 제품을 줄이거나 제외해 다시 분석해 보세요.` : ratioNeedsAttention ? `현재 칼슘:인 비율이 적용 범위보다 ${calciumPhosphorus?.status === 'LOW' ? '낮아요' : '높아요'}. 칼슘과 인 급여량을 조정해 주세요.` : analysis.summary.caution ? `${analysis.summary.caution}개 성분이 서비스 주의선에 도달했어요.` : analysis.summary.deficient ? `${analysis.summary.deficient}개 성분이 최소 권장량보다 낮아요.` : hasUnjudged ? '정보 부족 또는 기준 검증 대기 항목이 있어 전체 조합의 안전성을 판단할 수 없습니다.' : '적용 가능한 공식 기준에서 주의·과다가 확인되지 않았어요.'}</b>
           </div>
           {analysis.usesEstimatedFeed && <div className="estimate-alert">일부 사료 성분은 제품 상세값이 없어 최소 권장량으로 추정했어요. 성분표 실제값과 구분해 확인해 주세요.</div>}
           <div className="sum">
             <div><b>{analysis.summary.deficient ?? 0}</b>부족</div><div><b>{analysis.summary.adequate ?? 0}</b>적정</div>
             <div><b>{analysis.summary.caution ?? 0}</b>주의</div><div><b>{analysis.summary.excess ?? 0}</b>과다</div>
-            <div><b>{analysis.summary.noStandard ?? 0}</b>기준 없음</div>
+            <div><b>{analysis.summary.noStandard ?? 0}</b>기준 없음</div><div><b>{analysis.nutrients.filter(n => n.total == null || n.unknownContribution || ['UNSUPPORTED', 'UNVERIFIED_STANDARD', 'INSUFFICIENT_DATA', 'UNIT_CONVERSION_UNSUPPORTED'].includes(n.status)).length}</b>판정·정보 확인 필요</div>
           </div>
           <div className="note">분석 프로필: {profile.name || '우리 아이'} · {species === 'DOG' ? '강아지' : '고양이'} · {weight}kg · {ageValue}{ageUnit === 'MONTH' ? '개월' : '주'}</div>
           <div className="note">하루 기준 에너지 {analysis.referenceEnergyKcal == null ? '검증 대기' : `약 ${Math.round(analysis.referenceEnergyKcal)}kcal`} · 선택 기준 {standardProfile} · 결과 기준 버전 {analysis.standardVersion}</div>
           {analysis.standardSource && <div className="note">기준 출처: {analysis.standardSource}</div>}
           {analysis.cautionPolicy && <div className="note">주의선 정책: {analysis.cautionPolicy}</div>}
-          <p className="note">기준에 포함된 성분만 결과에 표시합니다. 막대의 선은 하한·주의·상한이며, 각 성분의 실제값 또는 추정 여부를 함께 표시합니다.</p>
+          <p className="note">일부 정보가 없는 성분은 확인된 양만 표시합니다. 이 수치는 전체 섭취량이 아니며 0으로 표시되어도 실제 섭취량이 0이라는 뜻이 아닙니다.</p>
           <aside className="analysis-scope" aria-label="분석 범위 안내"><b>분석 범위 안내</b><span>기준 버전 {analysis.standardVersion} · 결과 {analysis.nutrients.length}종 성분</span><span>{analysis.usesEstimatedFeed ? '일부 사료 성분은 최소 권장량을 사용한 추정값입니다.' : '입력·선택한 제품의 제공량과 하루 급여량을 기준으로 계산했습니다.'}</span><span>이 결과는 건강 상태의 진단·처방 또는 확정 급여 권고가 아닙니다.</span></aside>
           <div className="nutrient-bars">{analysis.nutrients.map(n => <NutrientBar key={n.nutrientId} nutrient={n} />)}</div>
           <div className="tw"><table>
-            <thead><tr><th>영양소</th><th>데이터</th><th>사료</th><th>영양제</th><th>합계</th><th>최소</th><th>상한</th><th>상태</th></tr></thead>
+            <thead><tr><th>영양소</th><th>데이터</th><th>사료</th><th>영양제</th><th>합계 / 확인된 양</th><th>최소</th><th>상한</th><th>상태</th></tr></thead>
             <tbody>{analysis.nutrients.map(n => (
-              <tr key={n.nutrientId}><td data-label="영양소">{n.name} ({n.unit.toLowerCase()})</td><td data-label="데이터">{n.source === 'ESTIMATED' ? '사료 추정' : '실제값'}</td><td data-label="사료">{fmt(n.fromFeed)}</td><td data-label="영양제">{fmt(n.fromSupplements)}</td><td data-label="합계">{fmt(n.total)}</td><td data-label="최소">{fmt(n.minimum)}</td><td data-label="상한">{fmt(n.upper)}</td>
+              <tr key={n.nutrientId}><td data-label="영양소">{n.name} ({n.unit.toLowerCase()})</td><td data-label="데이터">{nutrientSourceLabel(n)}</td><td data-label="사료">{fmt(n.fromFeed)}</td><td data-label="영양제">{fmt(n.fromSupplements)}</td><td data-label="합계">{fmt(n.total)}{n.unknownContribution ? ' (확인된 양만)' : ''}</td><td data-label="최소">{fmt(n.minimum)}</td><td data-label="상한">{fmt(n.upper)}</td>
                 <td data-label="상태" className={`st ${n.status}`}>{STATUS[n.status] ?? n.status}</td></tr>))}</tbody>
           </table></div>
           <details className="contribution-details"><summary>제품별 성분 기여량 보기</summary><ul className="plist">{analysis.contributions.map((item, index) => <li key={`${item.name}-${index}`}><span><span className="tag">{item.type === 'FEED' ? '사료' : '영양제'}</span>{item.name} <small>{item.source === 'ESTIMATED' ? '최소 권장량 추정' : '성분표 실제값'}</small></span><small>{Object.entries(item.nutrients).map(([id, value]) => `${id}: ${fmt(value)}`).join(' · ') || '확인된 성분 없음'}</small></li>)}</ul></details>
           {Object.entries(analysis.ratios).map(([k, v]) => <p key={k} className="ratio-note"><b>{k === 'calciumPhosphorus' ? '칼슘:인 비율' : k} {fmt(v.value)} : 1</b><span>현재 분석 적용 범위 {v.minimum ?? 1} : 1 ~ {v.maximum ?? (analysis.lifeStage === 'GROWTH_EARLY' ? 1.6 : analysis.lifeStage === 'GROWTH_LATE' && Number(expectedAdultWeight) > 15 && ageDays < 182.625 ? 1.6 : analysis.lifeStage === 'GROWTH_LATE' ? 1.8 : 2)} : 1 · {RATIO[v.status] ?? v.status}</span></p>)}
           {analysis.warnings.length > 0 && <ul className="warns">{analysis.warnings.map(w => <li key={w}>{w}</li>)}</ul>}
-          <p style={{ marginTop: 14 }}><button className="btn" onClick={save} disabled={saved}>{saved ? '저장됨' : '기록으로 저장'}</button></p>
+          <p style={{ marginTop: 14 }}><button className="btn" onClick={save} disabled={saved}>{saved ? '리포트 저장됨' : '리포트로 기록 저장'}</button></p>
         </div>
       )}
 
@@ -306,12 +316,10 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
           {rec.excluded.length > 0 && <details><summary className="note">제외된 제품 {rec.excluded.length}개</summary><ul className="warns">{rec.excluded.map(x => <li key={x.productId}>{x.name}: {x.reason}</li>)}</ul></details>}
         </div>
       )}
-      {!analysis && <div className="panel result-placeholder"><div className="result-title"><span>STEP 4 · RESULT</span><h3>분석 결과</h3><p>위에서 정보를 입력하고 분석을 시작하면 이곳에 결과가 나타나요.</p></div></div>}
+      {!analysis && <div className="panel result-placeholder"><div className="result-title"><span>STEP 3 · RESULT</span><h3>분석 결과</h3><p>위에서 정보를 입력하고 분석을 시작하면 이곳에 결과가 나타나요.</p></div></div>}
       </section>
 
-      <section id="step-5" className="step-section records-section">
-        <section className="panel analysis-profile-panel"><div className="panel-title"><span>STEP 5</span><div><h3>저장된 반려동물 프로필과 분석 기록</h3><p>분석 페이지 전용 카드입니다. 기록은 버튼을 눌렀을 때만 펼쳐집니다.</p></div></div>{profiles.length === 0 ? <p className="note">저장된 프로필이 없습니다.</p> : <div className="analysis-profile-grid">{profiles.map(item => { const records = analysisRecords.filter(record => record.profileId ? record.profileId === item.id : record.name === item.name); const open = openAnalysisProfileId === item.id; return <article className={`analysis-profile-card ${open ? 'open' : ''}`} key={item.id}><div className="analysis-profile-main"><span className="profile-avatar">{item.species === 'DOG' ? '🐶' : '🐱'}</span><span><b>{item.name}</b><small>{item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg · {item.age.value}{item.age.unit === 'MONTH' ? '개월' : '주'}</small><em>저장된 분석 {records.length}건</em></span></div><div className="analysis-profile-actions"><button className="btn ghost" onClick={() => loadProfile(item.id)}>이 프로필로 분석</button><button className="btn ghost" aria-expanded={open} onClick={() => setOpenAnalysisProfileId(open ? null : item.id)}>{open ? '기록 닫기' : '기록 보기'}</button></div>{open && <div className="analysis-profile-records">{records.length === 0 ? <p className="empty-record">저장된 분석 기록이 없습니다.</p> : records.map(record => <article className="record-card" key={record.id}><div><b>{new Date(record.date).toLocaleString('ko-KR')}</b><span>부족 {record.summary.deficient ?? 0} · 적정 {record.summary.adequate ?? 0} · 주의 {record.summary.caution ?? 0} · 과다 {record.summary.excess ?? 0}</span><small>{record.items.join(', ')}</small></div></article>)}</div>}</article> })}</div>}</section>
-      </section>
+      </div>
       <p className="note">현재 영양 기준·제품 데이터는 기능 검증용 데모이며 수의학적 처방을 대체하지 않습니다.</p>
     </div>
   )
