@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Mic, Send, Sparkles, X } from 'lucide-react'
+import { Mic, RefreshCw, Send, Sparkles, Volume2, VolumeX, X } from 'lucide-react'
 import { askJarvis, type Analysis } from './api'
 import type { Page } from './Home'
 import './jarvis.css'
@@ -11,6 +11,7 @@ type Recognition = { lang: string; continuous: boolean; interimResults: boolean;
 type RecognitionConstructor = new () => Recognition
 
 const WELCOME = '안녕하세요, 우애영의 자비스예요. 영양제 분석·기록 조회·오늘 분석 요약을 도와드릴게요.'
+const QUICK_PROMPTS = ['오늘 분석 결과 요약해 줘', '칼슘:인 비율 알려줘', '부족한 성분만 보여줘', '지난 기록 열어줘']
 
 function describeAnalysis(analysis: Analysis | null) {
   if (!analysis) return '아직 완료된 분석 결과가 없어요. 반려동물 정보와 급여 제품을 입력한 뒤 “맞춤 분석 시작하기”를 눌러 주세요.'
@@ -45,9 +46,9 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
   const [input, setInput] = useState('')
   const [listening, setListening] = useState(false)
   const [messages, setMessages] = useState<Message[]>([{ from: 'assistant', text: WELCOME }])
-  const [provider, setProvider] = useState<'grok'|'ollama'>('grok')
   const [loading, setLoading] = useState(false)
   const [speak, setSpeak] = useState(false)
+  const [failedInput, setFailedInput] = useState('')
   const recognition = useRef<Recognition | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -61,11 +62,13 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
     setInput('')
     setLoading(true)
     try {
-      const response = await askJarvis(text, analysis, provider)
+      const response = await askJarvis(text, analysis)
+      setFailedInput('')
       setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
       if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.answer))
       if (response.page) onNavigate(response.page)
     } catch {
+      setFailedInput(text)
       setMessages(previous => [...previous, { from: 'assistant', text: 'AI 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.' }])
     } finally { setLoading(false) }
   }
@@ -86,10 +89,11 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
 
   return <aside className="jarvis-root" aria-label="우애영 AI 도우미">
     {open && <section className="jarvis-panel" aria-label="자비스 대화창">
-      <header className="jarvis-top"><span><Bot size={19} /> JARVIS <small>우애영 케어 도우미</small></span><div><select aria-label="AI 제공자" value={provider} onChange={e => setProvider(e.target.value as 'grok'|'ollama')}><option value="grok">Grok</option><option value="ollama">Ollama</option></select><button type="button" onClick={() => setSpeak(value => !value)} aria-pressed={speak} title="음성 답변">{speak ? '🔊' : '🔇'}</button><button type="button" onClick={() => setOpen(false)} aria-label="자비스 닫기"><X size={18} /></button></div></header>
-      <div className="jarvis-messages" role="log" aria-live="polite">{messages.map((message, index) => <p key={index} className={`jarvis-msg ${message.from}`}>{message.text}</p>)}<div ref={endRef} /></div>
+      <header className="jarvis-top"><div className="jarvis-identity"><span className="jarvis-monogram">J</span><div><b>JARVIS</b><small><i /> 자동 응답 · 케어 도우미</small></div></div><div className="jarvis-tools"><button type="button" onClick={() => setSpeak(value => !value)} aria-pressed={speak} title="음성 답변" aria-label={speak ? '음성 답변 끄기' : '음성 답변 켜기'}>{speak ? <Volume2 size={16} /> : <VolumeX size={16} />}</button><button type="button" onClick={() => setOpen(false)} aria-label="자비스 닫기"><X size={17} /></button></div></header>
+      <div className="jarvis-context" aria-label="현재 대화 정보"><span>{analysis ? '최근 분석 있음' : '분석 결과 없음'}</span><span>자동 모드</span><span>{analysis ? '18개 성분 연동' : '기본 안내'}</span></div>
+      <div className="jarvis-messages" role="log" aria-live="polite"><span className="jarvis-day">오늘</span>{messages.map((message, index) => <p key={index} className={`jarvis-msg ${message.from}`}>{message.text}</p>)}{messages.length === 1 && <div className="jarvis-quick"><small>이렇게 물어보세요</small><div>{QUICK_PROMPTS.map(prompt => <button type="button" key={prompt} onClick={() => void submit(prompt)}>{prompt}</button>)}</div></div>}{failedInput && !loading && <button type="button" className="jarvis-retry" onClick={() => void submit(failedInput)}><RefreshCw size={14} /> 다시 시도</button>}<div ref={endRef} /></div>
       <form className="jarvis-form" onSubmit={event => { event.preventDefault(); void submit() }}><button type="button" onClick={listen} aria-label={listening ? '음성 인식 중지' : '음성 인식 시작'} aria-pressed={listening} className={listening ? 'listening' : ''}><Mic size={19} /></button><input value={input} onChange={event => setInput(event.target.value)} placeholder={loading ? '답변 생성 중…' : '자비스에게 물어보기'} aria-label="자비스 명령 입력" disabled={loading} /><button type="submit" aria-label="메시지 보내기" disabled={!input.trim() || loading}>{loading ? '…' : <Send size={18} />}</button></form>
-      <small className="jarvis-note">분석 요약은 이 기기에서 완료한 최근 결과만 사용해요.</small>
+      <small className="jarvis-note">건강 상태의 진단이나 처방을 대신하지 않습니다.</small>
     </section>}
     <button type="button" className="jarvis-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}><Sparkles size={19} /><span>JARVIS</span></button>
   </aside>
