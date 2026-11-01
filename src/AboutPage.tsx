@@ -30,9 +30,14 @@ export default function AboutPage({ go }: AboutPageProps) {
           <div className="about-actions"><button className="about-primary" onClick={() => go('analysis')}>우리 아이 분석 시작 <span>→</span></button><a href="#about-principle">우리가 일하는 방식</a></div>
           <dl className="about-proof"><div><dt>18</dt><dd>분석 영양성분</dd></div><div><dt>2</dt><dd>영양 기준 체계</dd></div><div><dt>LOCAL</dt><dd>브라우저 기록 저장</dd></div></dl>
         </div>
-        <div className="about-portrait" aria-label="우애영의 반려견 영양 관찰 노트">
-          <span className="about-orbit orbit-one">CALCIUM</span><span className="about-orbit orbit-two">OMEGA-3</span><span className="about-orbit orbit-three">VITAMIN</span>
-          <div className="about-portrait-frame"><span className="about-portrait-index">01 / DAILY CARE</span><img src={`${asset}pets/dog-transparent.png`} alt="햇살 아래 앉아 있는 반려견" /><p>잘 먹는 오늘이<br />오래 함께할 내일이 되도록.</p></div>
+        <div className="about-portrait" aria-label="야외에서 함께 달리는 개와 고양이">
+          <div className="about-portrait-frame">
+            <img src={`${asset}images/about-dog-cat-running.jpg`} alt="잔디밭에서 함께 달리는 개와 고양이" fetchPriority="high" />
+            <div className="about-photo-shade" aria-hidden="true" />
+            <span className="about-portrait-index">01 / DAILY CARE</span>
+            <p>잘 먹는 오늘이<br />오래 함께할 내일이 되도록.</p>
+            <a className="about-photo-credit" href="https://unsplash.com/photos/f8QVn7EcJ1Y" target="_blank" rel="noreferrer">Photo · 拾壹 / Unsplash</a>
+          </div>
         </div>
       </div>
       <div className="about-marquee" aria-hidden="true"><span>PROFILE · DAILY INTAKE · 18 NUTRIENTS · REPORT · HEALTH JOURNAL · </span><span>PROFILE · DAILY INTAKE · 18 NUTRIENTS · REPORT · HEALTH JOURNAL · </span></div>
