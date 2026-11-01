@@ -6,3 +6,31 @@
 .about-portrait-frame img{object-position:center center}
 @media(max-width:900px){.about-hero-grid{grid-template-columns:1fr}.about-portrait{min-height:0;aspect-ratio:3/2}}
 @media(max-width:600px){.about-copy h1{font-size:43px}.about-portrait{aspect-ratio:16/10}.about-portrait-frame img{object-position:center center}.site-h:has(+.site-main.page-about) .w{height:58px;gap:12px;overflow:hidden}.site-h:has(+.site-main.page-about) .logo{flex:0 0 auto;font-size:17px}.site-h:has(+.site-main.page-about) nav{display:flex;flex:1;gap:16px;overflow-x:auto;scrollbar-width:none}.site-h:has(+.site-main.page-about) nav::-webkit-scrollbar{display:none}.site-h:has(+.site-main.page-about) nav button{flex:0 0 auto;margin:0;font-size:12px;white-space:nowrap}}
+
+/* Direction A · editorial manifesto */
+.about-hero{background:#f4f0e6}
+.about-hero:before{display:none}
+.about-hero-grid{grid-template-columns:57fr 43fr;width:100%;max-width:none;min-height:620px;padding:0}
+.about-copy{display:flex;flex-direction:column;justify-content:center;padding:72px max(44px,calc((100vw - 1160px)/2)) 72px max(44px,calc((100vw - 1160px)/2))}
+.about-copy h1{max-width:720px;margin-top:22px;font-size:clamp(50px,5.2vw,72px);line-height:1.12}
+.about-copy>p{max-width:650px}
+.about-proof{max-width:530px}
+.about-portrait{width:100%;height:100%;aspect-ratio:auto;min-height:620px}
+.about-portrait:before{display:none}
+.about-portrait-frame{inset:0;border-radius:0;box-shadow:none}
+.about-portrait-frame img{object-position:44% center}
+.about-photo-shade{background:linear-gradient(180deg,transparent 45%,#102f1fc7 100%)}
+.about-portrait-frame p{font-size:24px}
+.about-main{gap:120px}
+.about-manifesto{grid-template-columns:.68fr 1.32fr;gap:7vw}
+.about-manifesto-copy{padding-top:0;border-top:0}
+.about-manifesto-quote{margin:0;padding:0 0 26px 32px;border-left:1px solid #88a695;color:#263b31;font-size:clamp(22px,2.25vw,31px);line-height:1.6}
+.about-principle-grid{display:grid;grid-template-columns:repeat(3,1fr);margin-top:34px;border-top:1px solid #bfcec5}
+.about-principle-grid article{padding:24px 22px 8px 0;border-right:1px solid #d8e2dc}
+.about-principle-grid article+article{padding-left:22px}
+.about-principle-grid article:last-child{border-right:0}
+.about-principle-grid span{color:var(--leaf);font-family:Georgia,serif;font-size:24px}
+.about-principle-grid h3{margin:15px 0 8px;font-size:15px}
+.about-principle-grid p{margin:0;color:#68766f;font-size:12px;line-height:1.75}
+@media(max-width:900px){.about-hero-grid{grid-template-columns:1fr}.about-copy{padding:70px max(24px,calc((100vw - 720px)/2)) 54px}.about-portrait{min-height:0;aspect-ratio:3/2}.about-manifesto{grid-template-columns:1fr}.about-manifesto-quote{display:block}}
+@media(max-width:600px){.about-copy{padding:50px 20px 42px}.about-copy h1{font-size:39px}.about-portrait{aspect-ratio:4/3}.about-proof{grid-template-columns:repeat(3,1fr)}.about-proof div{min-width:0;padding-right:4px}.about-proof dt{font-size:18px}.about-main{gap:82px}.about-principle-grid{grid-template-columns:1fr}.about-principle-grid article,.about-principle-grid article+article{padding:20px 0;border-right:0;border-bottom:1px solid #d8e2dc}.about-manifesto-quote{padding-left:20px;font-size:21px}}

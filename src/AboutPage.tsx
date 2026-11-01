@@ -16,6 +16,12 @@ const steps = [
   ['03', '리포트로 남겨요', '분석 결과를 PDF 리포트와 일일 건강 기록으로 보관합니다.'],
 ]
 
+const principles = [
+  ['01', '근거를 밝힙니다', '적용한 기준 버전과 데이터 검증 상태를 결과에 함께 표시합니다.'],
+  ['02', '모르는 것은 남깁니다', '제품에 없는 값이나 추정할 수 없는 성분을 실제 0으로 단정하지 않습니다.'],
+  ['03', '기록으로 이어갑니다', '한 번의 영양 분석을 매일의 건강 변화와 다음 돌봄으로 연결합니다.'],
+]
+
 export default function AboutPage({ go }: AboutPageProps) {
   const [videoFailed, setVideoFailed] = useState(false)
   const asset = import.meta.env.BASE_URL
@@ -24,9 +30,9 @@ export default function AboutPage({ go }: AboutPageProps) {
     <section className="about-hero">
       <div className="w about-hero-grid">
         <div className="about-copy">
-          <span className="about-kicker">WOOAEYOUNG · NUTRITION JOURNAL</span>
-          <h1>매일 먹는 것을<br /><em>건강의 기록으로.</em></h1>
-          <p>우애영은 반려동물의 사료와 영양제를 함께 살펴보고, 복잡한 영양 정보를 보호자가 이해할 수 있는 하루의 리포트로 정리합니다.</p>
+          <span className="about-kicker">OUR POINT OF VIEW · 2026</span>
+          <h1>더 많이<br />알려주기보다,<br /><em>더 분명하게.</em></h1>
+          <p>사료와 영양제가 겹치면 작은 숫자도 중요한 신호가 됩니다. 우애영은 확인할 수 있는 것과 아직 모르는 것을 구분해, 보호자가 오늘의 선택을 이해하도록 돕습니다.</p>
           <div className="about-actions"><button className="about-primary" onClick={() => go('analysis')}>우리 아이 분석 시작 <span>→</span></button><a href="#about-principle">우리가 일하는 방식</a></div>
           <dl className="about-proof"><div><dt>18</dt><dd>분석 영양성분</dd></div><div><dt>2</dt><dd>영양 기준 체계</dd></div><div><dt>LOCAL</dt><dd>브라우저 기록 저장</dd></div></dl>
         </div>
@@ -45,8 +51,11 @@ export default function AboutPage({ go }: AboutPageProps) {
 
     <main className="w about-main">
       <section id="about-principle" className="about-manifesto" aria-labelledby="about-manifesto-title">
-        <div><span className="about-section-label">01 · OUR POINT OF VIEW</span><h2 id="about-manifesto-title">좋은 선택은<br />잘 보이는 정보에서 시작됩니다.</h2></div>
-        <div className="about-manifesto-copy"><p>영양제 하나만 보면 간단해 보여도, 사료와 여러 제품을 함께 먹는 순간 하루 섭취량은 복잡해집니다.</p><p>우애영은 제품을 추천하기 전에 지금 먹는 조합을 먼저 정리합니다. 확인된 값과 추정값, 기준이 있는 성분과 아직 판단할 수 없는 성분을 구분해 보여주는 것이 우리의 원칙입니다.</p><strong>정보를 더 많이 보여주는 것보다,<br />무엇을 믿고 판단할 수 있는지 분명하게.</strong></div>
+        <div><span className="about-section-label">01 · MANIFESTO</span><h2 id="about-manifesto-title">우리가 믿는<br />세 가지 원칙</h2></div>
+        <div className="about-manifesto-copy">
+          <strong className="about-manifesto-quote">정보는 많을수록 좋은 것이 아니라,<br />판단할 수 있을 때 비로소 유용합니다.</strong>
+          <div className="about-principle-grid">{principles.map(([number, title, description]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{description}</p></article>)}</div>
+        </div>
       </section>
 
       <section className="about-feature-story" aria-labelledby="about-feature-title">
