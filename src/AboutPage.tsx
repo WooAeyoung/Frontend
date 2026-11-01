@@ -38,7 +38,8 @@ export default function AboutPage({ go }: AboutPageProps) {
         </div>
         <div className="about-portrait" aria-label="야외에서 함께 달리는 개와 고양이">
           <div className="about-portrait-frame">
-            <img src={`${asset}images/about-dog-cat-running.jpg`} alt="잔디밭에서 함께 달리는 개와 고양이" fetchPriority="high" />
+            <img className="about-photo-backdrop" src={`${asset}images/about-dog-cat-running.jpg`} alt="" aria-hidden="true" />
+            <img className="about-photo-main" src={`${asset}images/about-dog-cat-running.jpg`} alt="잔디밭에서 함께 달리는 개와 고양이" fetchPriority="high" />
             <div className="about-photo-shade" aria-hidden="true" />
             <span className="about-portrait-index">01 / DAILY CARE</span>
             <p>잘 먹는 오늘이<br />오래 함께할 내일이 되도록.</p>
