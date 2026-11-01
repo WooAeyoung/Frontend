@@ -2,5 +2,6 @@
 .about-hero:before{background:linear-gradient(90deg,transparent 46.9%,#d7e3da 47%,transparent 47.1%)}
 .about-hero-grid{grid-template-columns:.94fr 1.06fr;gap:46px}
 .about-copy h1{font-size:clamp(48px,5.1vw,68px);word-break:keep-all}
+.about-portrait-frame img{object-position:30% center}
 @media(max-width:900px){.about-hero-grid{grid-template-columns:1fr}}
-@media(max-width:600px){.about-copy h1{font-size:43px}.site-h:has(+.site-main.page-about) .w{height:58px;gap:12px;overflow:hidden}.site-h:has(+.site-main.page-about) .logo{flex:0 0 auto;font-size:17px}.site-h:has(+.site-main.page-about) nav{display:flex;flex:1;gap:16px;overflow-x:auto;scrollbar-width:none}.site-h:has(+.site-main.page-about) nav::-webkit-scrollbar{display:none}.site-h:has(+.site-main.page-about) nav button{flex:0 0 auto;margin:0;font-size:12px;white-space:nowrap}}
+@media(max-width:600px){.about-copy h1{font-size:43px}.about-portrait-frame img{object-position:38% center}.site-h:has(+.site-main.page-about) .w{height:58px;gap:12px;overflow:hidden}.site-h:has(+.site-main.page-about) .logo{flex:0 0 auto;font-size:17px}.site-h:has(+.site-main.page-about) nav{display:flex;flex:1;gap:16px;overflow-x:auto;scrollbar-width:none}.site-h:has(+.site-main.page-about) nav::-webkit-scrollbar{display:none}.site-h:has(+.site-main.page-about) nav button{flex:0 0 auto;margin:0;font-size:12px;white-space:nowrap}}
