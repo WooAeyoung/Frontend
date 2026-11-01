@@ -1,9 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './story.css'
 
-declare global {
-  interface Window { gsap?: any; ScrollTrigger?: any }
-}
+gsap.registerPlugin(ScrollTrigger)
 
 export type Page = 'home' | 'about' | 'analysis' | 'records' | 'support'
 const days = [['월','14',true],['화','15',true],['수','16',true],['목','17',false],['금','18',false],['토','19',false],['일','20',false]] as const
@@ -30,7 +30,6 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
   const startAnalysis = () => {
     if (!formValid || analyzing || !root.current) return
     setAnalyzing(true)
-    const gsap = window.gsap
     const finish = () => {
       unlocked.current = true
       root.current?.classList.remove('story-gated')
@@ -38,7 +37,6 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
       setAnalyzing(false)
       beginAnalysis({ name: name.trim(), species, weightKg: Number(weight), ageYears: Number(age), symptoms })
     }
-    if (!gsap) { finish(); return }
     // 홈 안의 요소만 선택한다. 전역 셀렉터('.input-panel' 등)를 쓰면 마운트된 분석 화면의 STEP 1·2 패널까지 opacity:0이 된다.
     const scope = root.current
     const q = (selector: string) => scope.querySelectorAll(selector)
@@ -62,13 +60,6 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
     // Browsers can restore the previous pinned-story offset after the app mounts.
     // Reset the landing story itself so a fresh visit always starts at 01 · 만남.
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-    const resetScroll = window.setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' }), 120)
-    const gsap = window.gsap
-    const ScrollTrigger = window.ScrollTrigger
-    if (!gsap || !ScrollTrigger) { element.dataset.step = '01'; return () => window.clearTimeout(resetScroll) }
-    gsap.registerPlugin(ScrollTrigger)
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
     const context = gsap.context(() => {
       gsap.timeline({
         defaults: { ease: 'none' },
@@ -94,12 +85,23 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
 
       const gate = ScrollTrigger.create({ trigger: element, start: 'top top', end: '+=4200', onUpdate: (self: { progress: number }) => {
         element.dataset.step = self.progress < .35 ? '01' : self.progress < .68 ? '02' : '03'
-        const shouldGate = self.progress >= .52 && self.progress < .68 && !unlocked.current
-        element.classList.toggle('story-gated', shouldGate)
       }})
-      return () => { gate.kill(); window.clearTimeout(resetScroll) }
+      return () => gate.kill()
     }, element)
-    return () => { context.revert(); window.clearTimeout(resetScroll) }
+    // Layout can change after the first measurement while emoji, images, or web fonts load.
+    // Refreshing after those assets settle prevents a stale pin range on a revisit.
+    const refresh = () => ScrollTrigger.refresh()
+    const frame = window.requestAnimationFrame(refresh)
+    const images = Array.from(element.querySelectorAll('img'))
+    images.forEach(image => {
+      if (!image.complete) image.addEventListener('load', refresh, { once: true })
+    })
+    document.fonts?.ready.then(refresh).catch(() => undefined)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      images.forEach(image => image.removeEventListener('load', refresh))
+      context.revert()
+    }
   }, [])
 
   return <main ref={root} className="story-root" data-step="01">
@@ -114,7 +116,7 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
 
       <div className="device-shell" aria-label="우애영 모바일 앱 미리보기"><div className="device-speaker"/><div className="device-screen"><div className="device-top"><b>우애영</b><span>•••</span></div><div className="device-pet"><span>🐕</span><div><small>오늘도 건강하게</small><b>{name || '우리 아이'}의 영양 리포트</b></div></div><div className="analysis-screen"><div className="analysis-head"><div><small>DAILY BALANCE</small><b>오늘의 영양 균형</b></div><div className="score-ring"><strong>84</strong><small>GOOD</small></div></div><div className="chart-card">{[1,2,3,4,5,6].map(n=><span className="chart-bar" key={n}/>)}</div><div className="metrics">{[['오메가 3','92%'],['칼슘','76%'],['비타민 D','68%']].map(([label,value])=><div className="metric-row" key={label}><span>{label}</span><b>{value}</b><em><i style={{width:value}}/></em></div>)}</div><div className="device-note"><span>✓</span><p><b>{name || '우리 아이'}에게 좋은 균형이에요</b><small>{symptoms[0] || '건강'} 케어 성분을 꾸준히 기록해 주세요.</small></p></div></div></div></div>
 
-      <div className="chapter-copy chapter-two"><p className="story-kicker">02 · NUTRITION INSIGHT</p><h2>우리 아이를<br/><em>먼저 알려주세요.</em></h2><p>입력을 마칠 때까지 이 화면은 고정됩니다.<br/>완료 후 맞춤 분석 결과가 이어집니다.</p></div>
+      <div className="chapter-copy chapter-two"><p className="story-kicker">02 · NUTRITION INSIGHT</p><h2>우리 아이를<br/><em>먼저 알려주세요.</em></h2><p>정보를 입력하면 맞춤 분석을 시작할 수 있어요.<br/>스크롤을 계속하면 건강 기록을 살펴볼 수 있습니다.</p></div>
 
       <form className="input-panel" onSubmit={event => { event.preventDefault(); startAnalysis() }}><div className="form-fields"><div className="form-heading"><small>PERSONAL PROFILE</small><h3>맞춤 분석 정보</h3><span>필수 항목</span></div><label>반려동물 이름<input value={name} onChange={event => setName(event.target.value)} placeholder="예: 몽이" autoComplete="off"/></label><div className="form-two"><label>종<select value={species} onChange={event => setSpecies(event.target.value as 'DOG' | 'CAT')}><option value="DOG">강아지</option><option value="CAT">고양이</option></select></label><label>체중<input value={weight} onChange={event => setWeight(event.target.value.replace(/[^0-9.]/g,''))} inputMode="decimal" placeholder="예: 4.5"/><i>kg</i></label></div><label>나이<input value={age} onChange={event => setAge(event.target.value.replace(/[^0-9]/g,''))} inputMode="numeric" placeholder="예: 4"/><i>살</i></label><fieldset><legend>걱정되는 증상 <small>하나 이상 선택</small></legend><div className="symptom-grid">{[['관절','🦴'],['피부·모질','✨'],['장 건강','◌'],['눈 건강','◉']].map(([label,icon])=><button type="button" key={label} className={symptoms.includes(label)?'selected':''} aria-pressed={symptoms.includes(label)} onClick={() => toggleSymptom(label)}><span>{icon}</span>{label}<i>✓</i></button>)}</div></fieldset><button className="analyze-button" disabled={!formValid || analyzing}>{analyzing?<><span className="loader"/>프로필을 저장하고 있어요</>:<>맞춤 분석 시작하기 <span>→</span></>}</button><p className="form-help">입력한 프로필은 한 번 저장되어 다음 분석에서 바로 불러옵니다.</p></div>{['NAME','AGE','CARE','DATA','BALANCE','HEALTH','84%','GOOD'].map(item=><span className="data-particle" key={item}>{item}</span>)}</form>
       <div className="result-toast" aria-live="polite"><span>✓</span><p><b>분석이 완료됐어요</b><small>이제 스크롤해 건강 기록으로 이어가세요.</small></p></div>
