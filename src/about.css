@@ -21,9 +21,8 @@
 .about-portrait-frame img{object-position:44% center}
 .about-photo-shade{background:linear-gradient(180deg,transparent 45%,#102f1fc7 100%)}
 .about-portrait-frame p{font-size:24px}
-.about-marquee-track{display:flex;width:max-content;will-change:transform;animation:about-track 22s linear infinite}
+.about-marquee-track{display:flex;width:max-content;will-change:transform;animation:about-track 16s linear infinite!important}
 .about-marquee-track span{padding-right:54px;animation:none}
-.about-marquee:hover .about-marquee-track{animation-play-state:paused}
 .about-main{gap:120px}
 .about-manifesto{grid-template-columns:.68fr 1.32fr;gap:7vw}
 .about-manifesto-copy{padding-top:0;border-top:0}
@@ -38,4 +37,3 @@
 @media(max-width:900px){.about-hero .about-hero-grid{grid-template-columns:1fr;width:100%;margin-top:0!important}.about-copy{padding:70px max(24px,calc((100vw - 720px)/2)) 54px}.about-portrait{min-height:0;aspect-ratio:3/2}.about-manifesto{grid-template-columns:1fr}.about-manifesto-quote{display:block}}
 @media(max-width:600px){.about-copy{padding:50px 20px 42px}.about-copy h1{font-size:39px}.about-portrait{aspect-ratio:4/3}.about-proof{grid-template-columns:repeat(3,1fr)}.about-proof div{min-width:0;padding-right:4px}.about-proof dt{font-size:18px}.about-main{gap:82px}.about-principle-grid{grid-template-columns:1fr}.about-principle-grid article,.about-principle-grid article+article{padding:20px 0;border-right:0;border-bottom:1px solid #d8e2dc}.about-manifesto-quote{padding-left:20px;font-size:21px}}
 @keyframes about-track{to{transform:translate3d(-50%,0,0)}}
-@media(prefers-reduced-motion:reduce){.about-marquee-track{animation:none}}
