@@ -1,15 +1,19 @@
 name: Deploy public website
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 concurrency:
   group: pages
   cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     environment:
@@ -26,6 +30,7 @@ jobs:
       - run: npm run build
         env:
           VITE_API_URL: https://wooaeyoung-backend.onrender.com
+          VITE_BASE_PATH: /Frontend/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -33,4 +38,3 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-
