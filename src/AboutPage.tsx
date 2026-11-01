@@ -46,7 +46,7 @@ export default function AboutPage({ go }: AboutPageProps) {
           </div>
         </div>
       </div>
-      <div className="about-marquee" aria-hidden="true"><span>PROFILE · DAILY INTAKE · 18 NUTRIENTS · REPORT · HEALTH JOURNAL · </span><span>PROFILE · DAILY INTAKE · 18 NUTRIENTS · REPORT · HEALTH JOURNAL · </span></div>
+      <div className="about-marquee" aria-hidden="true"><div className="about-marquee-track"><span>PROFILE · DAILY INTAKE · 18 NUTRIENTS · REPORT · HEALTH JOURNAL · </span><span>PROFILE · DAILY INTAKE · 18 NUTRIENTS · REPORT · HEALTH JOURNAL · </span><span>PROFILE · DAILY INTAKE · 18 NUTRIENTS · REPORT · HEALTH JOURNAL · </span><span>PROFILE · DAILY INTAKE · 18 NUTRIENTS · REPORT · HEALTH JOURNAL · </span></div></div>
     </section>
 
     <main className="w about-main">
