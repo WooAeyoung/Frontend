@@ -10,12 +10,12 @@
 /* Direction A · editorial manifesto */
 .about-hero{background:#f4f0e6}
 .about-hero:before{display:none}
-.about-hero-grid{grid-template-columns:57fr 43fr;width:100%;max-width:none;min-height:620px;padding:0}
-.about-copy{display:flex;flex-direction:column;justify-content:center;padding:72px max(44px,calc((100vw - 1160px)/2)) 72px max(44px,calc((100vw - 1160px)/2))}
+.about-hero .about-hero-grid{grid-template-columns:minmax(0,57fr) minmax(420px,43fr);width:calc(100% - 64px);max-width:1440px;min-height:620px;margin:48px auto 0!important;padding:0}
+.about-copy{min-width:0;display:flex;flex-direction:column;justify-content:center;padding:72px clamp(40px,6vw,86px)}
 .about-copy h1{max-width:720px;margin-top:22px;font-size:clamp(50px,5.2vw,72px);line-height:1.12}
 .about-copy>p{max-width:650px}
 .about-proof{max-width:530px}
-.about-portrait{width:100%;height:100%;aspect-ratio:auto;min-height:620px}
+.about-portrait{min-width:0;width:100%;height:100%;aspect-ratio:auto;min-height:620px}
 .about-portrait:before{display:none}
 .about-portrait-frame{inset:0;border-radius:0;box-shadow:none}
 .about-portrait-frame img{object-position:44% center}
@@ -35,7 +35,7 @@
 .about-principle-grid span{color:var(--leaf);font-family:Georgia,serif;font-size:24px}
 .about-principle-grid h3{margin:15px 0 8px;font-size:15px}
 .about-principle-grid p{margin:0;color:#68766f;font-size:12px;line-height:1.75}
-@media(max-width:900px){.about-hero-grid{grid-template-columns:1fr}.about-copy{padding:70px max(24px,calc((100vw - 720px)/2)) 54px}.about-portrait{min-height:0;aspect-ratio:3/2}.about-manifesto{grid-template-columns:1fr}.about-manifesto-quote{display:block}}
+@media(max-width:900px){.about-hero .about-hero-grid{grid-template-columns:1fr;width:100%;margin-top:0!important}.about-copy{padding:70px max(24px,calc((100vw - 720px)/2)) 54px}.about-portrait{min-height:0;aspect-ratio:3/2}.about-manifesto{grid-template-columns:1fr}.about-manifesto-quote{display:block}}
 @media(max-width:600px){.about-copy{padding:50px 20px 42px}.about-copy h1{font-size:39px}.about-portrait{aspect-ratio:4/3}.about-proof{grid-template-columns:repeat(3,1fr)}.about-proof div{min-width:0;padding-right:4px}.about-proof dt{font-size:18px}.about-main{gap:82px}.about-principle-grid{grid-template-columns:1fr}.about-principle-grid article,.about-principle-grid article+article{padding:20px 0;border-right:0;border-bottom:1px solid #d8e2dc}.about-manifesto-quote{padding-left:20px;font-size:21px}}
 @keyframes about-track{to{transform:translate3d(-50%,0,0)}}
 @media(prefers-reduced-motion:reduce){.about-marquee-track{animation:none}}
