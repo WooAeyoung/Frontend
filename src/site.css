@@ -337,6 +337,6 @@ th:first-child,td:first-child{text-align:left}
   .analysis-page .analysis-grid>.profile-panel{grid-column:1!important;grid-row:1!important}
   .analysis-page .analysis-grid>.products-panel{grid-column:2!important;grid-row:1!important}
   .analysis-page .analysis-grid>.standard-select{grid-column:2!important;grid-row:2!important}
-  .analysis-page .analysis-grid>.manual-panel{grid-column:2!important;grid-row:2!important;max-width:none;margin:0}
+  .analysis-page .analysis-grid>.manual-panel{grid-column:2!important;grid-row:1!important;max-width:none;margin:0}
   .analysis-page .analysis-grid>.step-section{grid-column:3!important;grid-row:1 / span 3!important}
 }
