@@ -70,6 +70,23 @@
   .dashboard-grid { gap: .65rem; }
 }
 
+/* 홈의 프로필 입력 카드만 화면 높이에 맞춘다. 분석 페이지 패널에는 적용하지 않는다. */
+@media (min-width: 901px) and (max-height: 980px) {
+  .story-root .input-panel {
+    max-height: calc(100vh - 2rem);
+    padding: 1rem 1.2rem;
+  }
+  .story-root .input-panel .form-fields { gap: .58rem; }
+  .story-root .form-heading h3 { font-size: 1.12rem; }
+  .story-root .input-panel input,
+  .story-root .input-panel select { height: 2.45rem; }
+  .story-root .input-panel label > i { bottom: .62rem; }
+  .story-root .input-panel legend { margin-bottom: .35rem; }
+  .story-root .symptom-grid { gap: .38rem; }
+  .story-root .symptom-grid button { min-height: 2.25rem; padding: .38rem .6rem; }
+  .story-root .analyze-button { min-height: 2.55rem; }
+}
+
 .analysis-page .input-panel{position:relative;left:auto;right:auto;top:auto;bottom:auto;z-index:auto;width:auto;opacity:1;pointer-events:auto;transform:none;padding:28px;backdrop-filter:none}
 
 /* 03 기록: 제목이 우측 대시보드 카드 아래로 밀려 겹치지 않도록 좌측 열 안에 맞춘다. */
