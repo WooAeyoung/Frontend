@@ -235,7 +235,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     let count = 0
     const lines = labelText.toLowerCase().split(/\r?\n/)
     for (const line of lines) {
-      const match = line.match(/(.+?)\s*[:：]?\s*([0-9]+(?:[.,][0-9]+)?)\s*(mg|g|ug|μg|mcg|iu)?\s*$/i)
+      const match = line.replace(/^[•·*-]\s*/, '').match(/(.+?)\s*[:：]?\s*([0-9]+(?:[.,][0-9]+)?)\s*(mg|g|ug|μg|mcg|iu)?(?:\s|$)/i)
       if (!match) continue
       const key = LABEL_ALIASES.find(([label]) => match[1].replace(/[()]/g, '').includes(label))?.[1]
       if (!key) continue
