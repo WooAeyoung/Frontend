@@ -262,8 +262,9 @@ th:first-child,td:first-child{text-align:left}
 
 .analysis-page .manual-panel{max-width:1100px;margin-left:auto;margin-right:auto}
 .analysis-page .manual-panel .grid2{grid-template-columns:minmax(240px,1.8fr) repeat(4,minmax(120px,1fr));align-items:start}
-.analysis-page .manual-panel .ingredient-row{display:grid;grid-template-columns:minmax(260px,1.7fr) minmax(150px,1fr) minmax(120px,.7fr) auto;gap:12px;align-items:end;margin-top:10px}
+.analysis-page .manual-panel .ingredient-row{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,.85fr) minmax(76px,.65fr) auto;gap:10px;align-items:end;margin-top:10px}
 .analysis-page .manual-panel .ingredient-name{min-width:0}
+.analysis-page .manual-panel .ingredient-row .f,.analysis-page .manual-panel .ingredient-row .in{min-width:0;width:100%;box-sizing:border-box}
 .analysis-page .manual-panel .ingredient-row .btn{white-space:nowrap}
 .analysis-page .manual-panel .label-draft{width:100%;box-sizing:border-box}
 @media (max-width:900px){.analysis-page .manual-panel .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.analysis-page .manual-panel .ingredient-row{grid-template-columns:minmax(0,1fr) minmax(120px,1fr) minmax(100px,.7fr) auto}}
