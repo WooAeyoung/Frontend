@@ -47,6 +47,7 @@ const VITAMIN_FORMS: Record<string, [string, string][]> = {
 const fmt = formatNumber
 const ADULT_SIZE_WEIGHT: Record<string, number> = { S: 7, M: 15, L: 27.5, XL: 47.5, XXL: 60 }
 const adultSizeFromWeight = (weight?: number) => weight === 7 ? 'S' : weight === 15 ? 'M' : weight === 27.5 ? 'L' : weight === 47.5 ? 'XL' : weight === 60 ? 'XXL' : ''
+const LABEL_ALIASES: [string, string][] = [['타우린', 'TAURINE'], ['epa+d​​ha', 'EPA_DHA'], ['epa+d​​ha', 'EPA_DHA'], ['epa+dha', 'EPA_DHA'], ['칼슘', 'CALCIUM'], ['인', 'PHOSPHORUS'], ['구리', 'COPPER'], ['요오드', 'IODINE'], ['철', 'IRON'], ['망간', 'MANGANESE'], ['셀레늄', 'SELENIUM'], ['아연', 'ZINC'], ['비타민 a', 'VITAMIN_A'], ['비타민 d', 'VITAMIN_D'], ['비타민 e', 'VITAMIN_E'], ['비타민 b1', 'VITAMIN_B1'], ['비타민 b6', 'VITAMIN_B6'], ['비타민 b12', 'VITAMIN_B12'], ['엽산', 'VITAMIN_B9'], ['비오틴', 'VITAMIN_B7']]
 
 function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) {
   const ceiling = Math.max(nutrient.upper ?? 0, nutrient.caution ?? 0, nutrient.minimum ?? 0, nutrient.total ?? 0, 1)
@@ -87,6 +88,8 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [productsLoading, setProductsLoading] = useState(true)
   const [items, setItems] = useState<FeedingItem[]>([])
   const [manualItems, setManualItems] = useState<ManualItem[]>([])
+  const [labelText, setLabelText] = useState('')
+  const [labelNotice, setLabelNotice] = useState('')
   const [ingredientRows, setIngredientRows] = useState<string[]>([''])
   const [dailyFrequency, setDailyFrequency] = useState('1')
   const emptyNutrients = () => Object.fromEntries(MANUAL_NUTRIENTS.map(([id]) => [id, ''])) as Record<string, string>
@@ -226,6 +229,27 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setError('')
   }
 
+  function extractLabelDraft() {
+    const next: Record<string, string> = emptyNutrients()
+    const nextUnits: Record<string, string> = {}
+    let count = 0
+    const lines = labelText.toLowerCase().split(/\r?\n/)
+    for (const line of lines) {
+      const match = line.match(/(.+?)\s*[:：]?\s*([0-9]+(?:[.,][0-9]+)?)\s*(mg|g|ug|μg|mcg|iu)?\s*$/i)
+      if (!match) continue
+      const key = LABEL_ALIASES.find(([label]) => match[1].replace(/[()]/g, '').includes(label))?.[1]
+      if (!key) continue
+      next[key] = match[2].replace(',', '.')
+      nextUnits[key] = (match[3] || nutrientOptions(standardProfile).find(([id]) => id === key)?.[2] || 'MG').toUpperCase().replace('ΜG', 'UG').replace('Μ', 'U')
+      count++
+    }
+    const productLine = lines.find(line => /제품명|product|name/.test(line))
+    const productName = productLine?.split(/[:：]/)[1]?.trim()
+    setManual(current => ({ ...current, ...(productName ? { name: productName } : {}), nutrients: next, units: nextUnits }))
+    setIngredientRows(Object.keys(next).filter(key => next[key]).concat(['']))
+    setLabelNotice(count ? `${count}개 성분 후보를 추출했어요. 값을 확인한 뒤 제품 저장 및 추가를 눌러 주세요.` : '성분 값을 찾지 못했어요. 성분명과 수치를 줄바꿈해 입력해 주세요.')
+  }
+
   function save() {
     if (!analysis) return
     saveRecord({ id: analysis.traceId, profileId: profileId || undefined, date: new Date().toISOString(), name: profile.name, species, items: [...items.map(i => `${i.name} ${i.dailyAmount}${i.unit}`), ...manualItems.map(item => `${item.name} ${item.dailyAmount}${item.servingUnit} (직접 입력)`)], summary: analysis.summary, standardVersion: analysis.standardVersion, standardSource: analysis.standardSource, analysisSnapshot: analysis, profileSnapshot: profile })
@@ -260,6 +284,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
       </div>
       <div className="panel standard-select"><b>영양 기준 · FEDIAF + NIAS v3</b><p className="manual-support-note">FEDIAF와 NIAS v3 기준을 통합해 성장기 기준을 포함한 총 18개 성분을 분석합니다.</p><div role="radiogroup" aria-label="영양 기준 선택">{STANDARD_OPTIONS.map(option => <label key={option.id}><input type="radio" name="standardProfile" value={option.id} checked={standardProfile === option.id} disabled={!option.available || loading} onChange={() => { setStandardProfile(option.id); setIngredientRows(['']); setManual({ ...manual, nutrients: emptyNutrients(), units: {}, forms: {} }); setAnalysis(null); setRec(null); setError('') }} /> {option.label} <small>{option.note}</small></label>)}</div></div>
       <div id="step-2" className="panel manual-panel"><div className="panel-title compact"><span>STEP 2</span><div><h3>검색되지 않는 제품 직접 입력</h3><p>제품 라벨의 1회 제공량과 영양성분을 입력해 함께 계산할 수 있어요.</p></div></div>
+        <div className="label-draft panel"><div className="manual-card__head"><b>라벨 텍스트 붙여넣기</b><span className="note">후보값만 추출하며 확인 후 반영됩니다.</span></div><textarea className="in label-draft-text" value={labelText} onChange={e => setLabelText(e.target.value)} placeholder={'예시:\n제품명: 칼슘 플러스\n칼슘 120 mg\n비타민 D 4 IU'} rows={5} /><button className="btn ghost" type="button" onClick={extractLabelDraft} disabled={!labelText.trim()}>초안 추출</button>{labelNotice && <p className="care-notice">{labelNotice}</p>}</div>
         {manualItems.map((item, index) => <article className="manual-card saved-manual-card" key={`${item.name}-${index}`}><div className="manual-card__head"><b>{item.type === 'FEED' ? '사료' : '영양제'} {index + 1} · {item.name}</b><button className="btn ghost" onClick={() => setManualItems(manualItems.filter((_, i) => i !== index))}>삭제</button></div><p>1회 {item.servingAmount}{item.servingUnit} · 하루 {item.dailyAmount}{item.servingUnit}</p><p>{item.nutrients.map(n => `${MANUAL_NUTRIENTS.find(([id]) => id === n.nutrientId)?.[1] || n.nutrientId} ${n.amount} ${n.unit}`).join(' · ')}</p></article>)}
         <div className="manual-card"><div className="manual-card__head"><b>{manual.type === 'FEED' ? '사료' : '영양제'} {manualItems.length + 1}</b></div>
           <div className="grid2"><label className="f">제품명<input className="in" value={manual.name} onChange={e => setManual({ ...manual, name: e.target.value })} placeholder="예: 우리집 관절 영양제" /></label><label className="f">구분<select className="in" value={manual.type} onChange={e => setManual({ ...manual, type: e.target.value as 'FEED' | 'SUPPLEMENT' })}><option value="SUPPLEMENT">영양제</option><option value="FEED">사료</option></select></label><label className="f">1회 제공량<input className="in" type="number" min="0.1" value={manual.amount} onChange={e => setManual({ ...manual, amount: e.target.value, daily: String(Number(e.target.value) * Number(dailyFrequency)) })} /></label><label className="f">단위<select className="in" value={manual.unit} onChange={e => setManual({ ...manual, unit: e.target.value })}><option value="TABLET">정</option><option value="CAPSULE">캡슐</option><option value="G">g</option></select></label><label className="f">하루 횟수<input className="in" type="number" min="0.1" step="any" value={dailyFrequency} onChange={e => { setDailyFrequency(e.target.value); setManual({ ...manual, daily: String(Number(manual.amount) * Number(e.target.value)) }) }} /><small className="note">하루 총 급여량: {Number(manual.daily) || 0} {manual.unit === 'TABLET' ? '정' : manual.unit === 'CAPSULE' ? '캡슐' : 'g'}</small></label></div>
