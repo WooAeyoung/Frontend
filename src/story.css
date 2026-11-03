@@ -73,8 +73,8 @@
 /* 홈의 프로필 입력 카드만 화면 높이에 맞춘다. 분석 페이지 패널에는 적용하지 않는다. */
 @media (min-width: 901px) {
   .story-root .input-panel {
-    top: clamp(1rem, 4vh, 3rem);
-    bottom: clamp(1rem, 4vh, 3rem);
+    top: clamp(5rem, 10vh, 8rem);
+    bottom: clamp(1rem, 2vh, 1.5rem);
     max-height: none;
     translate: none;
   }
