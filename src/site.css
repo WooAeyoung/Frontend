@@ -331,7 +331,7 @@ th:first-child,td:first-child{text-align:left}
 .records-workspace .records-work-head h3{white-space:normal;word-break:keep-all}
 .records-workspace .records-work-head>.btn{flex:0 0 auto;white-space:nowrap}
 @media (min-width:1100px){
-  .analysis-page .analysis-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1.25fr)!important;gap:22px}
+  .analysis-page .analysis-grid{grid-template-columns:minmax(280px,1fr) minmax(360px,1fr) minmax(560px,1.8fr)!important;gap:24px}
   .analysis-page .analysis-grid>.profile-panel{grid-column:1!important;grid-row:1!important}
   .analysis-page .analysis-grid>.products-panel{grid-column:2!important;grid-row:1!important}
   .analysis-page .analysis-grid>.standard-select{grid-column:2!important;grid-row:2!important}
