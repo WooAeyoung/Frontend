@@ -48,7 +48,7 @@ const VITAMIN_FORMS: Record<string, [string, string][]> = {
 const fmt = formatNumber
 const ADULT_SIZE_WEIGHT: Record<string, number> = { S: 7, M: 15, L: 27.5, XL: 47.5, XXL: 60 }
 const adultSizeFromWeight = (weight?: number) => weight === 7 ? 'S' : weight === 15 ? 'M' : weight === 27.5 ? 'L' : weight === 47.5 ? 'XL' : weight === 60 ? 'XXL' : ''
-const LABEL_ALIASES: [string, string][] = [['타우린', 'TAURINE'], ['epa+d​​ha', 'EPA_DHA'], ['epa+d​​ha', 'EPA_DHA'], ['epa+dha', 'EPA_DHA'], ['칼슘', 'CALCIUM'], ['인', 'PHOSPHORUS'], ['구리', 'COPPER'], ['요오드', 'IODINE'], ['철', 'IRON'], ['망간', 'MANGANESE'], ['셀레늄', 'SELENIUM'], ['아연', 'ZINC'], ['비타민 a', 'VITAMIN_A'], ['비타민 d', 'VITAMIN_D'], ['비타민 e', 'VITAMIN_E'], ['비타민 b1', 'VITAMIN_B1'], ['비타민 b6', 'VITAMIN_B6'], ['비타민 b12', 'VITAMIN_B12'], ['엽산', 'VITAMIN_B9'], ['비오틴', 'VITAMIN_B7']]
+const LABEL_ALIASES: [string, string][] = [['타우린', 'TAURINE'], ['epa+dha', 'EPA_DHA'], ['칼슘', 'CALCIUM'], ['인', 'PHOSPHORUS'], ['구리', 'COPPER'], ['요오드', 'IODINE'], ['철', 'IRON'], ['망간', 'MANGANESE'], ['셀레늄', 'SELENIUM'], ['아연', 'ZINC'], ['za', 'ZINC'], ['비타민 a', 'VITAMIN_A'], ['비타민ㅁ', 'VITAMIN_A'], ['비타민 d', 'VITAMIN_D'], ['비타민 e', 'VITAMIN_E'], ['비타민 b1', 'VITAMIN_B1'], ['비타민 b6', 'VITAMIN_B6'], ['비타민 b12', 'VITAMIN_B12'], ['엽산', 'VITAMIN_B9'], ['비오틴', 'VITAMIN_B7']]
 
 function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) {
   const ceiling = Math.max(nutrient.upper ?? 0, nutrient.caution ?? 0, nutrient.minimum ?? 0, nutrient.total ?? 0, 1)
@@ -235,7 +235,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     const next: Record<string, string> = emptyNutrients()
     const nextUnits: Record<string, string> = {}
     let count = 0
-    const lines = labelText.toLowerCase().split(/\r?\n/)
+    const lines = labelText.toLowerCase().replace(/비타민\s*[《〈]/g, '비타민 d').split(/[\r\n,]/)
     for (const line of lines) {
       const match = line.replace(/^[•·*-]\s*/, '').match(/(.+?)\s*[:：]?\s*([0-9]+(?:[.,][0-9]+)?)\s*(mg|g|ug|μg|mcg|iu)?(?:\s|$)/i)
       if (!match) continue
