@@ -51,10 +51,37 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
   const [openReport, setOpenReport] = useState<SavedRecord | null>(null)
   const [selectedId, setSelectedId] = useState(() => loadProfiles()[0]?.id ?? '')
   const [activeTab, setActiveTab] = useState<RecordTab>('today')
+  const importInput = useRef<HTMLInputElement>(null)
+  const [importNotice, setImportNotice] = useState('')
   useEffect(() => { const refresh = () => { setList(loadRecords()); setProfiles(loadProfiles()) }; window.addEventListener('wooaeyoung:records-changed', refresh); window.addEventListener('wooaeyoung:profiles-changed', refresh); return () => { window.removeEventListener('wooaeyoung:records-changed', refresh); window.removeEventListener('wooaeyoung:profiles-changed', refresh) } }, [])
   const recordsFor = (profile: SavedProfile) => list.filter(record => record.profileId ? record.profileId === profile.id : record.name === profile.name)
   const removeRecord = (id: string) => { const next = list.filter(record => record.id !== id); localStorage.setItem(KEY, JSON.stringify(next)); setList(next) }
   const removeProfile = (id: string) => { const next = profiles.filter(profile => profile.id !== id); localStorage.setItem(PROFILE_KEY, JSON.stringify(next)); setProfiles(next) }
+  const importSavedAnalysis = async (file: File) => {
+    try {
+      const parsed: unknown = JSON.parse(await file.text())
+      const parsedObject = parsed && typeof parsed === 'object' ? parsed as { records?: unknown } : null
+      const candidates: unknown[] = Array.isArray(parsed) ? parsed : Array.isArray(parsedObject?.records) ? parsedObject.records : [parsed]
+      const imported = candidates.filter((raw): raw is SavedRecord => {
+        if (!raw || typeof raw !== 'object') return false
+        const item = raw as Partial<SavedRecord>
+        return Boolean(item.analysisSnapshot?.nutrients && item.analysisSnapshot?.summary)
+      }).map(item => ({
+        ...item,
+        id: item.id || crypto.randomUUID(),
+        date: item.date || new Date().toISOString(),
+        name: item.name || item.profileSnapshot?.name || '가져온 분석',
+        species: item.species || item.profileSnapshot?.species || 'DOG',
+        items: Array.isArray(item.items) ? item.items : [],
+        summary: item.summary || item.analysisSnapshot!.summary,
+      }))
+      if (!imported.length) throw new Error('analysis')
+      const existing = loadRecords()
+      const known = new Set(existing.map(item => item.id))
+      const next = [...imported.filter(item => !known.has(item.id)), ...existing]
+      localStorage.setItem(KEY, JSON.stringify(next)); setList(next); window.dispatchEvent(new CustomEvent('wooaeyoung:records-changed')); setImportNotice(`${imported.length}개의 저장 분석을 불러왔어요.`)
+    } catch { setImportNotice('분석 기록 JSON 파일을 읽지 못했어요. 저장된 리포트 파일을 선택해 주세요.') }
+  }
   const selectedProfile = profiles.find(profile => profile.id === selectedId) ?? profiles[0]
   const selectedRecords = selectedProfile ? recordsFor(selectedProfile) : []
   useEffect(() => { if (selectedProfile && selectedProfile.id !== selectedId) setSelectedId(selectedProfile.id) }, [selectedId, selectedProfile])
@@ -66,7 +93,7 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
       {selectedProfile && <main className="records-work-main"><header className="records-work-head"><div><span>{selectedProfile.name.toUpperCase()}’S RECORD</span><h3>{selectedProfile.name}의 건강 기록</h3><p>{selectedProfile.species === 'DOG' ? '강아지' : '고양이'} · {selectedProfile.weightKg}kg · 저장된 분석 {selectedRecords.length}건</p></div><button className="btn" onClick={() => selectProfile(selectedProfile.id)}>새 분석</button></header>
         <nav className="records-tabs" aria-label="기록 종류">{([['today', '오늘 관리'], ['analysis', `영양 분석 ${selectedRecords.length || ''}`], ['trend', '건강 변화'], ['reminder', '알림 설정']] as [RecordTab, string][]).map(([id, label]) => <button key={id} className={activeTab === id ? 'active' : ''} aria-current={activeTab === id ? 'page' : undefined} onClick={() => setActiveTab(id)}>{label}</button>)}</nav>
         <div className="records-tab-panel">
-          {activeTab === 'analysis' && <section className="records-analysis-list"><div className="records-section-head"><div><span>ANALYSIS REPORTS</span><h4>저장된 영양 분석</h4></div></div>{selectedRecords.length === 0 ? <p className="empty-record">아직 저장된 분석 기록이 없어요. 첫 분석을 시작해 보세요.</p> : selectedRecords.map(record => <article className="record-card" key={record.id}><div><b>{new Date(record.date).toLocaleString('ko-KR')}</b><span>부족 {record.summary.deficient ?? 0} · 적정 {record.summary.adequate ?? 0} · 주의 {record.summary.caution ?? 0} · 과다 {record.summary.excess ?? 0}</span><small>{record.items.join(', ')}</small>{record.standardVersion && <small>기준 {record.standardVersion}</small>}</div><div className="record-actions"><button className="btn report-open" onClick={() => setOpenReport(record)}>리포트 보기</button><details className="record-more"><summary aria-label="기록 더보기">•••</summary><button className="btn danger" onClick={() => removeRecord(record.id)}>기록 삭제</button></details></div></article>)}</section>}
+          {activeTab === 'analysis' && <section className="records-analysis-list"><div className="records-section-head"><div><span>ANALYSIS REPORTS</span><h4>저장된 영양 분석</h4></div><div><input ref={importInput} type="file" accept=".json,application/json" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void importSavedAnalysis(file); event.currentTarget.value = '' }} /><button className="btn ghost" onClick={() => importInput.current?.click()}>파일 불러오기</button></div></div>{importNotice && <p className="care-notice">{importNotice}</p>}{selectedRecords.length === 0 ? <p className="empty-record">아직 저장된 분석 기록이 없어요. 첫 분석을 시작해 보세요.</p> : selectedRecords.map(record => <article className="record-card" key={record.id}><div><b>{new Date(record.date).toLocaleString('ko-KR')}</b><span>부족 {record.summary.deficient ?? 0} · 적정 {record.summary.adequate ?? 0} · 주의 {record.summary.caution ?? 0} · 과다 {record.summary.excess ?? 0}</span><small>{record.items.join(', ')}</small>{record.standardVersion && <small>기준 {record.standardVersion}</small>}</div><div className="record-actions"><button className="btn report-open" onClick={() => setOpenReport(record)}>리포트 보기</button><details className="record-more"><summary aria-label="기록 더보기">•••</summary><button className="btn danger" onClick={() => removeRecord(record.id)}>기록 삭제</button></details></div></article>)}</section>}
           {activeTab !== 'analysis' && <ProfileTools key={selectedProfile.id} profile={selectedProfile} records={selectedRecords} view={activeTab} />}
         </div>
         <details className="profile-management"><summary>프로필 관리</summary><button className="btn danger" onClick={() => removeProfile(selectedProfile.id)}>이 프로필 삭제</button></details>
