@@ -330,6 +330,8 @@ th:first-child,td:first-child{text-align:left}
 .records-workspace .records-work-head>div{min-width:0}
 .records-workspace .records-work-head h3{white-space:normal;word-break:keep-all}
 .records-workspace .records-work-head>.btn{flex:0 0 auto;white-space:nowrap}
+.manual-panel.profile-required> :not(.panel-title):not(.profile-required-notice){pointer-events:none;opacity:.35;filter:grayscale(.3)}
+.profile-required-notice{margin:0 0 16px;padding:14px 16px;border:1px solid #cfe4d9;border-radius:10px;background:#f2faf6;color:#23694f;font-size:12px;font-weight:800;line-height:1.5}
 @media (min-width:1100px){
   .analysis-page{width:calc(100% - 48px);max-width:1720px;box-sizing:border-box;padding-left:0;padding-right:0}
   .analysis-page .analysis-grid{width:100%;grid-template-columns:minmax(0,1.15fr) minmax(0,1.35fr) minmax(0,1.65fr)!important;gap:24px}
