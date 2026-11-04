@@ -239,7 +239,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     let count = 0
     const lines = labelText.toLowerCase().replace(/비타민\s*[《〈]/g, '비타민 d').split(/[\r\n,]/)
     for (const line of lines) {
-      const match = line.replace(/^[•·*-]\s*/, '').match(/(.+?)\s*[:：]?\s*([0-9]+(?:[.,][0-9]+)?)\s*(mg|g|ug|μg|mcg|iu)?(?:\s|$)/i)
+      const match = line.replace(/^[•·*-]\s*/, '').match(/(.+?)\s*[:：]?\s*([0-9]+(?:[.,][0-9]+)?)\s*(mg|g|ug|μg|mcg|iu)\b/i)
       if (!match) continue
       const candidate = match[1].replace(/[()]/g, '').trim()
       const key = LABEL_ALIASES.find(([label]) => candidate === label || candidate.startsWith(`${label} `) || candidate.startsWith(`${label}·`))?.[1]
