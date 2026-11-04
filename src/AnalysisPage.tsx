@@ -92,6 +92,9 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [labelText, setLabelText] = useState('')
   const [labelNotice, setLabelNotice] = useState('')
   const [ocrLoading, setOcrLoading] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const cameraVideoRef = useRef<HTMLVideoElement>(null)
+  const cameraStreamRef = useRef<MediaStream | null>(null)
   const [ingredientRows, setIngredientRows] = useState<string[]>([''])
   const [dailyFrequency, setDailyFrequency] = useState('1')
   const emptyNutrients = () => Object.fromEntries(MANUAL_NUTRIENTS.map(([id]) => [id, ''])) as Record<string, string>
@@ -266,6 +269,9 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     } catch { setLabelNotice('사진을 읽지 못했어요. 글자가 선명한 사진을 다시 선택하거나 텍스트를 붙여 넣어 주세요.') }
     finally { setOcrLoading(false) }
   }
+  async function openCamera() { try { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); cameraStreamRef.current = stream; setCameraOpen(true); requestAnimationFrame(() => { if (cameraVideoRef.current) { cameraVideoRef.current.srcObject = stream; void cameraVideoRef.current.play() } }) } catch { setLabelNotice('카메라를 사용할 수 없어요. 브라우저 권한을 허용하거나 사진 파일을 선택해 주세요.') } }
+  function closeCamera() { cameraStreamRef.current?.getTracks().forEach(track => track.stop()); cameraStreamRef.current = null; setCameraOpen(false) }
+  function captureCameraFrame() { const video = cameraVideoRef.current; if (!video) return; const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight; canvas.getContext('2d')?.drawImage(video, 0, 0); canvas.toBlob(blob => { if (blob) void extractLabelImage(new File([blob], 'label-camera.jpg', { type: 'image/jpeg' })); closeCamera() }, 'image/jpeg', .92) }
 
   function save() {
     if (!analysis) return
@@ -363,6 +369,8 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
       </section>
 
       </div>
+      <button className="btn ghost desktop-camera-button" type="button" onClick={openCamera}>📷 PC 카메라로 라벨 촬영</button>
+      {cameraOpen && <div className="camera-capture"><video ref={cameraVideoRef} playsInline muted /><div><button className="btn" type="button" onClick={captureCameraFrame}>촬영</button><button className="btn ghost" type="button" onClick={closeCamera}>닫기</button></div></div>}
       <p className="note">현재 영양 기준·제품 데이터는 기능 검증용 데모이며 수의학적 처방을 대체하지 않습니다.</p>
     </div>
   )
