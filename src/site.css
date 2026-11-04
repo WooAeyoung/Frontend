@@ -329,10 +329,12 @@ th:first-child,td:first-child{text-align:left}
 .records-workspace .records-work-main{width:100%;max-width:none;margin:0}
 .achievement-badge{display:inline-flex;align-items:center;gap:9px;margin:0 auto 12px;padding:8px 12px;border:1px solid #b8dfc9;border-radius:999px;background:#effaf3;color:#176b4d;text-align:left}.achievement-badge>b{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#25a878;color:#fff;font-size:13px}.achievement-badge span{display:grid;gap:1px}.achievement-badge strong{font-size:11px}.achievement-badge small{margin:0;color:#5d806f;font-size:9px}
 .profile-achievement{margin:0 0 0 auto;flex-shrink:0}
+.records-head-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}.records-achievement{margin:0}.records-achievement b{width:22px;height:22px}.records-achievement strong{font-size:10px}.records-achievement small{font-size:8px}
 .imported-file .btn{margin-left:auto;flex:none;padding:7px 10px;font-size:10px}
 .imported-file-delete{margin-left:0!important;color:#a44949!important;border-color:#e7caca!important;background:#fff!important}
 .imported-files{display:grid;gap:8px;margin:12px 0;padding:12px;border:1px solid #dce9e2;border-radius:10px;background:#f7fbf8}.imported-files>b{color:#2b795a;font-size:12px}.imported-file{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:#fff}.imported-file>span{display:grid;place-items:center;width:30px;height:30px;border-radius:7px;background:#eaf5ef;color:#19704f;font-size:9px;font-weight:900}.imported-file div{display:grid;gap:2px;min-width:0}.imported-file strong{overflow:hidden;color:#30443a;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.imported-file small{margin:0;color:#7b8b83;font-size:9px}
 @media(max-width:760px){.profile-achievement{margin:10px 0 0;flex-basis:100%}.analysis-page .profile-panel .panel-title{flex-wrap:wrap}}
+@media(max-width:760px){.records-head-actions{width:100%;align-items:flex-end;justify-content:space-between}.records-achievement{display:inline-flex}}
 .records-workspace .records-work-head{height:auto;min-height:92px;padding:0;background:transparent;border:0}
 .records-workspace .records-work-head>div{min-width:0}
 .records-workspace .records-work-head h3{white-space:normal;word-break:keep-all}
