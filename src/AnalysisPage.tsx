@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { analyze, getProducts, recommend, STANDARD_OPTIONS } from './api'
 import type { Analysis, FeedingItem, ManualItem, Product, Profile, Recommendation, StandardProfile } from './api'
-import { loadRecords, saveRecord, type SavedRecord } from './Records'
+import { loadImportedPdfCount, loadRecords, saveRecord, type SavedRecord } from './Records'
 import { loadAnalysisProfiles, saveAnalysisProfile } from './analysisProfiles'
 import type { AnalysisDraft } from './Home'
 import PetCompanion from './PetCompanion'
@@ -105,6 +105,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [saved, setSaved] = useState(false)
   const [profiles, setProfiles] = useState(loadAnalysisProfiles)
   const [analysisRecords, setAnalysisRecords] = useState<SavedRecord[]>(loadRecords)
+  const [importedPdfCount, setImportedPdfCount] = useState(loadImportedPdfCount)
   const [openAnalysisProfileId, setOpenAnalysisProfileId] = useState<string | null>(null)
   const [profileId, setProfileId] = useState('')
   const [profileSaved, setProfileSaved] = useState(false)
@@ -173,7 +174,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
   }
   useEffect(() => { if (active) setProfiles(loadAnalysisProfiles()) }, [active])
-  useEffect(() => { const refresh = () => setAnalysisRecords(loadRecords()); window.addEventListener('wooaeyoung:records-changed', refresh); return () => window.removeEventListener('wooaeyoung:records-changed', refresh) }, [])
+  useEffect(() => { const refresh = () => setAnalysisRecords(loadRecords()); const refreshFiles = () => setImportedPdfCount(loadImportedPdfCount()); window.addEventListener('wooaeyoung:records-changed', refresh); window.addEventListener('wooaeyoung:files-changed', refreshFiles); return () => { window.removeEventListener('wooaeyoung:records-changed', refresh); window.removeEventListener('wooaeyoung:files-changed', refreshFiles) } }, [])
   useEffect(() => {
     if (initialProfileId) loadProfile(initialProfileId)
   }, [initialProfileId, loadSeq])
@@ -284,7 +285,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
 
       <div className="analysis-grid">
 
-      <div id="step-1" className="panel input-panel profile-panel"><div className="panel-title"><span>STEP 1</span><div><h3>반려동물 정보</h3><p>한 번 저장하면 다음 분석에서 다시 사용할 수 있어요.</p></div>{analysis && <div className="achievement-badge profile-achievement" role="status"><b>✓</b><span><strong>첫 분석 완료</strong><small>우리 아이의 첫 영양 도장을 받았어요</small></span></div>}</div>
+      <div id="step-1" className="panel input-panel profile-panel"><div className="panel-title"><span>STEP 1</span><div><h3>반려동물 정보</h3><p>한 번 저장하면 다음 분석에서 다시 사용할 수 있어요.</p></div>{(analysis || analysisRecords.length + importedPdfCount > 0) && <div className="achievement-badge profile-achievement" role="status" title="분석 기록 또는 PDF 리포트를 저장한 날 받은 배지"><b>✓</b><span><strong>분석 기록 {analysisRecords.length + importedPdfCount}회</strong><small>{new Date(analysisRecords[0]?.date || Date.now()).toLocaleDateString('ko-KR')} 획득</small></span></div>}</div>
         <div className="profile-actions"><label className="f">저장된 프로필 불러오기<select className="in" value={profileId} onChange={e => loadProfile(e.target.value)}><option value="">새 프로필 작성</option>{profiles.map(item => <option key={item.id} value={item.id}>{item.name} · {item.species === 'DOG' ? '강아지' : '고양이'} · {item.weightKg}kg</option>)}</select></label>{profileReady ? <button className="btn ghost reveal-action" onClick={saveCurrentProfile}>{profileSaved ? '프로필 저장됨' : profileId ? '프로필 수정 저장' : '프로필 저장'}</button> : <span className="action-hint">필수 칸을 입력하면 저장 버튼이 나타나요.</span>}</div>
         <div className="grid2">
           <label className="f">이름<input className="in" value={name} onChange={e => setName(e.target.value)} placeholder="예: 보리" /></label>
