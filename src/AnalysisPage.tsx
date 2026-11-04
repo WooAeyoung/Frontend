@@ -241,7 +241,8 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     for (const line of lines) {
       const match = line.replace(/^[•·*-]\s*/, '').match(/(.+?)\s*[:：]?\s*([0-9]+(?:[.,][0-9]+)?)\s*(mg|g|ug|μg|mcg|iu)?(?:\s|$)/i)
       if (!match) continue
-      const key = LABEL_ALIASES.find(([label]) => match[1].replace(/[()]/g, '').includes(label))?.[1]
+      const candidate = match[1].replace(/[()]/g, '').trim()
+      const key = LABEL_ALIASES.find(([label]) => candidate === label || candidate.startsWith(`${label} `) || candidate.startsWith(`${label}·`))?.[1]
       if (!key) continue
       next[key] = match[2].replace(',', '.')
       nextUnits[key] = (match[3] || nutrientOptions(standardProfile).find(([id]) => id === key)?.[2] || 'MG').toUpperCase().replace('ΜG', 'UG').replace('Μ', 'U')
