@@ -107,4 +107,3 @@
 /* 고정(pin) 구간의 높이는 GSAP pin-spacer가 만든다. 루트에 고정 높이를 주면 푸터와 겹치고 끝까지 스크롤되지 않는다. */
 .story-root { height: auto; }
 
-.hero-actions{display:grid;justify-items:start;gap:.65rem;margin-top:2rem}.hero-cta{display:inline-flex;align-items:center;gap:1rem;border:0;border-radius:999px;padding:.85rem 1.1rem;background:var(--forest);color:#fff;font-size:.72rem;font-weight:900;box-shadow:0 12px 28px #153c3130}.hero-cta span{display:grid;place-items:center;width:1.45rem;height:1.45rem;border-radius:50%;background:var(--lime);color:var(--forest)}.hero-cta:hover{transform:translateY(-2px);box-shadow:0 16px 34px #153c3140}.hero-actions small{color:#71837a;font-size:.58rem}

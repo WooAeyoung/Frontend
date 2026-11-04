@@ -110,7 +110,7 @@ export default function Home({ go, beginAnalysis }: { go: (page: Page) => void; 
       <div className="story-progress" aria-hidden="true"><i/></div>
       <div className="story-rail" aria-label="현재 스토리 단계"><span data-no="01">만남</span><span data-no="02">분석</span><span data-no="03">기록</span></div>
 
-      <div className="hero-copy chapter-one"><p className="story-kicker">PERSONAL NUTRITION FOR PETS</p><h1>매일 먹는 것부터,<br/><em>더 오래 함께.</em></h1><p>우리 아이의 나이, 체중, 생활 습관을 바탕으로<br/>꼭 필요한 영양만 섬세하게 설계해요.</p><div className="hero-actions"><button className="hero-cta" type="button" onClick={() => go('analysis')}>무료 분석 시작하기 <span>→</span></button><small>회원가입 없이 · 브라우저에만 안전하게 저장</small></div><div className="scroll-cue"><span/>SCROLL TO DISCOVER</div></div>
+      <div className="hero-copy chapter-one"><p className="story-kicker">PERSONAL NUTRITION FOR PETS</p><h1>매일 먹는 것부터,<br/><em>더 오래 함께.</em></h1><p>우리 아이의 나이, 체중, 생활 습관을 바탕으로<br/>꼭 필요한 영양만 섬세하게 설계해요.</p><div className="scroll-cue"><span/>SCROLL TO DISCOVER</div></div>
 
       <div className="pet-visual" role="img" aria-label="햇살 아래 앉아 있는 반려견과 반려묘"><div className="sun-disc"/><div className="pet-art"><span className="dog">🐕</span><span className="cat">🐈</span></div><small>MOONGI &amp; HARU · 2026</small></div>
 
