@@ -327,6 +327,7 @@ th:first-child,td:first-child{text-align:left}
 .records-analysis-list .record-card>div:first-child{min-width:0}.records-analysis-list .record-card small{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 /* Reset generic semantic header/main rules inside the records workspace. */
 .records-workspace .records-work-main{width:100%;max-width:none;margin:0}
+.achievement-badge{display:inline-flex;align-items:center;gap:9px;margin:0 auto 12px;padding:8px 12px;border:1px solid #b8dfc9;border-radius:999px;background:#effaf3;color:#176b4d;text-align:left}.achievement-badge>b{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#25a878;color:#fff;font-size:13px}.achievement-badge span{display:grid;gap:1px}.achievement-badge strong{font-size:11px}.achievement-badge small{margin:0;color:#5d806f;font-size:9px}
 .records-workspace .records-work-head{height:auto;min-height:92px;padding:0;background:transparent;border:0}
 .records-workspace .records-work-head>div{min-width:0}
 .records-workspace .records-work-head h3{white-space:normal;word-break:keep-all}
