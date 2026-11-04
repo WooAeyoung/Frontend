@@ -105,9 +105,10 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [saved, setSaved] = useState(false)
   const [profiles, setProfiles] = useState(loadAnalysisProfiles)
   const [analysisRecords, setAnalysisRecords] = useState<SavedRecord[]>(loadRecords)
-  const [importedPdfCount, setImportedPdfCount] = useState(loadImportedPdfCount)
+  const [importedPdfCount, setImportedPdfCount] = useState(0)
   const [openAnalysisProfileId, setOpenAnalysisProfileId] = useState<string | null>(null)
   const [profileId, setProfileId] = useState('')
+  useEffect(() => { setImportedPdfCount(loadImportedPdfCount(profileId || undefined)) }, [profileId])
   const [profileSaved, setProfileSaved] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
 
@@ -174,7 +175,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
   }
   useEffect(() => { if (active) setProfiles(loadAnalysisProfiles()) }, [active])
-  useEffect(() => { const refresh = () => setAnalysisRecords(loadRecords()); const refreshFiles = () => setImportedPdfCount(loadImportedPdfCount()); window.addEventListener('wooaeyoung:records-changed', refresh); window.addEventListener('wooaeyoung:files-changed', refreshFiles); return () => { window.removeEventListener('wooaeyoung:records-changed', refresh); window.removeEventListener('wooaeyoung:files-changed', refreshFiles) } }, [])
+  useEffect(() => { const refresh = () => setAnalysisRecords(loadRecords()); const refreshFiles = () => setImportedPdfCount(loadImportedPdfCount(profileId || undefined)); window.addEventListener('wooaeyoung:records-changed', refresh); window.addEventListener('wooaeyoung:files-changed', refreshFiles); return () => { window.removeEventListener('wooaeyoung:records-changed', refresh); window.removeEventListener('wooaeyoung:files-changed', refreshFiles) } }, [profileId])
   useEffect(() => {
     if (initialProfileId) loadProfile(initialProfileId)
   }, [initialProfileId, loadSeq])
