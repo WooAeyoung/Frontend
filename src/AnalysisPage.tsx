@@ -95,6 +95,10 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [cameraOpen, setCameraOpen] = useState(false)
   const cameraVideoRef = useRef<HTMLVideoElement>(null)
   const cameraStreamRef = useRef<MediaStream | null>(null)
+  useEffect(() => () => {
+    cameraStreamRef.current?.getTracks().forEach(track => track.stop())
+    cameraStreamRef.current = null
+  }, [])
   const [ingredientRows, setIngredientRows] = useState<string[]>([''])
   const [dailyFrequency, setDailyFrequency] = useState('1')
   const emptyNutrients = () => Object.fromEntries(MANUAL_NUTRIENTS.map(([id]) => [id, ''])) as Record<string, string>
