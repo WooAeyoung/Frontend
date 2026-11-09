@@ -67,9 +67,10 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
       setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
       if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.answer))
       if (response.page) onNavigate(response.page)
-    } catch {
+    } catch (error) {
       setFailedInput(text)
-      setMessages(previous => [...previous, { from: 'assistant', text: 'AI 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.' }])
+      const message = error instanceof Error ? error.message : '자비스 응답을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.'
+      setMessages(previous => [...previous, { from: 'assistant', text: `${message} 입력하신 내용은 보존했어요.` }])
     } finally { setLoading(false) }
   }
 

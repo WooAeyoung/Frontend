@@ -31,6 +31,13 @@ async function call<T>(path:string,init?:RequestInit):Promise<T>{
   if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.detail?.message??body.detail?.[0]?.msg??'요청을 처리하지 못했습니다.')}
   return response.json()
 }
+async function callWithTimeout<T>(path:string,init:RequestInit|undefined,timeoutMs:number):Promise<T>{
+  const controller=new AbortController()
+  const timer=window.setTimeout(()=>controller.abort(),timeoutMs)
+  try{return await call<T>(path,{...init,signal:controller.signal})}
+  catch(error){if(controller.signal.aborted)throw new Error('자비스 응답이 늦어지고 있어요. 다시 시도해 주세요.');throw error}
+  finally{window.clearTimeout(timer)}
+}
 export async function getProducts(query=''){
   if(STATIC_MODE){
     const {marketProducts,localProducts}=await import('./localEngine')
@@ -56,7 +63,7 @@ export async function getParameterCatalog(standardProfile:StandardProfile){
   return call<{standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;verification:Record<string,string>;allowUnverified:boolean}>(`/api/v2/parameters/${standardProfile}`)
 }
 export async function askJarvis(message:string,analysis:Analysis|null){
-  return call<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message,analysis})})
+  return callWithTimeout<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message,analysis})},7000)
 }
 export async function getNearestVets(lat:number,lon:number,limit=5){
   const request = call<NearbyVets>(`/api/v1/vets/nearest?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limit=${limit}`)
