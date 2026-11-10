@@ -69,7 +69,9 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
       if (response.page) onNavigate(response.page)
     } catch (error) {
       setFailedInput(text)
-      const message = error instanceof Error ? error.message : '자비스 응답을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.'
+      const message = error instanceof Error && error.message.includes('늦어지고')
+        ? '서버가 깨어나는 중이거나 응답이 지연되고 있어요.'
+        : error instanceof Error ? error.message : '자비스 응답을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.'
       setMessages(previous => [...previous, { from: 'assistant', text: `${message} 입력하신 내용은 보존했어요.` }])
     } finally { setLoading(false) }
   }
