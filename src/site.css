@@ -360,3 +360,12 @@ th:first-child,td:first-child{text-align:left}
   .analysis-page .analysis-grid>.manual-panel{grid-column:1!important;grid-row:2!important;max-width:none;margin:0}
   .analysis-page .analysis-grid>.step-section{grid-column:2!important;grid-row:1 / span 3!important}
 }
+
+/* Friendly open eyes with small pupils that follow the pointer. */
+.pet-eye{top:8px;width:17px;height:19px;border-radius:50%;background:#fffaf3;overflow:hidden;box-shadow:0 1px 2px #623d3226}
+.pet-eye:nth-child(1){left:6px}.pet-eye:nth-child(2){right:6px}
+.pet-pupil{position:absolute;left:4px;top:5px;width:9px;height:10px;border-radius:50%;background:#2c2522;transition:transform .08s ease-out}
+.pet-pupil:after{content:'';position:absolute;left:2px;top:1px;width:3px;height:3px;border-radius:50%;background:white}
+.pet-companion.is-sleeping .pet-eye{top:17px;height:2px;border-radius:4px;background:#2c2522;box-shadow:none}
+.pet-companion.is-sleeping .pet-pupil{display:none}
+@media(prefers-reduced-motion:reduce){.pet-pupil{transition:none}}

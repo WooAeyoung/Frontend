@@ -13,7 +13,7 @@ export default function PetCompanion() {
   return <div className={`pet-companion ${sleeping ? 'is-sleeping' : ''}`} aria-label="분석을 지켜보는 반려동물">
     <div className="pet-shadow" />
     <div className="pet-body"><span className="pet-ear left"/><span className="pet-ear right"/><span className="pet-face">
-      <span className="pet-eye" style={{ transform: `translate(${look.x * 3}px, ${look.y * 2}px)` }} /><span className="pet-eye" style={{ transform: `translate(${look.x * 3}px, ${look.y * 2}px)` }} /><span className="pet-nose" />
+      {[0, 1].map(eye => <span className="pet-eye" key={eye}><span className="pet-pupil" style={{ transform: `translate(${look.x * 2}px, ${look.y * 2}px)` }} /></span>)}<span className="pet-nose" />
     </span></div>
     <span className="pet-ball" />
     <span className="pet-bubble">{sleeping ? 'zzZ' : '같이 볼까요?'}</span>
