@@ -279,7 +279,6 @@ th:first-child,td:first-child{text-align:left}
 }
 .desktop-camera-button{margin:14px 0}
 .label-capture-actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
-.camera-open-button{display:inline-flex;align-items:center;gap:7px}
 .camera-capture{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:20px;background:#10231cbd;backdrop-filter:blur(8px)}
 .camera-dialog{width:min(560px,calc(100vw - 32px));overflow:hidden;border:1px solid #ffffff2e;border-radius:22px;background:#f9fcfa;box-shadow:0 28px 90px #07150f80}
 .camera-dialog>header{display:flex;height:auto;align-items:flex-start;justify-content:space-between;padding:20px 22px 17px;border:0;border-bottom:1px solid #dce9e2;background:#fff}
