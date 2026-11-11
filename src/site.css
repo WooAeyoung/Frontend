@@ -267,8 +267,12 @@ th:first-child,td:first-child{text-align:left}
 .analysis-page .manual-panel .ingredient-row .f,.analysis-page .manual-panel .ingredient-row .in{min-width:0;width:100%;box-sizing:border-box}
 .analysis-page .manual-panel .ingredient-row .btn{white-space:nowrap}
 .analysis-page .manual-panel .label-draft{width:100%;box-sizing:border-box}
+.analysis-page .manual-product-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;align-items:start}
+.analysis-page .manual-product-fields .product-name-field{grid-column:1 / -1}
+.analysis-page .manual-product-fields>.f{display:grid;gap:7px;margin:0;min-width:0}
+.analysis-page .manual-product-fields>.f>.note{margin-top:0;line-height:1.45}
 @media (max-width:900px){.analysis-page .manual-panel .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.analysis-page .manual-panel .ingredient-row{grid-template-columns:minmax(0,1fr) minmax(120px,1fr) minmax(100px,.7fr) auto}}
-@media (max-width:600px){.analysis-page .manual-panel .grid2,.analysis-page .manual-panel .ingredient-row{grid-template-columns:1fr}.analysis-page .manual-panel .ingredient-row .btn{justify-self:start}}
+@media (max-width:600px){.analysis-page .manual-panel .grid2,.analysis-page .manual-panel .ingredient-row{grid-template-columns:1fr}.analysis-page .manual-product-fields .product-name-field{grid-column:1}.analysis-page .manual-panel .ingredient-row .btn{justify-self:start}}
 @media (min-width:1100px){
   .analysis-page .analysis-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1.25fr);align-items:start;gap:22px}
   .analysis-page .analysis-grid>.profile-panel{grid-column:1;grid-row:1 / span 3}
