@@ -62,8 +62,8 @@ export async function getStandardCatalog(standardProfile:StandardProfile):Promis
 export async function getParameterCatalog(standardProfile:StandardProfile){
   return call<{standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;verification:Record<string,string>;allowUnverified:boolean}>(`/api/v2/parameters/${standardProfile}`)
 }
-export async function askJarvis(message:string,analysis:Analysis|null){
-  return callWithTimeout<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message,analysis})},25000)
+export async function askJarvis(message:string,analysis:Analysis|null,history:{role:'user'|'assistant';content:string}[]=[]){
+  return callWithTimeout<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message,analysis,history:history.slice(-12)})},25000)
 }
 export async function getNearestVets(lat:number,lon:number,limit=5){
   const request = call<NearbyVets>(`/api/v1/vets/nearest?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limit=${limit}`)

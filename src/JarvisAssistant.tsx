@@ -62,7 +62,8 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
     setInput('')
     setLoading(true)
     try {
-      const response = await askJarvis(text, analysis)
+      const history = messages.map(message => ({ role: message.from, content: message.text }))
+      const response = await askJarvis(text, analysis, history)
       setFailedInput('')
       setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
       if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.answer))
