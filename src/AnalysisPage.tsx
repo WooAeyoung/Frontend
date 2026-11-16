@@ -48,7 +48,16 @@ const VITAMIN_FORMS: Record<string, [string, string][]> = {
 const fmt = formatNumber
 const ADULT_SIZE_WEIGHT: Record<string, number> = { S: 7, M: 15, L: 27.5, XL: 47.5, XXL: 60 }
 const adultSizeFromWeight = (weight?: number) => weight === 7 ? 'S' : weight === 15 ? 'M' : weight === 27.5 ? 'L' : weight === 47.5 ? 'XL' : weight === 60 ? 'XXL' : ''
-const LABEL_ALIASES: [string, string][] = [['타우린', 'TAURINE'], ['epa+dha', 'EPA_DHA'], ['칼슘', 'CALCIUM'], ['인', 'PHOSPHORUS'], ['구리', 'COPPER'], ['요오드', 'IODINE'], ['철', 'IRON'], ['망간', 'MANGANESE'], ['셀레늄', 'SELENIUM'], ['아연', 'ZINC'], ['za', 'ZINC'], ['비타민 a', 'VITAMIN_A'], ['비타민ㅁ', 'VITAMIN_A'], ['비타민 d', 'VITAMIN_D'], ['비타민 e', 'VITAMIN_E'], ['비타민 b1', 'VITAMIN_B1'], ['비타민 b6', 'VITAMIN_B6'], ['비타민 b12', 'VITAMIN_B12'], ['엽산', 'VITAMIN_B9'], ['비오틴', 'VITAMIN_B7']]
+const LABEL_ALIASES: [string, string][] = [['타우린', 'TAURINE'], ['epa+dha', 'EPA_DHA'], ['칼슘', 'CALCIUM'], ['칼숨', 'CALCIUM'], ['칼습', 'CALCIUM'], ['za', 'CALCIUM'], ['인', 'PHOSPHORUS'], ['구리', 'COPPER'], ['요오드', 'IODINE'], ['철', 'IRON'], ['망간', 'MANGANESE'], ['셀레늄', 'SELENIUM'], ['아연', 'ZINC'], ['비타민 a', 'VITAMIN_A'], ['비타민 d', 'VITAMIN_D'], ['비타민ㅁ', 'VITAMIN_D'], ['비타민 e', 'VITAMIN_E'], ['비타민 b1', 'VITAMIN_B1'], ['비타민 b6', 'VITAMIN_B6'], ['비타민 b12', 'VITAMIN_B12'], ['엽산', 'VITAMIN_B9'], ['비오틴', 'VITAMIN_B7']]
+
+function normalizeLabelOcrText(value: string) {
+  return value
+    .normalize('NFKC')
+    .replace(/\\\s*\r?\n/g, '')
+    .replace(/\b(?:pg|рg)\b/gi, 'ug')
+    .replace(/μg|µg|㎍/gi, 'ug')
+    .replace(/마그네슈(?!\S)/g, '마그네슘')
+}
 
 function NutrientBar({ nutrient }: { nutrient: Analysis['nutrients'][number] }) {
   const ceiling = Math.max(nutrient.upper ?? 0, nutrient.caution ?? 0, nutrient.minimum ?? 0, nutrient.total ?? 0, 1)
@@ -244,22 +253,30 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     const next: Record<string, string> = emptyNutrients()
     const nextUnits: Record<string, string> = {}
     let count = 0
-    const lines = labelText.toLowerCase().replace(/비타민\s*[《〈]/g, '비타민 d').split(/[\r\n,]/)
+    const normalizedText = normalizeLabelOcrText(labelText).toLowerCase()
+    const lines = normalizedText.split(/[\r\n,]/).map(line => line.trim()).filter(Boolean)
+    const unsupported = new Set<string>()
+    if (lines.some(line => /마그네슘/.test(line))) unsupported.add('마그네슘')
+    if (lines.some(line => /비타민\s*(?:k|《|〈)/i.test(line))) unsupported.add('비타민 K')
     for (const line of lines) {
       const match = line.replace(/^[•·*-]\s*/, '').match(/(.+?)\s*[:：]?\s*([0-9]+(?:[.,][0-9]+)?)\s*(mg|g|ug|μg|mcg|iu)\b/i)
       if (!match) continue
       const candidate = match[1].replace(/[()]/g, '').trim()
       const key = LABEL_ALIASES.find(([label]) => candidate === label || candidate.startsWith(`${label} `) || candidate.startsWith(`${label}·`))?.[1]
       if (!key) continue
-      next[key] = match[2].replace(',', '.')
-      nextUnits[key] = (match[3] || nutrientOptions(standardProfile).find(([id]) => id === key)?.[2] || 'MG').toUpperCase().replace('ΜG', 'UG').replace('Μ', 'U')
+      let amount = Number(match[2].replace(',', '.'))
+      let unit = (match[3] || nutrientOptions(standardProfile).find(([id]) => id === key)?.[2] || 'MG').toUpperCase().replace('ΜG', 'UG').replace('MCG', 'UG').replace('Μ', 'U')
+      if (key === 'VITAMIN_D' && unit === 'UG') { amount *= 40; unit = 'IU' }
+      next[key] = String(amount)
+      nextUnits[key] = unit
       count++
     }
     const productLine = lines.find(line => /제품명|product|name/.test(line))
     const productName = productLine?.split(/[:：]/)[1]?.trim()
     setManual(current => ({ ...current, ...(productName ? { name: productName } : {}), nutrients: next, units: nextUnits }))
     setIngredientRows(Object.keys(next).filter(key => next[key]).concat(['']))
-    setLabelNotice(count ? `${count}개 성분 후보를 추출했어요. 값을 확인한 뒤 제품 저장 및 추가를 눌러 주세요.` : '성분 값을 찾지 못했어요. 성분명과 수치를 줄바꿈해 입력해 주세요.')
+    const unsupportedNotice = unsupported.size ? ` 현재 분석 범위 밖 성분(${[...unsupported].join(', ')})은 초안에서 제외했어요.` : ''
+    setLabelNotice(count ? `${count}개 성분 후보를 추출했어요.${unsupportedNotice} 값을 확인한 뒤 제품 저장 및 추가를 눌러 주세요.` : `성분 값을 찾지 못했어요.${unsupportedNotice} 성분명과 수치를 줄바꿈해 입력해 주세요.`)
   }
 
   async function extractLabelImage(file: File) {
@@ -275,7 +292,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   }
   async function openCamera() { try { if (!navigator.mediaDevices?.getUserMedia) throw new Error('unsupported'); setLabelNotice('카메라 권한을 확인하는 중이에요…'); const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); cameraStreamRef.current = stream; setLabelNotice(''); setCameraOpen(true); requestAnimationFrame(() => { if (cameraVideoRef.current) { cameraVideoRef.current.srcObject = stream; void cameraVideoRef.current.play() } }) } catch { setCameraOpen(false); setLabelNotice('PC 카메라를 열 수 없어요. 주소창의 카메라 권한을 허용한 뒤 다시 눌러 주세요. 계속 안 되면 사진 선택을 이용해 주세요.') } }
   function closeCamera() { cameraStreamRef.current?.getTracks().forEach(track => track.stop()); cameraStreamRef.current = null; setCameraOpen(false) }
-  function captureCameraFrame() { const video = cameraVideoRef.current; if (!video) return; const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight; canvas.getContext('2d')?.drawImage(video, 0, 0); canvas.toBlob(blob => { if (blob) void extractLabelImage(new File([blob], 'label-camera.jpg', { type: 'image/jpeg' })); closeCamera() }, 'image/jpeg', .92) }
+  function captureCameraFrame() { const video = cameraVideoRef.current; if (!video) return; const canvas = document.createElement('canvas'); const MAX_DIM = 2048; const scale = Math.max(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight)); canvas.width = Math.floor(video.videoWidth * scale); canvas.height = Math.floor(video.videoHeight * scale); const ctx = canvas.getContext('2d'); if (!ctx) return; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(video, 0, 0, canvas.width, canvas.height); canvas.toBlob(blob => { if (blob) void extractLabelImage(new File([blob], 'label-camera.jpg', { type: 'image/jpeg' })); closeCamera() }, 'image/jpeg', .92) }
 
   function save() {
     if (!analysis) return
