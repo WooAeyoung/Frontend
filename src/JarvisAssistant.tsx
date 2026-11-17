@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Mic, RefreshCw, Send, Sparkles, Volume2, VolumeX, X } from 'lucide-react'
 import { askJarvis, type Analysis } from './api'
 import type { Page } from './Home'
+import type { SavedRecord } from './Records'
 import './jarvis.css'
 
-type Props = { onNavigate: (page: Page) => void; analysis: Analysis | null }
+type Props = { onNavigate: (page: Page) => void; analysis: Analysis | null; analysisRecord?: SavedRecord; records: SavedRecord[] }
 type Message = { from: 'user' | 'assistant'; text: string }
 type SpeechResult = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type Recognition = { lang: string; continuous: boolean; interimResults: boolean; onresult: ((event: SpeechResult) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; start: () => void; stop: () => void }
@@ -13,13 +14,14 @@ type RecognitionConstructor = new () => Recognition
 const WELCOME = '안녕하세요, 우애영의 자비스예요. 영양제 분석·기록 조회·오늘 분석 요약을 도와드릴게요.'
 const QUICK_PROMPTS = ['오늘 분석 결과 요약해 줘', '칼슘:인 비율 알려줘', '부족한 성분만 보여줘', '지난 기록 열어줘']
 
-function describeAnalysis(analysis: Analysis | null) {
+function describeAnalysis(analysis: Analysis | null, record?: SavedRecord) {
   if (!analysis) return '아직 완료된 분석 결과가 없어요. 반려동물 정보와 급여 제품을 입력한 뒤 “맞춤 분석 시작하기”를 눌러 주세요.'
   const { deficient = 0, adequate = 0, caution = 0, excess = 0 } = analysis.summary
   const concerns = analysis.nutrients.filter(n => ['DEFICIENT', 'CAUTION', 'EXCESS'].includes(n.status)).map(n => `${n.name} ${n.status === 'DEFICIENT' ? '부족' : n.status === 'EXCESS' ? '과다' : '주의'}`)
   const ratio = analysis.ratios.calciumPhosphorus
   const ratioText = ratio && ratio.value !== null ? ` 칼슘:인 비율은 ${ratio.value.toFixed(2)}:1로 ${ratio.status === 'ADEQUATE' ? '적정 범위' : ratio.status === 'LOW' ? '낮은 편' : ratio.status === 'HIGH' ? '높은 편' : '확인이 필요'}이에요.` : ''
-  return `오늘 결과는 적정 ${adequate}개, 부족 ${deficient}개, 주의 ${caution}개, 과다 ${excess}개예요.${concerns.length ? ` 확인할 항목은 ${concerns.slice(0, 3).join(', ')}입니다.` : ' 현재 확인된 주의 항목은 없어요.'}${ratioText} 이 결과는 진단이나 처방이 아니며, 증상이 있으면 수의사와 상담해 주세요.`
+  const source = record ? `${record.name}의 가장 최근 저장 기록(${new Date(record.date).toLocaleDateString('ko-KR')})은` : '오늘 결과는'
+  return `${source} 적정 ${adequate}개, 부족 ${deficient}개, 주의 ${caution}개, 과다 ${excess}개예요.${concerns.length ? ` 확인할 항목은 ${concerns.slice(0, 3).join(', ')}입니다.` : ' 현재 확인된 주의 항목은 없어요.'}${ratioText}`
 }
 
 function calciumAnswer(analysis: Analysis | null) {
@@ -28,20 +30,27 @@ function calciumAnswer(analysis: Analysis | null) {
   return '칼슘 부족 여부는 사료와 영양제를 합친 하루 섭취량, 나이·체중, 칼슘:인 비율을 함께 봐야 해요. 임의로 칼슘제를 추가하지 말고, 급여 제품을 등록해 분석한 뒤 결과를 확인해 주세요. 증상이 있으면 수의사와 상담해 주세요.'
 }
 
-function answerCommand(input: string, analysis: Analysis | null): { answer: string; page?: Page } {
+function answerCommand(input: string, analysis: Analysis | null, analysisRecord: SavedRecord | undefined, records: SavedRecord[]): { answer: string; page?: Page } | undefined {
   const phrase = input.replace(/\s+/g, '').toLowerCase()
-  if (/(오늘|최근).*(분석|결과).*(요약|설명)|((요약|설명).*(분석|결과))/.test(phrase)) return { answer: describeAnalysis(analysis), page: 'analysis' }
+  if (/(오늘|최근).*(분석|결과).*(요약|설명)|((요약|설명).*(분석|결과))/.test(phrase)) return { answer: describeAnalysis(analysis, analysisRecord), page: analysisRecord ? 'records' : 'analysis' }
+  if (/(건강)?기록.*(있|여기|보여|조회|열|찾)|.*(있|여기).*(건강)?기록/.test(phrase)) {
+    if (!records.length) return { answer: '현재 브라우저에 저장된 건강 기록이 없어요.', page: 'records' }
+    const samePetRecords = records.filter(record => record.name === records[0].name)
+    return { answer: `${records[0].name}의 건강 기록이 ${samePetRecords.length}건 있어요. ${describeAnalysis(records[0].analysisSnapshot ?? analysis, records[0])}`, page: 'records' }
+  }
   if (/(칼슘).*(부족|낮|어떻게|도움)/.test(phrase)) return { answer: calciumAnswer(analysis), page: 'analysis' }
   if (/(추천).*(영양제|제품|찾)/.test(phrase)) return { answer: analysis ? '현재 분석 결과 아래의 “추천 영양제”에서 추천 목록을 확인할 수 있어요.' : '추천은 반려동물 정보와 현재 급여 제품을 분석한 뒤 제공해요. 먼저 분석 화면에서 정보를 입력해 주세요.', page: 'analysis' }
-  if (/(지난|이전|반려동물).*(기록|결과)|기록(을|보여|조회)/.test(phrase)) return { answer: '반려동물 기록 화면을 열었어요. 저장한 분석 결과와 프로필을 확인할 수 있어요.', page: 'records' }
+  if (/(지난|이전|반려동물).*(기록|결과)|기록(을|보여|조회)/.test(phrase)) return records.length
+    ? { answer: `${records[0].name}의 저장 기록 ${records.filter(record => record.name === records[0].name).length}건을 열었어요. 가장 최근 기록부터 확인할 수 있어요.`, page: 'records' }
+    : { answer: '기록 화면을 열었어요. 현재 브라우저에 저장된 분석 기록은 아직 없어요.', page: 'records' }
   if (/(분석|영양제)/.test(phrase)) return { answer: '영양제 분석 화면으로 이동할게요. 반려동물 정보와 급여 제품을 입력해 주세요.', page: 'analysis' }
   if (/(고객센터|문의|도움말)/.test(phrase)) return { answer: '고객센터로 이동할게요.', page: 'support' }
   if (/(홈|처음|메인)/.test(phrase)) return { answer: '홈 화면으로 이동할게요.', page: 'home' }
   if (/(안녕|자비스)/.test(phrase)) return { answer: WELCOME }
-  return { answer: '“영양제 분석”, “지난 기록 보여줘”, “오늘 분석 결과 요약해 줘”, “칼슘이 부족하면 어떻게 해?”라고 말씀해 보세요.' }
+  return undefined
 }
 
-export default function JarvisAssistant({ onNavigate, analysis }: Props) {
+export default function JarvisAssistant({ onNavigate, analysis, analysisRecord, records }: Props) {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [listening, setListening] = useState(false)
@@ -60,10 +69,19 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
     if (!text) return
     setMessages(previous => [...previous, { from: 'user', text }])
     setInput('')
+    const localResponse = answerCommand(text, analysis, analysisRecord, records)
+    if (localResponse) {
+      setFailedInput('')
+      setMessages(previous => [...previous, { from: 'assistant', text: localResponse.answer }])
+      if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(localResponse.answer))
+      if (localResponse.page) onNavigate(localResponse.page)
+      return
+    }
     setLoading(true)
     try {
       const history = messages.map(message => ({ role: message.from, content: message.text }))
-      const response = await askJarvis(text, analysis, history)
+      const analysisWithRecord = analysis && analysisRecord ? { ...analysis, recordContext: { petName: analysisRecord.name, savedAt: analysisRecord.date, savedRecordCount: records.filter(record => record.name === analysisRecord.name).length } } as Analysis : analysis
+      const response = await askJarvis(text, analysisWithRecord, history)
       setFailedInput('')
       setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
       if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.answer))
@@ -94,7 +112,7 @@ export default function JarvisAssistant({ onNavigate, analysis }: Props) {
   return <aside className="jarvis-root" aria-label="우애영 AI 도우미">
     {open && <section className="jarvis-panel" aria-label="자비스 대화창">
       <header className="jarvis-top"><div className="jarvis-identity"><span className="jarvis-monogram">J</span><div><b>JARVIS</b><small><i /> 자동 응답 · 케어 도우미</small></div></div><div className="jarvis-tools"><button type="button" onClick={() => setSpeak(value => !value)} aria-pressed={speak} title="음성 답변" aria-label={speak ? '음성 답변 끄기' : '음성 답변 켜기'}>{speak ? <Volume2 size={16} /> : <VolumeX size={16} />}</button><button type="button" onClick={() => setOpen(false)} aria-label="자비스 닫기"><X size={17} /></button></div></header>
-      <div className="jarvis-context" aria-label="현재 대화 정보"><span>{analysis ? '최근 분석 있음' : '분석 결과 없음'}</span><span>자동 모드</span><span>{analysis ? '18개 성분 연동' : '기본 안내'}</span></div>
+      <div className="jarvis-context" aria-label="현재 대화 정보"><span>{analysis ? '최근 분석 있음' : '분석 결과 없음'}</span><span>{records.length ? `저장 기록 ${records.length}건` : '저장 기록 없음'}</span><span>{analysis ? '18개 성분 연동' : '기본 안내'}</span></div>
       <div className="jarvis-messages" role="log" aria-live="polite"><span className="jarvis-day">오늘</span>{messages.map((message, index) => <p key={index} className={`jarvis-msg ${message.from}`}>{message.text}</p>)}{messages.length === 1 && <div className="jarvis-quick"><small>이렇게 물어보세요</small><div>{QUICK_PROMPTS.map(prompt => <button type="button" key={prompt} onClick={() => void submit(prompt)}>{prompt}</button>)}</div></div>}{failedInput && !loading && <button type="button" className="jarvis-retry" onClick={() => void submit(failedInput)}><RefreshCw size={14} /> 다시 시도</button>}<div ref={endRef} /></div>
       <form className="jarvis-form" onSubmit={event => { event.preventDefault(); void submit() }}><button type="button" onClick={listen} aria-label={listening ? '음성 인식 중지' : '음성 인식 시작'} aria-pressed={listening} className={listening ? 'listening' : ''}><Mic size={19} /></button><input value={input} onChange={event => setInput(event.target.value)} placeholder={loading ? '답변 생성 중…' : '자비스에게 물어보기'} aria-label="자비스 명령 입력" disabled={loading} /><button type="submit" aria-label="메시지 보내기" disabled={!input.trim() || loading}>{loading ? '…' : <Send size={18} />}</button></form>
       <small className="jarvis-note">건강 상태의 진단이나 처방을 대신하지 않습니다.</small>

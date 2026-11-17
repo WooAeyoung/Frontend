@@ -7,7 +7,7 @@ import Records from './Records'
 import Support from './Support'
 import AboutPage from './AboutPage'
 import RoamingPet from './RoamingPet'
-import { saveProfile } from './Records'
+import { loadRecords, saveProfile, type SavedRecord } from './Records'
 import JarvisAssistant from './JarvisAssistant'
 import type { Analysis } from './api'
 
@@ -23,6 +23,7 @@ export default function SiteApp() {
   const [loadSeq, setLoadSeq] = useState(0)
   const [analysisVisited, setAnalysisVisited] = useState(false)
   const [latestAnalysis, setLatestAnalysis] = useState<Analysis | null>(null)
+  const [savedRecords, setSavedRecords] = useState<SavedRecord[]>(loadRecords)
   const firstPageRender = useRef(true)
   const scrollByPage = useRef<Partial<Record<Page, number>>>({})
   const restoreOnEnter = useRef(false)
@@ -47,6 +48,14 @@ export default function SiteApp() {
     return () => window.removeEventListener('popstate', onPopState)
   }, [page])
 
+  const latestSavedAnalysis = savedRecords.find(record => record.analysisSnapshot)
+
+  useEffect(() => {
+    const refreshRecords = () => setSavedRecords(loadRecords())
+    window.addEventListener('wooaeyoung:records-changed', refreshRecords)
+    return () => window.removeEventListener('wooaeyoung:records-changed', refreshRecords)
+  }, [])
+
   // Navigation is a destination jump, not part of the landing-page story scroll.
   // Run after the new page has rendered so the browser can animate to its actual top.
   useEffect(() => {
@@ -67,13 +76,13 @@ export default function SiteApp() {
         {page === 'home' && <Home go={go} beginAnalysis={draft => { const saved = saveProfile({ name: draft.name, species: draft.species, weightKg: draft.weightKg, age: { value: draft.ageYears * 12, unit: 'MONTH' }, completeFeed: true }); setAnalysisDraft(draft); setProfileToLoad(saved.id); setLoadSeq(n => n + 1); go('analysis') }} />}
         {page === 'about' && <AboutPage go={go} />}
         {/* 실제 분석 화면은 계속 마운트해 두어 다른 화면에 다녀와도 입력값·결과가 유지된다. */}
-        {analysisVisited && <div hidden={page !== 'analysis'}><AnalysisPage onSaved={() => setTick(tick + 1)} onAnalysis={setLatestAnalysis} initialProfileId={profileToLoad} initialDraft={analysisDraft} loadSeq={loadSeq} active={page === 'analysis'} /></div>}
+        {analysisVisited && <div hidden={page !== 'analysis'}><AnalysisPage onSaved={() => setTick(value => value + 1)} onAnalysis={setLatestAnalysis} initialProfileId={profileToLoad} initialDraft={analysisDraft} loadSeq={loadSeq} active={page === 'analysis'} /></div>}
         {page === 'records' && <Records key={tick} go={go} selectProfile={id => { setAnalysisDraft(undefined); setProfileToLoad(id); setLoadSeq(n => n + 1); go('analysis') }} />}
         {page === 'support' && <Support />}
       </main>
       <footer className="site-f"><b>우애영</b><br />반려동물 영양제 분석 서비스<br />© 2026 우애영. All rights reserved.</footer>
       <RoamingPet />
-      <JarvisAssistant onNavigate={go} analysis={latestAnalysis} />
+      <JarvisAssistant onNavigate={go} analysis={latestAnalysis ?? latestSavedAnalysis?.analysisSnapshot ?? null} analysisRecord={latestAnalysis ? undefined : latestSavedAnalysis} records={savedRecords} />
     </>
   )
 }
