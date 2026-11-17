@@ -49,6 +49,7 @@ const fmt = formatNumber
 const ADULT_SIZE_WEIGHT: Record<string, number> = { S: 7, M: 15, L: 27.5, XL: 47.5, XXL: 60 }
 const adultSizeFromWeight = (weight?: number) => weight === 7 ? 'S' : weight === 15 ? 'M' : weight === 27.5 ? 'L' : weight === 47.5 ? 'XL' : weight === 60 ? 'XXL' : ''
 const LABEL_ALIASES: [string, string][] = [['타우린', 'TAURINE'], ['epa+dha', 'EPA_DHA'], ['칼슘', 'CALCIUM'], ['칼숨', 'CALCIUM'], ['칼습', 'CALCIUM'], ['za', 'CALCIUM'], ['인', 'PHOSPHORUS'], ['구리', 'COPPER'], ['요오드', 'IODINE'], ['철', 'IRON'], ['망간', 'MANGANESE'], ['셀레늄', 'SELENIUM'], ['아연', 'ZINC'], ['비타민 a', 'VITAMIN_A'], ['비타민 d', 'VITAMIN_D'], ['비타민ㅁ', 'VITAMIN_D'], ['비타민 e', 'VITAMIN_E'], ['비타민 b1', 'VITAMIN_B1'], ['비타민 b6', 'VITAMIN_B6'], ['비타민 b12', 'VITAMIN_B12'], ['엽산', 'VITAMIN_B9'], ['비오틴', 'VITAMIN_B7']]
+type NutrientFilter = 'all' | 'attention' | 'adequate'
 
 function normalizeLabelOcrText(value: string) {
   return value
@@ -113,6 +114,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const emptyNutrients = () => Object.fromEntries(MANUAL_NUTRIENTS.map(([id]) => [id, ''])) as Record<string, string>
   const [manual, setManual] = useState({ name: '', type: 'SUPPLEMENT' as 'FEED' | 'SUPPLEMENT', amount: '1', unit: 'TABLET', daily: '1', nutrients: emptyNutrients(), units: {} as Record<string, string>, forms: {} as Record<string, string> })
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [nutrientFilter, setNutrientFilter] = useState<NutrientFilter>('all')
   const [rec, setRec] = useState<Recommendation | null>(null)
   const [error, setError] = useState('')
   const [standardProfile] = useState<StandardProfile>('NIAS_V3')
@@ -215,6 +217,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setLoading(true); setError(''); setSaved(false)
     try {
       const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems, manualItems, standardProfile), recommend(profile, nextItems, manualItems, standardProfile)])
+      setNutrientFilter('all')
       setAnalysis(nextAnalysis); onAnalysis(nextAnalysis); setRec(nextRecommendation)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
@@ -230,6 +233,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setLoading(true)
     try {
       const [a, r] = await Promise.all([analyze(profile, items, manualItems, standardProfile), recommend(profile, items, manualItems, standardProfile)])
+      setNutrientFilter('all')
       setAnalysis(a); onAnalysis(a); setRec(r)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch (e) {
@@ -300,6 +304,12 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setSaved(true); setAnalysisRecords(loadRecords()); onSaved()
   }
 
+  const adequateStatuses = new Set(['ADEQUATE', 'ADEQUATE_NO_UPPER_LIMIT'])
+  const filteredNutrients = analysis?.nutrients.filter(nutrient => nutrientFilter === 'all'
+    || (nutrientFilter === 'adequate' ? adequateStatuses.has(nutrient.status) : !adequateStatuses.has(nutrient.status))) ?? []
+  const attentionCount = analysis?.nutrients.filter(nutrient => !adequateStatuses.has(nutrient.status)).length ?? 0
+  const adequateCount = (analysis?.nutrients.length ?? 0) - attentionCount
+
   return (
     <div className="w page analysis-page">
       <section className="analysis-hero">
@@ -361,10 +371,15 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
           {analysis.cautionPolicy && <div className="note">주의선 정책: {analysis.cautionPolicy}</div>}
           <p className="note">일부 정보가 없는 성분은 확인된 양만 표시합니다. 이 수치는 전체 섭취량이 아니며 0으로 표시되어도 실제 섭취량이 0이라는 뜻이 아닙니다.</p>
           <aside className="analysis-scope" aria-label="분석 범위 안내"><b>분석 범위 안내</b><span>기준 버전 {analysis.standardVersion} · 결과 {analysis.nutrients.length}종 성분</span><span>{analysis.usesEstimatedFeed ? '일부 사료 성분은 최소 권장량을 사용한 추정값입니다.' : '입력·선택한 제품의 제공량과 하루 급여량을 기준으로 계산했습니다.'}</span><span>이 결과는 건강 상태의 진단·처방 또는 확정 급여 권고가 아닙니다.</span></aside>
-          <div className="nutrient-bars">{analysis.nutrients.map(n => <NutrientBar key={n.nutrientId} nutrient={n} />)}</div>
+          <div className="nutrient-filter" role="group" aria-label="영양성분 결과 필터">
+            <button type="button" className={nutrientFilter === 'all' ? 'active' : ''} aria-pressed={nutrientFilter === 'all'} onClick={() => setNutrientFilter('all')}>전체 {analysis.nutrients.length}</button>
+            <button type="button" className={nutrientFilter === 'attention' ? 'active' : ''} aria-pressed={nutrientFilter === 'attention'} onClick={() => setNutrientFilter('attention')}>확인 필요 {attentionCount}</button>
+            <button type="button" className={nutrientFilter === 'adequate' ? 'active' : ''} aria-pressed={nutrientFilter === 'adequate'} onClick={() => setNutrientFilter('adequate')}>적정 {adequateCount}</button>
+          </div>
+          {filteredNutrients.length ? <div className="nutrient-bars">{filteredNutrients.map(n => <NutrientBar key={n.nutrientId} nutrient={n} />)}</div> : <p className="nutrient-filter-empty">해당하는 성분이 없어요.</p>}
           <div className="tw"><table>
             <thead><tr><th>영양소</th><th>데이터</th><th>사료</th><th>영양제</th><th>합계 / 확인된 양</th><th>최소</th><th>상한</th><th>상태</th></tr></thead>
-            <tbody>{analysis.nutrients.map(n => (
+            <tbody>{filteredNutrients.map(n => (
               <tr key={n.nutrientId}><td data-label="영양소">{n.name} ({n.unit.toLowerCase()})</td><td data-label="데이터">{nutrientSourceLabel(n)}</td><td data-label="사료">{fmt(n.fromFeed)}</td><td data-label="영양제">{fmt(n.fromSupplements)}</td><td data-label="합계">{fmt(n.total)}{n.unknownContribution ? ' (확인된 양만)' : ''}</td><td data-label="최소">{fmt(n.minimum)}</td><td data-label="상한">{fmt(n.upper)}</td>
                 <td data-label="상태" className={`st ${n.status}`}>{STATUS[n.status] ?? n.status}</td></tr>))}</tbody>
           </table></div>
