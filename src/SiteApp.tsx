@@ -48,7 +48,9 @@ export default function SiteApp() {
     return () => window.removeEventListener('popstate', onPopState)
   }, [page])
 
-  const latestSavedAnalysis = savedRecords.find(record => record.analysisSnapshot)
+  const latestSavedAnalysis = [...savedRecords]
+    .filter(record => record.analysisSnapshot)
+    .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0]
 
   useEffect(() => {
     const refreshRecords = () => setSavedRecords(loadRecords())

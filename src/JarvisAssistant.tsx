@@ -10,6 +10,7 @@ type Message = { from: 'user' | 'assistant'; text: string }
 type SpeechResult = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type Recognition = { lang: string; continuous: boolean; interimResults: boolean; onresult: ((event: SpeechResult) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; start: () => void; stop: () => void }
 type RecognitionConstructor = new () => Recognition
+type CommandAnswer = { answer: string; page?: Page; awaitPetSelection?: boolean }
 
 const WELCOME = '안녕하세요, 우애영의 자비스예요. 영양제 분석·기록 조회·오늘 분석 요약을 도와드릴게요.'
 const QUICK_PROMPTS = ['오늘 분석 결과 요약해 줘', '칼슘:인 비율 알려줘', '부족한 성분만 보여줘', '지난 기록 열어줘']
@@ -24,25 +25,47 @@ function describeAnalysis(analysis: Analysis | null, record?: SavedRecord) {
   return `${source} 적정 ${adequate}개, 부족 ${deficient}개, 주의 ${caution}개, 과다 ${excess}개예요.${concerns.length ? ` 확인할 항목은 ${concerns.slice(0, 3).join(', ')}입니다.` : ' 현재 확인된 주의 항목은 없어요.'}${ratioText}`
 }
 
+function describeRecord(record: SavedRecord) {
+  if (record.analysisSnapshot) return describeAnalysis(record.analysisSnapshot, record)
+  const { deficient = 0, adequate = 0, caution = 0, excess = 0 } = record.summary
+  return `${record.name}의 저장 기록(${new Date(record.date).toLocaleDateString('ko-KR')})은 적정 ${adequate}개, 부족 ${deficient}개, 주의 ${caution}개, 과다 ${excess}개예요.`
+}
+
 function calciumAnswer(analysis: Analysis | null) {
   const calcium = analysis?.nutrients.find(n => n.nutrientId === 'CALCIUM')
   if (calcium) return `최근 분석에서 칼슘은 ${calcium.status === 'DEFICIENT' ? '부족' : calcium.status === 'EXCESS' ? '과다' : calcium.status === 'CAUTION' ? '주의' : '적정'}으로 표시됐어요. 임의로 칼슘제를 더하기보다, 현재 사료·영양제와 급여량을 먼저 확인해 다시 분석해 주세요. 성장기이거나 절뚝임·통증 같은 증상이 있다면 수의사 상담이 필요해요.`
   return '칼슘 부족 여부는 사료와 영양제를 합친 하루 섭취량, 나이·체중, 칼슘:인 비율을 함께 봐야 해요. 임의로 칼슘제를 추가하지 말고, 급여 제품을 등록해 분석한 뒤 결과를 확인해 주세요. 증상이 있으면 수의사와 상담해 주세요.'
 }
 
-function answerCommand(input: string, analysis: Analysis | null, analysisRecord: SavedRecord | undefined, records: SavedRecord[]): { answer: string; page?: Page } | undefined {
+function answerCommand(input: string, analysis: Analysis | null, analysisRecord: SavedRecord | undefined, records: SavedRecord[], awaitingPetSelection: boolean): CommandAnswer | undefined {
   const phrase = input.replace(/\s+/g, '').toLowerCase()
-  if (/(오늘|최근).*(분석|결과).*(요약|설명)|((요약|설명).*(분석|결과))/.test(phrase)) return { answer: describeAnalysis(analysis, analysisRecord), page: analysisRecord ? 'records' : 'analysis' }
-  if (/(건강)?기록.*(있|여기|보여|조회|열|찾)|.*(있|여기).*(건강)?기록/.test(phrase)) {
+  const petNames = Array.from(new Set(records.map(record => record.name).filter(Boolean)))
+    .sort((a, b) => b.replace(/\s+/g, '').length - a.replace(/\s+/g, '').length)
+  const requestedPet = petNames.find(name => phrase.includes(name.replace(/\s+/g, '').toLowerCase()))
+  const isSummaryRequest = /(오늘|최근).*(분석|결과).*(요약|설명)|((요약|설명).*(분석|결과))/.test(phrase)
+  const isRecordRequest = /(건강)?기록.*(있|여기|보여|조회|열|찾)|.*(있|여기).*(건강)?기록|(?:지난|이전|반려동물).*(?:기록|결과)|기록(?:을|보여|조회)/.test(phrase)
+  const needsSavedRecord = isRecordRequest || (isSummaryRequest && Boolean(analysisRecord)) || awaitingPetSelection
+
+  if (needsSavedRecord && petNames.length > 1 && !requestedPet) {
+    return { answer: `어느 아이의 기록을 볼까요? ${petNames.join(', ')} 중에서 이름을 알려주세요.`, awaitPetSelection: true }
+  }
+
+  const selectedPet = requestedPet ?? (needsSavedRecord && petNames.length === 1 ? petNames[0] : undefined)
+  const selectedRecords = selectedPet
+    ? records.filter(record => record.name === selectedPet).sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+    : []
+  const selectedRecord = selectedRecords[0]
+
+  if (awaitingPetSelection && selectedRecord) return { answer: `${selectedPet}의 건강 기록이 ${selectedRecords.length}건 있어요. ${describeRecord(selectedRecord)}`, page: 'records' }
+  if (isSummaryRequest) return selectedRecord
+    ? { answer: describeRecord(selectedRecord), page: 'records' }
+    : { answer: describeAnalysis(analysis, analysisRecord), page: analysisRecord ? 'records' : 'analysis' }
+  if (isRecordRequest) {
     if (!records.length) return { answer: '현재 브라우저에 저장된 건강 기록이 없어요.', page: 'records' }
-    const samePetRecords = records.filter(record => record.name === records[0].name)
-    return { answer: `${records[0].name}의 건강 기록이 ${samePetRecords.length}건 있어요. ${describeAnalysis(records[0].analysisSnapshot ?? analysis, records[0])}`, page: 'records' }
+    if (selectedRecord) return { answer: `${selectedPet}의 건강 기록이 ${selectedRecords.length}건 있어요. ${describeRecord(selectedRecord)}`, page: 'records' }
   }
   if (/(칼슘).*(부족|낮|어떻게|도움)/.test(phrase)) return { answer: calciumAnswer(analysis), page: 'analysis' }
   if (/(추천).*(영양제|제품|찾)/.test(phrase)) return { answer: analysis ? '현재 분석 결과 아래의 “추천 영양제”에서 추천 목록을 확인할 수 있어요.' : '추천은 반려동물 정보와 현재 급여 제품을 분석한 뒤 제공해요. 먼저 분석 화면에서 정보를 입력해 주세요.', page: 'analysis' }
-  if (/(지난|이전|반려동물).*(기록|결과)|기록(을|보여|조회)/.test(phrase)) return records.length
-    ? { answer: `${records[0].name}의 저장 기록 ${records.filter(record => record.name === records[0].name).length}건을 열었어요. 가장 최근 기록부터 확인할 수 있어요.`, page: 'records' }
-    : { answer: '기록 화면을 열었어요. 현재 브라우저에 저장된 분석 기록은 아직 없어요.', page: 'records' }
   if (/(분석|영양제)/.test(phrase)) return { answer: '영양제 분석 화면으로 이동할게요. 반려동물 정보와 급여 제품을 입력해 주세요.', page: 'analysis' }
   if (/(고객센터|문의|도움말)/.test(phrase)) return { answer: '고객센터로 이동할게요.', page: 'support' }
   if (/(홈|처음|메인)/.test(phrase)) return { answer: '홈 화면으로 이동할게요.', page: 'home' }
@@ -58,6 +81,7 @@ export default function JarvisAssistant({ onNavigate, analysis, analysisRecord, 
   const [loading, setLoading] = useState(false)
   const [speak, setSpeak] = useState(false)
   const [failedInput, setFailedInput] = useState('')
+  const [awaitingPetSelection, setAwaitingPetSelection] = useState(false)
   const recognition = useRef<Recognition | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -69,9 +93,10 @@ export default function JarvisAssistant({ onNavigate, analysis, analysisRecord, 
     if (!text) return
     setMessages(previous => [...previous, { from: 'user', text }])
     setInput('')
-    const localResponse = answerCommand(text, analysis, analysisRecord, records)
+    const localResponse = answerCommand(text, analysis, analysisRecord, records, awaitingPetSelection)
     if (localResponse) {
       setFailedInput('')
+      setAwaitingPetSelection(Boolean(localResponse.awaitPetSelection))
       setMessages(previous => [...previous, { from: 'assistant', text: localResponse.answer }])
       if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(localResponse.answer))
       if (localResponse.page) onNavigate(localResponse.page)

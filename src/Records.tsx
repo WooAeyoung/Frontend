@@ -61,7 +61,7 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
   const [importedPdfs, setImportedPdfs] = useState<ImportedPdf[]>(loadImportedPdfs)
   useEffect(() => { const refresh = () => { setList(loadRecords()); setProfiles(loadProfiles()) }; window.addEventListener('wooaeyoung:records-changed', refresh); window.addEventListener('wooaeyoung:profiles-changed', refresh); return () => { window.removeEventListener('wooaeyoung:records-changed', refresh); window.removeEventListener('wooaeyoung:profiles-changed', refresh) } }, [])
   const recordsFor = (profile: SavedProfile) => list.filter(record => record.profileId ? record.profileId === profile.id : record.name === profile.name)
-  const removeRecord = (id: string) => { const next = list.filter(record => record.id !== id); localStorage.setItem(KEY, JSON.stringify(next)); setList(next) }
+  const removeRecord = (id: string) => { const next = list.filter(record => record.id !== id); localStorage.setItem(KEY, JSON.stringify(next)); setList(next); window.dispatchEvent(new CustomEvent('wooaeyoung:records-changed')) }
   const removeProfile = (id: string) => { const next = profiles.filter(profile => profile.id !== id); localStorage.setItem(PROFILE_KEY, JSON.stringify(next)); setProfiles(next) }
   const removeImportedPdf = (id: string) => { const next = loadImportedPdfs().filter(file => file.id !== id); localStorage.setItem(PDF_KEY, JSON.stringify(next)); setImportedPdfs(next); setImportNotice('올린 PDF를 삭제했어요.'); window.dispatchEvent(new CustomEvent('wooaeyoung:files-changed')) }
   const importSavedAnalysis = async (file: File) => {
