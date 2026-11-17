@@ -116,6 +116,8 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [nutrientFilter, setNutrientFilter] = useState<NutrientFilter>('all')
   const [rec, setRec] = useState<Recommendation | null>(null)
+  const [recommendationLoading, setRecommendationLoading] = useState(false)
+  const [recommendationError, setRecommendationError] = useState('')
   const [error, setError] = useState('')
   const [standardProfile] = useState<StandardProfile>('NIAS_V3')
   const setStandardProfile = (_value: StandardProfile) => undefined
@@ -129,6 +131,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   useEffect(() => { setImportedPdfCount(loadImportedPdfCount(profileId || undefined)) }, [profileId])
   const [profileSaved, setProfileSaved] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
+  const recommendationRequest = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -211,15 +214,30 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
   const setAmount = (id: string, v: string) => setItems(items.map(i => (i.productId === id ? { ...i, dailyAmount: Number(v) } : i)))
   const adjustAmount = (id: string, delta: number) => setItems(items.map(i => i.productId === id ? { ...i, dailyAmount: Math.max(0.1, Math.round((i.dailyAmount + delta) * 10) / 10) } : i))
 
+  async function loadRecommendation(nextItems: FeedingItem[]) {
+    const requestId = ++recommendationRequest.current
+    setRecommendationLoading(true); setRecommendationError(''); setRec(null)
+    try {
+      const nextRecommendation = await recommend(profile, nextItems, manualItems, standardProfile)
+      if (requestId === recommendationRequest.current) setRec(nextRecommendation)
+    } catch (e) {
+      if (requestId === recommendationRequest.current) setRecommendationError(e instanceof Error ? e.message : '추천 영양제를 불러오지 못했습니다.')
+    } finally {
+      if (requestId === recommendationRequest.current) setRecommendationLoading(false)
+    }
+  }
+
   async function addRecommendation(r: Recommendation['items'][number]) {
     const nextItems = [...items, { productId: r.productId, name: r.name, type: 'SUPPLEMENT' as const, unit: r.unit, dailyAmount: r.dailyAmount }]
-    setItems(nextItems)
+    setItems(nextItems); recommendationRequest.current += 1
+    setRecommendationLoading(false); setRecommendationError(''); setRec(null)
     setLoading(true); setError(''); setSaved(false)
     try {
-      const [nextAnalysis, nextRecommendation] = await Promise.all([analyze(profile, nextItems, manualItems, standardProfile), recommend(profile, nextItems, manualItems, standardProfile)])
+      const nextAnalysis = await analyze(profile, nextItems, manualItems, standardProfile)
       setNutrientFilter('all')
-      setAnalysis(nextAnalysis); onAnalysis(nextAnalysis); setRec(nextRecommendation)
+      setAnalysis(nextAnalysis); onAnalysis(nextAnalysis)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+      void loadRecommendation(nextItems)
     } catch (e) {
       setError(e instanceof Error ? e.message : '추가한 제품을 다시 분석하지 못했습니다.')
     } finally { setLoading(false) }
@@ -230,12 +248,14 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     if (incompatibleItems.length) { setError('선택한 기준과 맞지 않는 직접 입력 제품을 삭제하고 다시 입력해 주세요.'); return }
     if (!(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('체중과 나이를 입력해 주세요.'); return }
     if (items.length === 0 && manualItems.length === 0) { setError('급여 중인 제품을 하나 이상 추가해 주세요.'); return }
-    setLoading(true)
+    recommendationRequest.current += 1
+    setRecommendationLoading(false); setRecommendationError(''); setRec(null); setLoading(true)
     try {
-      const [a, r] = await Promise.all([analyze(profile, items, manualItems, standardProfile), recommend(profile, items, manualItems, standardProfile)])
+      const a = await analyze(profile, items, manualItems, standardProfile)
       setNutrientFilter('all')
-      setAnalysis(a); onAnalysis(a); setRec(r)
+      setAnalysis(a); onAnalysis(a)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+      void loadRecommendation(items)
     } catch (e) {
       setAnalysis(null); onAnalysis(null); setRec(null)
       setError(e instanceof Error ? e.message : '요청을 처리하지 못했습니다.')
@@ -401,6 +421,8 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
           {rec.excluded.length > 0 && <details><summary className="note">제외된 제품 {rec.excluded.length}개</summary><ul className="warns">{rec.excluded.map(x => <li key={x.productId}>{x.name}: {x.reason}</li>)}</ul></details>}
         </div>
       )}
+      {analysis && recommendationLoading && <div className="panel" role="status"><h3>추천 영양제 계산 중</h3><p className="note">분석 결과를 먼저 표시했어요. 추천 목록은 준비되는 대로 나타납니다.</p></div>}
+      {analysis && recommendationError && <div className="panel"><h3>추천 영양제를 불러오지 못했어요</h3><p className="note">분석 결과는 정상적으로 사용할 수 있습니다.</p><button className="btn ghost" onClick={() => void loadRecommendation(items)}>추천만 다시 불러오기</button></div>}
       {!analysis && <div className="panel result-placeholder"><div className="result-title"><span>STEP 3 · RESULT</span><h3>분석 결과</h3><p>위에서 정보를 입력하고 분석을 시작하면 이곳에 결과가 나타나요.</p></div></div>}
       </section>
 
