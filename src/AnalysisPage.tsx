@@ -234,7 +234,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setLoading(true); setError(''); setSaved(false)
     try {
       const nextAnalysis = await analyze(profile, nextItems, manualItems, standardProfile)
-      setNutrientFilter('all')
+      setNutrientFilter(nextAnalysis.nutrients.some(nutrient => !adequateStatuses.has(nutrient.status)) ? 'attention' : 'all')
       setAnalysis(nextAnalysis); onAnalysis(nextAnalysis)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
       void loadRecommendation(nextItems)
@@ -252,7 +252,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setRecommendationLoading(false); setRecommendationError(''); setRec(null); setLoading(true)
     try {
       const a = await analyze(profile, items, manualItems, standardProfile)
-      setNutrientFilter('all')
+      setNutrientFilter(a.nutrients.some(nutrient => !adequateStatuses.has(nutrient.status)) ? 'attention' : 'all')
       setAnalysis(a); onAnalysis(a)
       window.requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
       void loadRecommendation(items)
@@ -329,6 +329,13 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     || (nutrientFilter === 'adequate' ? adequateStatuses.has(nutrient.status) : !adequateStatuses.has(nutrient.status))) ?? []
   const attentionCount = analysis?.nutrients.filter(nutrient => !adequateStatuses.has(nutrient.status)).length ?? 0
   const adequateCount = (analysis?.nutrients.length ?? 0) - attentionCount
+  const priorityNutrients = analysis?.nutrients
+    .filter(nutrient => !adequateStatuses.has(nutrient.status))
+    .sort((a, b) => {
+      const priority: Record<string, number> = { EXCESS: 0, DEFICIENT: 1, CAUTION: 2, UNIT_CONVERSION_UNSUPPORTED: 3, INSUFFICIENT_DATA: 4, UNVERIFIED_STANDARD: 5, UNSUPPORTED: 6, NO_STANDARD: 7 }
+      return (priority[a.status] ?? 99) - (priority[b.status] ?? 99)
+    })
+    .slice(0, 3) ?? []
 
   return (
     <div className="w page analysis-page">
@@ -385,6 +392,7 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
             <div><b>{analysis.summary.caution ?? 0}</b>주의</div><div><b>{analysis.summary.excess ?? 0}</b>과다</div>
             <div><b>{analysis.summary.noStandard ?? 0}</b>기준 없음</div><div><b>{analysis.nutrients.filter(n => n.total == null || n.unknownContribution || ['UNSUPPORTED', 'UNVERIFIED_STANDARD', 'INSUFFICIENT_DATA', 'UNIT_CONVERSION_UNSUPPORTED'].includes(n.status)).length}</b>판정·정보 확인 필요</div>
           </div>
+          {priorityNutrients.length > 0 && <section className="result-priority" aria-labelledby="result-priority-title"><div><span>TODAY'S REVIEW</span><h4 id="result-priority-title">오늘 먼저 확인할 항목</h4><p>과다·부족·주의 순으로 중요한 결과를 먼저 보여 드려요.</p></div><ol>{priorityNutrients.map(nutrient => <li key={nutrient.nutrientId}><b>{nutrient.name}</b><span className={`st ${nutrient.status}`}>{STATUS[nutrient.status] ?? nutrient.status}</span><small>{nutrient.unknownContribution ? '전체 섭취량이 아닌 확인된 양만 반영됐어요.' : `하루 총량 ${fmt(nutrient.total)} ${nutrient.unit.toLowerCase()}`}</small></li>)}</ol></section>}
           <div className="note">분석 프로필: {profile.name || '우리 아이'} · {species === 'DOG' ? '강아지' : '고양이'} · {weight}kg · {ageValue}{ageUnit === 'MONTH' ? '개월' : '주'}</div>
           <div className="note">하루 기준 에너지 {analysis.referenceEnergyKcal == null ? '검증 대기' : `약 ${Math.round(analysis.referenceEnergyKcal)}kcal`} · 선택 기준 {standardProfile} · 결과 기준 버전 {analysis.standardVersion}</div>
           {analysis.standardSource && <div className="note">기준 출처: {analysis.standardSource}</div>}

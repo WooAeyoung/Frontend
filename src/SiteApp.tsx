@@ -9,7 +9,7 @@ import AboutPage from './AboutPage'
 import RoamingPet from './RoamingPet'
 import { loadRecords, saveProfile, type SavedRecord } from './Records'
 import JarvisAssistant from './JarvisAssistant'
-import type { Analysis } from './api'
+import { warmServer, type Analysis } from './api'
 
 const MENU: [Page, string][] = [['home', '홈'], ['about', 'About Us'], ['analysis', '영양제 분석'], ['records', '반려동물 기록'], ['support', '고객센터']]
 
@@ -31,6 +31,12 @@ export default function SiteApp() {
   useLayoutEffect(() => {
     if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
     window.scrollTo(0, 0)
+  }, [])
+
+  useEffect(() => {
+    // Render free instances can sleep while idle. Wake the API before the user
+    // opens analysis or JARVIS so their first action does not carry that delay.
+    void warmServer()
   }, [])
 
   // restore=true: 메뉴로 돌아올 때 떠나기 전 스크롤 위치를 복원한다.

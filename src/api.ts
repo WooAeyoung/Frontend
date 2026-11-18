@@ -21,11 +21,36 @@ export type NearbyVets = {origin:{lat:number;lon:number};clinics:VetClinic[]}
 
 const API = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? 'https://wooaeyoung-backend.onrender.com' : '')
 const STATIC_MODE = import.meta.env.PROD && !API
+let serverWarmup: Promise<boolean> | null = null
+
+/** Start Render while the user is still on the landing page. StrictMode reuses the same request. */
+export function warmServer(): Promise<boolean> {
+  if (STATIC_MODE || !API) return Promise.resolve(true)
+  if (serverWarmup) return serverWarmup
+  const attempt = async () => {
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => controller.abort(), 60000)
+    try {
+      const response = await fetch(`${API}/health`, { signal: controller.signal, cache: 'no-store' })
+      return response.ok
+    } catch {
+      return false
+    } finally {
+      window.clearTimeout(timer)
+    }
+  }
+  serverWarmup = attempt().then(ok => {
+    if (!ok) serverWarmup = null
+    return ok
+  })
+  return serverWarmup
+}
 async function call<T>(path:string,init?:RequestInit):Promise<T>{
   let response:Response
   try{
     response=await fetch(`${API}${path}`,{headers:{'Content-Type':'application/json'},...init})
-  }catch{
+  }catch(error){
+    if(init?.signal?.aborted) throw error
     throw new Error('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.')
   }
   if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.detail?.message??body.detail?.[0]?.msg??'요청을 처리하지 못했습니다.')}
@@ -46,14 +71,17 @@ export async function getProducts(query=''){
     catch(error){console.warn('시판 제품 데이터를 불러오지 못해 데모 목록을 사용합니다.',error)}
     return {items:local}
   }
+  await warmServer()
   return call<{items:Product[]}>(`/api/v1/products?query=${encodeURIComponent(query)}&limit=20`)
 }
 export async function analyze(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[],standardProfile:StandardProfile='FEDIAF_2025'){
   if(STATIC_MODE){const {localAnalyze}=await import('./localEngine');return localAnalyze(profile,items,manualItems)}
+  await warmServer()
   return call<Analysis>('/api/v1/analyses',{method:'POST',body:JSON.stringify({profile,standardProfile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems})})
 }
 export async function recommend(profile:Profile,items:FeedingItem[],manualItems:ManualItem[]=[],standardProfile:StandardProfile='FEDIAF_2025'){
   if(STATIC_MODE){const {localRecommend}=await import('./localEngine');return localRecommend(profile,items,manualItems)}
+  await warmServer()
   return call<Recommendation>('/api/v1/recommendations',{method:'POST',body:JSON.stringify({profile,standardProfile,items:items.map(({productId,dailyAmount,unit})=>({productId,dailyAmount,unit})),manualItems,maxItems:3})})
 }
 export async function getStandardCatalog(standardProfile:StandardProfile):Promise<StandardCatalog>{
@@ -63,8 +91,17 @@ export async function getParameterCatalog(standardProfile:StandardProfile){
   return call<{standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;verification:Record<string,string>;allowUnverified:boolean}>(`/api/v2/parameters/${standardProfile}`)
 }
 export async function askJarvis(message:string,analysis:Analysis|null,history:{role:'user'|'assistant';content:string}[]=[]){
-  const safeHistory=history.slice(-12).map(item=>({...item,content:item.content.slice(-500)})).filter(item=>item.content.trim())
-  return callWithTimeout<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message:message.slice(0,500),analysis,history:safeHistory})},25000)
+  await warmServer()
+  const safeHistory=history.slice(-8).map(item=>({...item,content:item.content.slice(-300)})).filter(item=>item.content.trim())
+  const jarvisAnalysis=analysis?{
+    traceId:analysis.traceId,
+    lifeStage:analysis.lifeStage,
+    summary:analysis.summary,
+    ratios:analysis.ratios,
+    warnings:analysis.warnings.slice(0,5),
+    nutrients:analysis.nutrients.map(({nutrientId,name,unit,total,minimum,caution,upper,status,unknownContribution})=>({nutrientId,name,unit,total,minimum,caution,upper,status,unknownContribution})),
+  }:null
+  return callWithTimeout<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message:message.slice(0,500),analysis:jarvisAnalysis,history:safeHistory})},18000)
 }
 export async function getNearestVets(lat:number,lon:number,limit=5){
   const request = call<NearbyVets>(`/api/v1/vets/nearest?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limit=${limit}`)
