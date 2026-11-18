@@ -38,7 +38,7 @@ function calciumAnswer(analysis: Analysis | null) {
 }
 
 function nutrientExplanation(analysis: Analysis | null, phrase: string) {
-  if (!analysis || !/(왜|이유|설명|부족|과다|주의)/.test(phrase)) return undefined
+  if (!analysis || !/(왜|이유|설명|확인|부족|과다|주의)/.test(phrase)) return undefined
   const nutrient = analysis.nutrients.find(item => {
     const name = item.name.replace(/\s+/g, '').toLowerCase()
     if (item.nutrientId === 'PHOSPHORUS') return /(^|[^확])인(부족|과다|주의|설명|왜|이유)/.test(phrase)
@@ -109,7 +109,7 @@ function answerCommand(input: string, analysis: Analysis | null, records: SavedR
     const source = selectedRecord ? `${selectedPet}의 ${new Date(selectedRecord.date).toLocaleDateString('ko-KR')} 저장 기록 기준이에요. ` : '현재 분석 기준이에요. '
     return { answer: source + explanation, page: selectedRecord ? 'records' : 'analysis', contextPet: selectedRecord ? selectedPet : undefined }
   }
-  if (/(칼슘).*(부족|낮|어떻게|도움)/.test(phrase)) return { answer: calciumAnswer(analysis), page: 'analysis' }
+  if (/(칼슘).*(부족|낮|어떻게|도움|확인)/.test(phrase)) return { answer: calciumAnswer(analysis), page: 'analysis' }
   if (/(추천).*(영양제|제품|찾)/.test(phrase)) return { answer: analysis ? '현재 분석 결과 아래의 “추천 영양제”에서 추천 목록을 확인할 수 있어요.' : '추천은 반려동물 정보와 현재 급여 제품을 분석한 뒤 제공해요. 먼저 분석 화면에서 정보를 입력해 주세요.', page: 'analysis' }
   if (/(분석|영양제)/.test(phrase)) return { answer: '영양제 분석 화면으로 이동할게요. 반려동물 정보와 급여 제품을 입력해 주세요.', page: 'analysis' }
   if (/(고객센터|문의|도움말)/.test(phrase)) return { answer: '고객센터로 이동할게요.', page: 'support' }
