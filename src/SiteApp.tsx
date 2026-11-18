@@ -54,10 +54,6 @@ export default function SiteApp() {
     return () => window.removeEventListener('popstate', onPopState)
   }, [page])
 
-  const latestSavedAnalysis = [...savedRecords]
-    .filter(record => record.analysisSnapshot)
-    .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0]
-
   useEffect(() => {
     const refreshRecords = () => setSavedRecords(loadRecords())
     window.addEventListener('wooaeyoung:records-changed', refreshRecords)
@@ -90,7 +86,7 @@ export default function SiteApp() {
       </main>
       <footer className="site-f"><b>우애영</b><br />반려동물 영양제 분석 서비스<br />© 2026 우애영. All rights reserved.</footer>
       <RoamingPet />
-      <JarvisAssistant onNavigate={go} analysis={latestAnalysis ?? latestSavedAnalysis?.analysisSnapshot ?? null} analysisRecord={latestAnalysis ? undefined : latestSavedAnalysis} records={savedRecords} />
+      <JarvisAssistant onNavigate={go} analysis={latestAnalysis} records={savedRecords} />
     </>
   )
 }

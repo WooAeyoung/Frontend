@@ -5,7 +5,7 @@ import type { Page } from './Home'
 import type { SavedRecord } from './Records'
 import './jarvis.css'
 
-type Props = { onNavigate: (page: Page) => void; analysis: Analysis | null; analysisRecord?: SavedRecord; records: SavedRecord[] }
+type Props = { onNavigate: (page: Page) => void; analysis: Analysis | null; records: SavedRecord[] }
 type Message = { from: 'user' | 'assistant'; text: string }
 type SpeechResult = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type Recognition = { lang: string; continuous: boolean; interimResults: boolean; onresult: ((event: SpeechResult) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; start: () => void; stop: () => void }
@@ -37,14 +37,16 @@ function calciumAnswer(analysis: Analysis | null) {
   return '칼슘 부족 여부는 사료와 영양제를 합친 하루 섭취량, 나이·체중, 칼슘:인 비율을 함께 봐야 해요. 임의로 칼슘제를 추가하지 말고, 급여 제품을 등록해 분석한 뒤 결과를 확인해 주세요. 증상이 있으면 수의사와 상담해 주세요.'
 }
 
-function answerCommand(input: string, analysis: Analysis | null, analysisRecord: SavedRecord | undefined, records: SavedRecord[], awaitingPetSelection: boolean): CommandAnswer | undefined {
+function answerCommand(input: string, analysis: Analysis | null, records: SavedRecord[], awaitingPetSelection: boolean): CommandAnswer | undefined {
   const phrase = input.replace(/\s+/g, '').toLowerCase()
   const petNames = Array.from(new Set(records.map(record => record.name).filter(Boolean)))
     .sort((a, b) => b.replace(/\s+/g, '').length - a.replace(/\s+/g, '').length)
   const requestedPet = petNames.find(name => phrase.includes(name.replace(/\s+/g, '').toLowerCase()))
   const isSummaryRequest = /(오늘|최근).*(분석|결과).*(요약|설명)|((요약|설명).*(분석|결과))/.test(phrase)
   const isRecordRequest = /(건강)?기록.*(있|여기|보여|조회|열|찾)|.*(있|여기).*(건강)?기록|(?:지난|이전|반려동물).*(?:기록|결과)|기록(?:을|보여|조회)/.test(phrase)
-  const needsSavedRecord = isRecordRequest || (isSummaryRequest && Boolean(analysisRecord)) || awaitingPetSelection
+  const isSavedResultRequest = /(저장|지난|이전|기록).*(요약|부족|결과|성분)/.test(phrase)
+  const isDeficientRequest = /(부족).*(성분|영양)|(?:성분|영양).*(부족)|부족한성분/.test(phrase)
+  const needsSavedRecord = isRecordRequest || isSavedResultRequest || awaitingPetSelection
 
   if (needsSavedRecord && petNames.length > 1 && !requestedPet) {
     return { answer: `어느 아이의 기록을 볼까요? ${petNames.join(', ')} 중에서 이름을 알려주세요.`, awaitPetSelection: true }
@@ -57,12 +59,21 @@ function answerCommand(input: string, analysis: Analysis | null, analysisRecord:
   const selectedRecord = selectedRecords[0]
 
   if (awaitingPetSelection && selectedRecord) return { answer: `${selectedPet}의 건강 기록이 ${selectedRecords.length}건 있어요. ${describeRecord(selectedRecord)}`, page: 'records' }
-  if (isSummaryRequest) return selectedRecord
+  if (isSummaryRequest) return isSavedResultRequest && selectedRecord
     ? { answer: describeRecord(selectedRecord), page: 'records' }
-    : { answer: describeAnalysis(analysis, analysisRecord), page: analysisRecord ? 'records' : 'analysis' }
+    : { answer: describeAnalysis(analysis), page: 'analysis' }
   if (isRecordRequest) {
     if (!records.length) return { answer: '현재 브라우저에 저장된 건강 기록이 없어요.', page: 'records' }
     if (selectedRecord) return { answer: `${selectedPet}의 건강 기록이 ${selectedRecords.length}건 있어요. ${describeRecord(selectedRecord)}`, page: 'records' }
+  }
+  if (isDeficientRequest) {
+    if (isSavedResultRequest && selectedRecord?.analysisSnapshot) {
+      const names = selectedRecord.analysisSnapshot.nutrients.filter(nutrient => nutrient.status === 'DEFICIENT').map(nutrient => nutrient.name)
+      return { answer: `${selectedPet}의 ${new Date(selectedRecord.date).toLocaleDateString('ko-KR')} 저장 기록 기준이에요. ${names.length ? `부족으로 표시된 성분은 ${names.join(', ')}이에요.` : '부족으로 표시된 성분은 없어요.'} 현재 분석 결과와는 구분해서 봐 주세요.`, page: 'records' }
+    }
+    if (!analysis) return { answer: '지금 완료된 분석 결과가 없어서 부족한 성분을 판단할 수 없어요. 과거 저장 기록을 보려면 “저장 기록에서 부족한 성분 보여줘”라고 말씀해 주세요. 현재 상태를 확인하려면 먼저 새 분석을 진행해 주세요.', page: 'analysis' }
+    const names = analysis.nutrients.filter(nutrient => nutrient.status === 'DEFICIENT').map(nutrient => nutrient.name)
+    return { answer: names.length ? `현재 완료된 분석에서 부족으로 표시된 성분은 ${names.join(', ')}이에요.` : '현재 완료된 분석에서 부족으로 표시된 성분은 없어요.', page: 'analysis' }
   }
   if (/(칼슘).*(부족|낮|어떻게|도움)/.test(phrase)) return { answer: calciumAnswer(analysis), page: 'analysis' }
   if (/(추천).*(영양제|제품|찾)/.test(phrase)) return { answer: analysis ? '현재 분석 결과 아래의 “추천 영양제”에서 추천 목록을 확인할 수 있어요.' : '추천은 반려동물 정보와 현재 급여 제품을 분석한 뒤 제공해요. 먼저 분석 화면에서 정보를 입력해 주세요.', page: 'analysis' }
@@ -74,7 +85,7 @@ function answerCommand(input: string, analysis: Analysis | null, analysisRecord:
   return undefined
 }
 
-export default function JarvisAssistant({ onNavigate, analysis, analysisRecord, records }: Props) {
+export default function JarvisAssistant({ onNavigate, analysis, records }: Props) {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [listening, setListening] = useState(false)
@@ -94,7 +105,7 @@ export default function JarvisAssistant({ onNavigate, analysis, analysisRecord, 
     if (!text) return
     setMessages(previous => [...previous, { from: 'user', text }])
     setInput('')
-    const localResponse = answerCommand(text, analysis, analysisRecord, records, awaitingPetSelection)
+    const localResponse = answerCommand(text, analysis, records, awaitingPetSelection)
     if (localResponse) {
       setFailedInput('')
       setAwaitingPetSelection(Boolean(localResponse.awaitPetSelection))
@@ -106,8 +117,7 @@ export default function JarvisAssistant({ onNavigate, analysis, analysisRecord, 
     setLoading(true)
     try {
       const history = messages.map(message => ({ role: message.from, content: message.text }))
-      const analysisWithRecord = analysis && analysisRecord ? { ...analysis, recordContext: { petName: analysisRecord.name, savedAt: analysisRecord.date, savedRecordCount: records.filter(record => record.name === analysisRecord.name).length } } as Analysis : analysis
-      const response = await askJarvis(text, analysisWithRecord, history)
+      const response = await askJarvis(text, analysis, history)
       setFailedInput('')
       setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
       if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.answer))
