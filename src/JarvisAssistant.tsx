@@ -10,7 +10,7 @@ type Message = { from: 'user' | 'assistant'; text: string }
 type SpeechResult = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type Recognition = { lang: string; continuous: boolean; interimResults: boolean; onresult: ((event: SpeechResult) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; start: () => void; stop: () => void }
 type RecognitionConstructor = new () => Recognition
-type CommandAnswer = { answer: string; page?: Page; awaitPetSelection?: boolean }
+type CommandAnswer = { answer: string; page?: Page; awaitPetSelection?: boolean; contextPet?: string }
 
 const WELCOME = '안녕하세요. 우애영의 자비스예요. 궁금한 점을 편하게 말씀해 주세요. 영양 분석 결과와 기록을 차근차근 함께 살펴드릴게요.'
 const QUICK_PROMPTS = ['오늘 분석 결과 요약해 줘', '칼슘:인 비율 알려줘', '부족한 성분만 보여줘', '지난 기록 열어줘']
@@ -37,34 +37,36 @@ function calciumAnswer(analysis: Analysis | null) {
   return '칼슘 부족 여부는 사료와 영양제를 합친 하루 섭취량, 나이·체중, 칼슘:인 비율을 함께 봐야 해요. 임의로 칼슘제를 추가하지 말고, 급여 제품을 등록해 분석한 뒤 결과를 확인해 주세요. 증상이 있으면 수의사와 상담해 주세요.'
 }
 
-function answerCommand(input: string, analysis: Analysis | null, records: SavedRecord[], awaitingPetSelection: boolean): CommandAnswer | undefined {
+function answerCommand(input: string, analysis: Analysis | null, records: SavedRecord[], awaitingPetSelection: boolean, contextPet: string): CommandAnswer | undefined {
   const phrase = input.replace(/\s+/g, '').toLowerCase()
   const petNames = Array.from(new Set(records.map(record => record.name).filter(Boolean)))
     .sort((a, b) => b.replace(/\s+/g, '').length - a.replace(/\s+/g, '').length)
   const requestedPet = petNames.find(name => phrase.includes(name.replace(/\s+/g, '').toLowerCase()))
-  const isSummaryRequest = /(오늘|최근).*(분석|결과).*(요약|설명)|((요약|설명).*(분석|결과))/.test(phrase)
-  const isRecordRequest = /(건강)?기록.*(있|여기|보여|조회|열|찾)|.*(있|여기).*(건강)?기록|(?:지난|이전|반려동물).*(?:기록|결과)|기록(?:을|보여|조회)/.test(phrase)
-  const isSavedResultRequest = /(저장|지난|이전|기록).*(요약|부족|결과|성분)/.test(phrase)
+  const isSummaryRequest = /(오늘|최근).*(분석|결과).*(요약|설명)|(분석|결과).*(요약|설명)|(요약|설명).*(분석|결과)/.test(phrase)
+  const isHistoricalAnalysisRequest = /(과거|지난|이전).*(분석|결과).*(했던|한|설명|요약|보여|찾)|(?:분석|결과).*(과거|지난|이전)/.test(phrase)
+  const isRecordRequest = isHistoricalAnalysisRequest || /(건강)?기록.*(있|여기|보여|조회|열|찾)|.*(있|여기).*(건강)?기록|(?:지난|이전|반려동물).*(?:기록|결과)|기록(?:을|보여|조회)/.test(phrase)
+  const isSavedResultRequest = isHistoricalAnalysisRequest || /(저장|지난|이전|과거|기록).*(요약|부족|결과|성분|분석|설명)/.test(phrase)
   const isDeficientRequest = /(부족).*(성분|영양)|(?:성분|영양).*(부족)|부족한성분/.test(phrase)
-  const needsSavedRecord = isRecordRequest || isSavedResultRequest || awaitingPetSelection
+  const prefersSavedSummary = isSavedResultRequest || (isSummaryRequest && Boolean(contextPet || requestedPet || (!analysis && petNames.length === 1)))
+  const needsSavedRecord = isRecordRequest || prefersSavedSummary || awaitingPetSelection
 
-  if (needsSavedRecord && petNames.length > 1 && !requestedPet) {
+  if (needsSavedRecord && petNames.length > 1 && !requestedPet && !petNames.includes(contextPet)) {
     return { answer: `어느 아이의 기록을 볼까요? ${petNames.join(', ')} 중에서 이름을 알려주세요.`, awaitPetSelection: true }
   }
 
-  const selectedPet = requestedPet ?? (needsSavedRecord && petNames.length === 1 ? petNames[0] : undefined)
+  const selectedPet = requestedPet ?? (needsSavedRecord && petNames.includes(contextPet) ? contextPet : undefined) ?? (needsSavedRecord && petNames.length === 1 ? petNames[0] : undefined)
   const selectedRecords = selectedPet
     ? records.filter(record => record.name === selectedPet).sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
     : []
   const selectedRecord = selectedRecords[0]
 
-  if (awaitingPetSelection && selectedRecord) return { answer: `${selectedPet}의 건강 기록이 ${selectedRecords.length}건 있어요. ${describeRecord(selectedRecord)}`, page: 'records' }
-  if (isSummaryRequest) return isSavedResultRequest && selectedRecord
-    ? { answer: describeRecord(selectedRecord), page: 'records' }
+  if (awaitingPetSelection && selectedRecord) return { answer: `${selectedPet}의 건강 기록이 ${selectedRecords.length}건 있어요. ${describeRecord(selectedRecord)}`, page: 'records', contextPet: selectedPet }
+  if (isSummaryRequest) return prefersSavedSummary && selectedRecord
+    ? { answer: describeRecord(selectedRecord), page: 'records', contextPet: selectedPet }
     : { answer: describeAnalysis(analysis), page: 'analysis' }
   if (isRecordRequest) {
     if (!records.length) return { answer: '현재 브라우저에 저장된 건강 기록이 없어요.', page: 'records' }
-    if (selectedRecord) return { answer: `${selectedPet}의 건강 기록이 ${selectedRecords.length}건 있어요. ${describeRecord(selectedRecord)}`, page: 'records' }
+    if (selectedRecord) return { answer: `${selectedPet}의 건강 기록이 ${selectedRecords.length}건 있어요. ${describeRecord(selectedRecord)}`, page: 'records', contextPet: selectedPet }
   }
   if (isDeficientRequest) {
     if (isSavedResultRequest && selectedRecord?.analysisSnapshot) {
@@ -94,6 +96,7 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
   const [speak, setSpeak] = useState(false)
   const [failedInput, setFailedInput] = useState('')
   const [awaitingPetSelection, setAwaitingPetSelection] = useState(false)
+  const [contextPet, setContextPet] = useState('')
   const recognition = useRef<Recognition | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -105,10 +108,11 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
     if (!text) return
     setMessages(previous => [...previous, { from: 'user', text }])
     setInput('')
-    const localResponse = answerCommand(text, analysis, records, awaitingPetSelection)
+    const localResponse = answerCommand(text, analysis, records, awaitingPetSelection, contextPet)
     if (localResponse) {
       setFailedInput('')
       setAwaitingPetSelection(Boolean(localResponse.awaitPetSelection))
+      if (localResponse.contextPet) setContextPet(localResponse.contextPet)
       setMessages(previous => [...previous, { from: 'assistant', text: localResponse.answer }])
       if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(localResponse.answer))
       if (localResponse.page) onNavigate(localResponse.page)
