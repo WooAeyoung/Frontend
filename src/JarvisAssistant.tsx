@@ -12,7 +12,7 @@ type Recognition = { lang: string; continuous: boolean; interimResults: boolean;
 type RecognitionConstructor = new () => Recognition
 type CommandAnswer = { answer: string; page?: Page; awaitPetSelection?: boolean }
 
-const WELCOME = '안녕하세요, 우애영의 자비스예요. 영양제 분석·기록 조회·오늘 분석 요약을 도와드릴게요.'
+const WELCOME = '안녕하세요. 우애영의 자비스예요. 궁금한 점을 편하게 말씀해 주세요. 영양 분석 결과와 기록을 차근차근 함께 살펴드릴게요.'
 const QUICK_PROMPTS = ['오늘 분석 결과 요약해 줘', '칼슘:인 비율 알려줘', '부족한 성분만 보여줘', '지난 기록 열어줘']
 
 function describeAnalysis(analysis: Analysis | null, record?: SavedRecord) {
@@ -22,7 +22,7 @@ function describeAnalysis(analysis: Analysis | null, record?: SavedRecord) {
   const ratio = analysis.ratios.calciumPhosphorus
   const ratioText = ratio && ratio.value !== null ? ` 칼슘:인 비율은 ${ratio.value.toFixed(2)}:1로 ${ratio.status === 'ADEQUATE' ? '적정 범위' : ratio.status === 'LOW' ? '낮은 편' : ratio.status === 'HIGH' ? '높은 편' : '확인이 필요'}이에요.` : ''
   const source = record ? `${record.name}의 가장 최근 저장 기록(${new Date(record.date).toLocaleDateString('ko-KR')})은` : '오늘 결과는'
-  return `${source} 적정 ${adequate}개, 부족 ${deficient}개, 주의 ${caution}개, 과다 ${excess}개예요.${concerns.length ? ` 확인할 항목은 ${concerns.slice(0, 3).join(', ')}입니다.` : ' 현재 확인된 주의 항목은 없어요.'}${ratioText}`
+  return `확인해 봤어요. ${source} 적정 ${adequate}개, 부족 ${deficient}개, 주의 ${caution}개, 과다 ${excess}개예요.${concerns.length ? ` 먼저 살펴볼 항목은 ${concerns.slice(0, 3).join(', ')}이에요.` : ' 현재 확인된 주의 항목은 없어요.'}${ratioText} 궁금한 성분을 말씀해 주시면 이유와 다음 확인 순서를 쉽게 설명해 드릴게요.`
 }
 
 function describeRecord(record: SavedRecord) {
@@ -69,6 +69,7 @@ function answerCommand(input: string, analysis: Analysis | null, analysisRecord:
   if (/(분석|영양제)/.test(phrase)) return { answer: '영양제 분석 화면으로 이동할게요. 반려동물 정보와 급여 제품을 입력해 주세요.', page: 'analysis' }
   if (/(고객센터|문의|도움말)/.test(phrase)) return { answer: '고객센터로 이동할게요.', page: 'support' }
   if (/(홈|처음|메인)/.test(phrase)) return { answer: '홈 화면으로 이동할게요.', page: 'home' }
+  if (/(감사|고마워|고맙)/.test(phrase)) return { answer: '별말씀을요. 궁금한 점이 생기면 언제든 편하게 말씀해 주세요.' }
   if (/(안녕|자비스)/.test(phrase)) return { answer: WELCOME }
   return undefined
 }
