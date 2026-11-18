@@ -118,7 +118,7 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
     try {
       const history = messages.map(message => ({ role: message.from, content: message.text }))
       const response = await askJarvis(text, analysis, history)
-      setFailedInput(response.intent === 'AI_UNAVAILABLE' ? text : '')
+      setFailedInput(['AI_RATE_LIMIT', 'AI_TIMEOUT_OR_NETWORK', 'AI_PROVIDER_ERROR', 'AI_EMPTY_RESPONSE', 'AI_UNAVAILABLE'].includes(response.intent) ? text : '')
       setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
       if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.answer))
       if (response.page) onNavigate(response.page)
