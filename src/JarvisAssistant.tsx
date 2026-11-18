@@ -37,6 +37,27 @@ function calciumAnswer(analysis: Analysis | null) {
   return '칼슘 부족 여부는 사료와 영양제를 합친 하루 섭취량, 나이·체중, 칼슘:인 비율을 함께 봐야 해요. 임의로 칼슘제를 추가하지 말고, 급여 제품을 등록해 분석한 뒤 결과를 확인해 주세요. 증상이 있으면 수의사와 상담해 주세요.'
 }
 
+function nutrientExplanation(analysis: Analysis | null, phrase: string) {
+  if (!analysis || !/(왜|이유|설명|부족|과다|주의)/.test(phrase)) return undefined
+  const nutrient = analysis.nutrients.find(item => {
+    const name = item.name.replace(/\s+/g, '').toLowerCase()
+    if (item.nutrientId === 'PHOSPHORUS') return /(^|[^확])인(부족|과다|주의|설명|왜|이유)/.test(phrase)
+    if (item.nutrientId === 'CALCIUM') return phrase.includes('칼슘')
+    if (item.nutrientId === 'EPA_DHA') return /(오메가3|epa|dha)/.test(phrase)
+    return name.length >= 2 && phrase.includes(name)
+  })
+  if (!nutrient) return undefined
+  const status = nutrient.status === 'DEFICIENT' ? '부족' : nutrient.status === 'EXCESS' ? '과다' : nutrient.status === 'CAUTION' ? '주의' : '적정'
+  const unit = nutrient.unit.toLowerCase()
+  if (nutrient.status === 'DEFICIENT' && nutrient.minimum !== null) {
+    const caveat = nutrient.unknownContribution
+      ? ' 일부 제품의 성분표가 비어 있어 확인된 양만 반영됐으니, 제품 라벨 값을 보완한 뒤 다시 확인해 주세요.'
+      : ' 등록한 제품과 하루 급여량을 합친 값이 기준보다 낮다는 뜻이며, 몸속 결핍을 진단한 것은 아니에요.'
+    return `${nutrient.name}이 부족으로 나온 이유는 확인된 하루 섭취량 ${nutrient.total}${unit}이 적용 최소 기준 ${nutrient.minimum}${unit}보다 낮기 때문이에요.${caveat}`
+  }
+  return `${nutrient.name}은 이 분석에서 ${status}으로 표시됐어요. 제품 라벨의 함량과 하루 급여량을 확인한 뒤 다시 분석해 주세요.`
+}
+
 function answerCommand(input: string, analysis: Analysis | null, records: SavedRecord[], awaitingPetSelection: boolean, contextPet: string): CommandAnswer | undefined {
   const phrase = input.replace(/\s+/g, '').toLowerCase()
   const petNames = Array.from(new Set(records.map(record => record.name).filter(Boolean)))
@@ -59,7 +80,7 @@ function answerCommand(input: string, analysis: Analysis | null, records: SavedR
     return { answer: `어느 아이의 기록을 볼까요? ${petNames.join(', ')} 중에서 이름을 알려주세요.`, awaitPetSelection: true }
   }
 
-  const selectedPet = requestedPet ?? (needsSavedRecord && petNames.includes(contextPet) ? contextPet : undefined) ?? (needsSavedRecord && petNames.length === 1 ? petNames[0] : undefined)
+  const selectedPet = requestedPet ?? (petNames.includes(contextPet) ? contextPet : undefined) ?? ((needsSavedRecord || !analysis) && petNames.length === 1 ? petNames[0] : undefined)
   const selectedRecords = selectedPet
     ? records.filter(record => record.name === selectedPet).sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
     : []
@@ -81,6 +102,12 @@ function answerCommand(input: string, analysis: Analysis | null, records: SavedR
     if (!analysis) return { answer: '지금 완료된 분석 결과가 없어서 부족한 성분을 판단할 수 없어요. 과거 저장 기록을 보려면 “저장 기록에서 부족한 성분 보여줘”라고 말씀해 주세요. 현재 상태를 확인하려면 먼저 새 분석을 진행해 주세요.', page: 'analysis' }
     const names = analysis.nutrients.filter(nutrient => nutrient.status === 'DEFICIENT').map(nutrient => nutrient.name)
     return { answer: names.length ? `현재 완료된 분석에서 부족으로 표시된 성분은 ${names.join(', ')}이에요.` : '현재 완료된 분석에서 부족으로 표시된 성분은 없어요.', page: 'analysis' }
+  }
+  const explanationAnalysis = selectedRecord?.analysisSnapshot ?? analysis
+  const explanation = nutrientExplanation(explanationAnalysis, phrase)
+  if (explanation) {
+    const source = selectedRecord ? `${selectedPet}의 ${new Date(selectedRecord.date).toLocaleDateString('ko-KR')} 저장 기록 기준이에요. ` : '현재 분석 기준이에요. '
+    return { answer: source + explanation, page: selectedRecord ? 'records' : 'analysis', contextPet: selectedRecord ? selectedPet : undefined }
   }
   if (/(칼슘).*(부족|낮|어떻게|도움)/.test(phrase)) return { answer: calciumAnswer(analysis), page: 'analysis' }
   if (/(추천).*(영양제|제품|찾)/.test(phrase)) return { answer: analysis ? '현재 분석 결과 아래의 “추천 영양제”에서 추천 목록을 확인할 수 있어요.' : '추천은 반려동물 정보와 현재 급여 제품을 분석한 뒤 제공해요. 먼저 분석 화면에서 정보를 입력해 주세요.', page: 'analysis' }
