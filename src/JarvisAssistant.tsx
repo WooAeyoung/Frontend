@@ -65,10 +65,11 @@ function answerCommand(input: string, analysis: Analysis | null, records: SavedR
   const requestedPet = petNames.find(name => phrase.includes(name.replace(/\s+/g, '').toLowerCase()))
   const historicalPet = phrase.match(/(?:과거에?|지난|이전)([a-z0-9가-힣]+?)(?:의)?(?:분석|기록)/)?.[1]
   const inspectionPet = phrase.match(/^([a-z0-9가-힣]+?)(?:의)?(?:검사|점검)(?:결과|기록)?(?:해줘|확인|설명|보여줘?)?$/)?.[1]
-  const mentionedPet = historicalPet ?? inspectionPet
+  const savedAnalysisPet = phrase.match(/^([a-z0-9가-힣]+?)(?:의)?분석(?:결과|기록)(?:해줘|확인|설명|요약|보여줘?)?$/)?.[1]
+  const mentionedPet = historicalPet ?? inspectionPet ?? savedAnalysisPet
   const isSummaryRequest = /(오늘|최근).*(분석|결과).*(요약|설명)|(분석|결과).*(요약|설명)|(요약|설명).*(분석|결과)/.test(phrase)
   const isHistoricalAnalysisRequest = /(과거|지난|이전).*(분석|결과).*(했던|한|설명|요약|보여|찾)|(?:분석|결과).*(과거|지난|이전)/.test(phrase)
-  const isInspectionRequest = Boolean(inspectionPet) || /^(검사|점검)(결과|기록)?(확인|설명|보여줘?)?$/.test(phrase)
+  const isInspectionRequest = Boolean(inspectionPet || savedAnalysisPet) || /^(검사|점검)(결과|기록)?(확인|설명|보여줘?)?$/.test(phrase)
   const isRecordRequest = isHistoricalAnalysisRequest || isInspectionRequest || /(건강)?기록.*(있|여기|보여|조회|열|찾)|.*(있|여기).*(건강)?기록|(?:지난|이전|반려동물).*(?:기록|결과)|기록(?:을|보여|조회)/.test(phrase)
   const isSavedResultRequest = isHistoricalAnalysisRequest || /(저장|지난|이전|과거|기록).*(요약|부족|결과|성분|분석|설명)/.test(phrase)
   const isDeficientRequest = /(부족).*(성분|영양)|(?:성분|영양).*(부족)|부족한성분/.test(phrase)
