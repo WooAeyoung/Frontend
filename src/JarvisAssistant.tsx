@@ -116,7 +116,7 @@ function answerCommand(input: string, analysis: Analysis | null, records: SavedR
   }
   if (/(칼슘).*(부족|낮|어떻게|도움|확인)/.test(phrase)) return { answer: calciumAnswer(analysis), page: 'analysis' }
   if (/(추천).*(영양제|제품|찾)/.test(phrase)) return { answer: analysis ? '현재 분석 결과 아래의 “추천 영양제”에서 추천 목록을 확인할 수 있어요.' : '추천은 반려동물 정보와 현재 급여 제품을 분석한 뒤 제공해요. 먼저 분석 화면에서 정보를 입력해 주세요.', page: 'analysis' }
-  if (/(분석|영양제)/.test(phrase)) return { answer: '영양제 분석 화면으로 이동할게요. 반려동물 정보와 급여 제품을 입력해 주세요.', page: 'analysis' }
+  if (/^(?:영양제)?분석(?:화면|페이지)?(?:으로)?(?:이동|열어|열기|가줘|가자|시작)(?:해줘|줘)?$/.test(phrase)) return { answer: '영양제 분석 화면으로 이동할게요. 반려동물 정보와 급여 제품을 입력해 주세요.', page: 'analysis' }
   if (/(고객센터|문의|도움말)/.test(phrase)) return { answer: '고객센터로 이동할게요.', page: 'support' }
   if (/(홈|처음|메인)/.test(phrase)) return { answer: '홈 화면으로 이동할게요.', page: 'home' }
   if (/(감사|고마워|고맙)/.test(phrase)) return { answer: '별말씀을요. 궁금한 점이 생기면 언제든 편하게 말씀해 주세요.' }
