@@ -101,7 +101,7 @@ export async function askJarvis(message:string,analysis:Analysis|null,history:{r
     warnings:analysis.warnings.slice(0,5),
     nutrients:analysis.nutrients.map(({nutrientId,name,unit,total,minimum,caution,upper,status,unknownContribution})=>({nutrientId,name,unit,total,minimum,caution,upper,status,unknownContribution})),
   }:null
-  return callWithTimeout<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message:message.slice(0,500),analysis:jarvisAnalysis,history:safeHistory})},27000)
+  return callWithTimeout<JarvisReply>('/api/v1/jarvis',{method:'POST',body:JSON.stringify({message:message.slice(0,500),analysis:jarvisAnalysis,history:safeHistory})},35000)
 }
 export async function getNearestVets(lat:number,lon:number,limit=5){
   const request = call<NearbyVets>(`/api/v1/vets/nearest?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limit=${limit}`)
