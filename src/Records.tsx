@@ -106,9 +106,20 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
   useEffect(() => {
     let timers: number[] = []
     let original: { selectedId: string; activeTab: RecordTab } | null = null
+    const clearDemoMarkers = () => {
+      document.querySelectorAll<HTMLElement>('.tour-demo-focus').forEach(element => element.classList.remove('tour-demo-focus'))
+      document.querySelectorAll<HTMLDetailsElement>('details[data-tour-opened="true"]').forEach(element => { element.open = false; delete element.dataset.tourOpened })
+    }
+    const revealDeleteMenu = (selector: string) => {
+      const details = document.querySelector<HTMLDetailsElement>(selector)
+      if (!details) return
+      if (!details.open) { details.open = true; details.dataset.tourOpened = 'true' }
+      details.querySelector<HTMLElement>('.danger')?.classList.add('tour-demo-focus')
+    }
     const cancel = () => {
       timers.forEach(window.clearTimeout)
       timers = []
+      clearDemoMarkers()
       if (original) {
         setSelectedId(original.selectedId)
         setActiveTab(original.activeTab)
@@ -119,17 +130,22 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
       cancel()
       const current = demoState.current
       original = { selectedId: current.selectedId, activeTab: current.activeTab }
-      setActiveTab('today')
-      timers = [
-        window.setTimeout(() => setActiveTab('analysis'), 1_500),
-        window.setTimeout(() => setActiveTab('trend'), 3_000),
-        window.setTimeout(() => {
-          const latest = demoState.current
-          if (latest.profiles.length > 1) setSelectedId(latest.profiles.find(profile => profile.id !== latest.selectedId)?.id ?? latest.selectedId)
-          setActiveTab('today')
-        }, 4_500),
-        window.setTimeout(() => setActiveTab('trend'), 6_000),
-      ]
+      const runCycle = (): void => {
+        clearDemoMarkers()
+        setActiveTab('today')
+        timers.push(window.setTimeout(() => setActiveTab('analysis'), 1_500))
+        timers.push(window.setTimeout(() => document.querySelector<HTMLElement>('.records-section-head .btn.ghost')?.classList.add('tour-demo-focus'), 2_100))
+        timers.push(window.setTimeout(() => revealDeleteMenu('.record-more'), 2_700))
+        timers.push(window.setTimeout(() => setActiveTab('trend'), 3_800))
+        timers.push(window.setTimeout(() => {
+            const latest = demoState.current
+            if (latest.profiles.length > 1) setSelectedId(latest.profiles.find(profile => profile.id !== latest.selectedId)?.id ?? latest.selectedId)
+            setActiveTab('today')
+          }, 5_200))
+        timers.push(window.setTimeout(() => revealDeleteMenu('.profile-management'), 6_000))
+        timers.push(window.setTimeout(runCycle, 7_500))
+      }
+      runCycle()
     }
     window.addEventListener('wooaeyoung:demo-records', demo)
     window.addEventListener('wooaeyoung:cancel-records-demo', cancel)

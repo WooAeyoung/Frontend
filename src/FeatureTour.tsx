@@ -20,7 +20,8 @@ const STEPS: TourStep[] = [
   { page: 'home', selector: '.site-h nav', eyebrow: '전체 메뉴', title: '필요한 기능으로 바로 이동', description: '홈, 우애영 소개, 영양제 분석, 반려동물 기록, 고객센터를 언제든 바로 열 수 있어요.' },
   { page: 'about', selector: '.about-page', eyebrow: 'About Us', title: '분석 기준과 서비스 원칙', description: '우애영이 어떤 기준으로 영양 정보를 정리하고, 보호자가 결과를 안전하게 활용하도록 돕는지 확인할 수 있어요.', scanPage: true },
   { page: 'analysis', selector: '.analysis-page', eyebrow: '영양제 분석', title: '급여 내용을 모아 맞춤 분석', description: '반려동물 정보와 사료·영양제를 입력하면 영양소별 적정·부족·주의·과다 상태와 다음 행동을 한 화면에서 확인할 수 있어요.', scanPage: true },
-  { page: 'records', selector: '.records-page', eyebrow: '반려동물 기록', title: '분석과 일상 기록을 이어서 관리', description: '반려동물별 저장 분석, 급여 체크, 몸무게와 컨디션 기록을 모아 변화 흐름을 계속 살펴볼 수 있어요.', scanPage: true },
+  { page: 'records', selector: '.records-page', eyebrow: '반려동물 기록', title: '분석과 일상 기록을 이어서 관리', description: '오늘 상태, 영양 기록, 건강 추이와 다른 반려동물을 순서대로 반복해서 보여드려요.', scanPage: true },
+  { page: 'records', selector: '.records-workspace, .records-empty', eyebrow: '기록 가져오기·관리', title: '외부 리포트를 가져오고 안전하게 정리', description: '영양 기록의 “JSON/PDF 파일 불러오기”로 다른 곳에서 저장한 리포트를 가져올 수 있어요. 더보기와 프로필 관리에서 삭제 메뉴를 찾을 수 있으며, 둘러보기에서는 위치만 보여주고 실제 삭제는 실행하지 않아요.' },
   { page: 'support', selector: '.support-library-main', eyebrow: '고객센터', title: '사용법과 건강 안내를 빠르게 찾기', description: '검색, 도움말 분류, 질문 목록을 한 화면에서 살펴보고 원하는 안내를 선택할 수 있어요.', lockScroll: true },
   { page: 'support', selector: '#nearby-vets', eyebrow: '동물병원 찾기', title: '필요할 때 가까운 병원 확인', description: '위치 권한을 허용하면 현재 위치를 기준으로 가까운 동물병원을 찾을 수 있어요. 위치는 병원 검색에만 사용돼요.' },
   { page: 'support', selector: '.jarvis-toggle', eyebrow: 'JARVIS', title: '궁금한 내용을 바로 물어보세요', description: '저장된 분석과 기록을 바탕으로 요약과 성분 설명을 도와드려요. 화면 아래 JARVIS 버튼은 어느 페이지에서든 열 수 있어요.' },
@@ -29,7 +30,7 @@ const STEPS: TourStep[] = [
 
 type Rect = { top: number; left: number; width: number; height: number }
 
-const FIRST_STEP_BY_PAGE: Record<Page, number> = { home: 0, about: 2, analysis: 3, records: 4, support: 5 }
+const FIRST_STEP_BY_PAGE: Record<Page, number> = { home: 0, about: 2, analysis: 3, records: 4, support: 6 }
 
 export default function FeatureTour({ onNavigate, requestKey, currentPage }: { onNavigate: (page: Page) => void; requestKey: number; currentPage: Page }) {
   const [active, setActive] = useState(false)
@@ -56,7 +57,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   useEffect(() => {
     const audio = music.current
     if (!audio) return
-    if (!active || index === 7) {
+    if (!active || step.selector === '.jarvis-toggle') {
       audio.pause()
       return
     }
@@ -64,7 +65,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     void audio.play().catch(() => undefined)
     window.addEventListener('pointerdown', unlock, { once: true })
     return () => window.removeEventListener('pointerdown', unlock)
-  }, [active, index])
+  }, [active, index, step.selector])
 
   useEffect(() => {
     if (requestKey <= 0) return
@@ -229,17 +230,24 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     if (step.selector === '.jarvis-toggle') {
       timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('wooaeyoung:demo-jarvis')), 450))
     }
-    if (step.selector === '.records-page') {
+    if (step.selector === '.records-page' || step.selector === '.records-workspace, .records-empty') {
       timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('wooaeyoung:demo-records')), 450))
     }
     if (step.selector === '.support-library-main') {
-      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[1]?.click(), 1_750))
-      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[2]?.click(), 2_850))
-      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-library-categories>button')[1]?.click(), 3_950))
+      const runSupportCycle = (): void => {
+        document.querySelectorAll<HTMLButtonElement>('.support-library-categories>button')[0]?.click()
+        timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[1]?.click(), 1_100))
+        timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[2]?.click(), 2_200))
+        timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-library-categories>button')[1]?.click(), 3_300))
+        timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[0]?.click(), 4_400))
+        timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-library-categories>button')[2]?.click(), 5_500))
+        timers.push(window.setTimeout(runSupportCycle, 6_800))
+      }
+      timers.push(window.setTimeout(runSupportCycle, 450))
     }
     return () => {
       timers.forEach(timer => window.clearTimeout(timer))
-      if (step.selector === '.records-page') window.dispatchEvent(new CustomEvent('wooaeyoung:cancel-records-demo'))
+      if (step.selector === '.records-page' || step.selector === '.records-workspace, .records-empty') window.dispatchEvent(new CustomEvent('wooaeyoung:cancel-records-demo'))
     }
   }, [active, index, step.selector])
 
