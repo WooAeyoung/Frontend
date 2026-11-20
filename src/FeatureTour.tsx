@@ -157,12 +157,11 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
       }
       frame = window.requestAnimationFrame(tick)
     }
+    window.scrollTo(0, 0)
     timer = window.setTimeout(() => {
       const bottom = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
-      animate(window.scrollY, bottom, 5_500, () => {
-        timer = window.setTimeout(() => animate(window.scrollY, 0, 3_200), 500)
-      })
-    }, 900)
+      animate(0, bottom, 7_000)
+    }, 1_100)
     window.addEventListener('wheel', stop, { once: true, passive: true })
     window.addEventListener('touchstart', stop, { once: true, passive: true })
     window.addEventListener('pointerdown', stop, { once: true, passive: true })

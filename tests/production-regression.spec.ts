@@ -70,6 +70,8 @@ test.describe('first visit feature tour', () => {
     await page.goto('/')
     const tour = page.getByRole('region', { name: '기능 둘러보기' })
     await expect(tour).toBeVisible({ timeout: 5_000 })
+    await page.waitForTimeout(2_400)
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
 
     const expected = [
       '우애영의 돌봄 흐름을 한눈에',
