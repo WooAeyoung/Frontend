@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import NearestVets from './NearestVets'
 import PetCompanion from './PetCompanion'
 import './support.css'
@@ -18,6 +18,8 @@ const CATEGORIES = ['분석 결과 읽기', '제품 입력하기', '프로필과
 export default function Support() {
   const [category, setCategory] = useState(CATEGORIES[0])
   const [query, setQuery] = useState('')
+  const queryRef = useRef(query)
+  queryRef.current = query
   const [selected, setSelected] = useState(GUIDES[0])
 
   const guides = useMemo(() => {
@@ -26,6 +28,43 @@ export default function Support() {
       ? `${guide.title} ${guide.summary} ${guide.category}`.toLowerCase().includes(keyword)
       : guide.category === category)
   }, [category, query])
+
+  useEffect(() => {
+    let timers: number[] = []
+    let typing = 0
+    let original = ''
+    let running = false
+    const stop = () => {
+      running = false
+      window.clearInterval(typing)
+      timers.forEach(window.clearTimeout)
+      timers = []
+      setQuery(original)
+    }
+    const demo = () => {
+      stop()
+      running = true
+      original = queryRef.current
+      const phrase = '분석 결과'
+      const runCycle = (): void => {
+        if (!running) return
+        let length = 0
+        setQuery('')
+        typing = window.setInterval(() => {
+          length += 1
+          setQuery(phrase.slice(0, length))
+          if (length >= phrase.length) {
+            window.clearInterval(typing)
+            timers.push(window.setTimeout(runCycle, 2_200))
+          }
+        }, 180)
+      }
+      runCycle()
+    }
+    window.addEventListener('wooaeyoung:demo-support-search', demo)
+    window.addEventListener('wooaeyoung:cancel-support-search', stop)
+    return () => { stop(); window.removeEventListener('wooaeyoung:demo-support-search', demo); window.removeEventListener('wooaeyoung:cancel-support-search', stop) }
+  }, [])
 
   return <div className="support-page support-library-page">
     <main className="w support-library-main">

@@ -80,6 +80,7 @@ test.describe('first visit feature tour', () => {
       '급여 내용을 모아 맞춤 분석',
       '분석과 일상 기록을 이어서 관리',
       '외부 리포트를 가져오고 안전하게 정리',
+      '모르는 내용을 바로 검색',
       '사용법과 건강 안내를 빠르게 찾기',
       '같이 살펴보는 작은 안내 친구',
       '필요할 때 가까운 병원 확인',
@@ -88,6 +89,9 @@ test.describe('first visit feature tour', () => {
     ]
     for (let index = 0; index < expected.length; index += 1) {
       await expect(tour.getByRole('heading', { name: expected[index] })).toBeVisible()
+      if (expected[index] === '모르는 내용을 바로 검색') {
+        await expect(page.getByRole('textbox', { name: '고객센터 검색' })).toHaveValue(/분석/, { timeout: 2_500 })
+      }
       if (expected[index] === '같이 살펴보는 작은 안내 친구') {
         await expect(page.locator('.support-page .pet-companion')).toBeInViewport()
       }
@@ -119,7 +123,7 @@ test.describe('first visit feature tour', () => {
     await page.waitForTimeout(2_400)
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
     await page.getByRole('button', { name: '고객센터', exact: true }).click()
-    await expect(tour.getByRole('heading', { name: '사용법과 건강 안내를 빠르게 찾기' })).toBeVisible()
+    await expect(tour.getByRole('heading', { name: '모르는 내용을 바로 검색' })).toBeVisible()
     await tour.getByRole('button', { name: '기능 안내 닫기' }).click()
     await expect(tour).toBeHidden()
     await page.getByRole('button', { name: '고객센터', exact: true }).click()

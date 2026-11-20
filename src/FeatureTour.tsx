@@ -22,6 +22,7 @@ const STEPS: TourStep[] = [
   { page: 'analysis', selector: '.analysis-page', eyebrow: '영양제 분석', title: '급여 내용을 모아 맞춤 분석', description: '반려동물 정보와 사료·영양제를 입력하면 영양소별 적정·부족·주의·과다 상태와 다음 행동을 한 화면에서 확인할 수 있어요.', scanPage: true },
   { page: 'records', selector: '.records-page', eyebrow: '반려동물 기록', title: '분석과 일상 기록을 이어서 관리', description: '오늘 상태, 영양 기록, 건강 추이와 다른 반려동물을 순서대로 반복해서 보여드려요.', scanPage: true },
   { page: 'records', selector: '.records-workspace, .records-empty', eyebrow: '기록 가져오기·관리', title: '외부 리포트를 가져오고 안전하게 정리', description: '영양 기록의 “JSON/PDF 파일 불러오기”로 다른 곳에서 저장한 리포트를 가져올 수 있어요. 더보기와 프로필 관리에서 삭제 메뉴를 찾을 수 있으며, 둘러보기에서는 위치만 보여주고 실제 삭제는 실행하지 않아요.' },
+  { page: 'support', selector: '.support-library-head', eyebrow: '돌봄 가이드 검색', title: '모르는 내용을 바로 검색', description: '“잘 모르겠는 부분부터 차근히 살펴보세요.” 아래의 고객센터 검색창에 궁금한 단어를 입력하면 관련 도움말을 바로 찾을 수 있어요.', lockScroll: true },
   { page: 'support', selector: '.support-library-main', eyebrow: '고객센터', title: '사용법과 건강 안내를 빠르게 찾기', description: '검색, 도움말 분류, 질문 목록을 한 화면에서 살펴보고 원하는 안내를 선택할 수 있어요.', lockScroll: true },
   { page: 'support', selector: '.support-page .pet-companion', eyebrow: '돌봄 친구', title: '같이 살펴보는 작은 안내 친구', description: '고객센터 아래쪽에 있는 “같이 볼까요?” 친구예요. 마우스를 바라보고, 잠시 움직임이 없으면 편안하게 쉬다가 다시 이용하면 깨어나요.' },
   { page: 'support', selector: '#nearby-vets', eyebrow: '동물병원 찾기', title: '필요할 때 가까운 병원 확인', description: '위치 권한을 허용하면 현재 위치를 기준으로 가까운 동물병원을 찾을 수 있어요. 위치는 병원 검색에만 사용돼요.' },
@@ -235,6 +236,9 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     if (step.selector === '.records-page' || step.selector === '.records-workspace, .records-empty') {
       timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('wooaeyoung:demo-records')), 450))
     }
+    if (step.selector === '.support-library-head') {
+      timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('wooaeyoung:demo-support-search')), 450))
+    }
     if (step.selector === '.support-library-main') {
       const runSupportCycle = (): void => {
         document.querySelectorAll<HTMLButtonElement>('.support-library-categories>button')[0]?.click()
@@ -250,6 +254,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     return () => {
       timers.forEach(timer => window.clearTimeout(timer))
       if (step.selector === '.records-page' || step.selector === '.records-workspace, .records-empty') window.dispatchEvent(new CustomEvent('wooaeyoung:cancel-records-demo'))
+      if (step.selector === '.support-library-head') window.dispatchEvent(new CustomEvent('wooaeyoung:cancel-support-search'))
     }
   }, [active, index, step.selector])
 
