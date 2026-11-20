@@ -86,6 +86,10 @@ test.describe('first visit feature tour', () => {
     ]
     for (let index = 0; index < expected.length; index += 1) {
       await expect(tour.getByRole('heading', { name: expected[index] })).toBeVisible()
+      if (index === 2 || index === 3) {
+        await page.waitForTimeout(2_400)
+        expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
+      }
       if (index === 7) {
         await expect(page.getByLabel('자비스 대화창')).toBeVisible()
         await expect(page.locator('.jarvis-msg.user')).toContainText('안녕 자비스', { timeout: 5_000 })
@@ -108,6 +112,8 @@ test.describe('first visit feature tour', () => {
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
     await page.getByRole('button', { name: '고객센터', exact: true }).click()
     await expect(tour.getByRole('heading', { name: '사용법과 건강 안내를 빠르게 찾기' })).toBeVisible()
+    await page.waitForTimeout(2_400)
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
     await tour.getByRole('button', { name: '기능 안내 닫기' }).click()
     await expect(tour).toBeHidden()
     await page.getByRole('button', { name: '홈', exact: true }).click()

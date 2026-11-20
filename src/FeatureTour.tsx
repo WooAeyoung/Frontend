@@ -140,7 +140,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   }, [active, step.selector])
 
   useEffect(() => {
-    if (!active || !step.scanPage || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!active || !step.scanPage) return
     let frame = 0
     let timer = 0
     let interactionTimer = 0
