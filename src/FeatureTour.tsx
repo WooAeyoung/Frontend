@@ -36,14 +36,9 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   const [rect, setRect] = useState<Rect | null>(null)
   const step = STEPS[index]
 
-  const start = useCallback(() => {
-    setIndex(FIRST_STEP_BY_PAGE[currentPage])
-    setActive(true)
-  }, [currentPage])
-
   useEffect(() => {
     if (requestKey <= 0) return
-    setIndex(FIRST_STEP_BY_PAGE[currentPage])
+    setIndex(0)
     setActive(true)
     // 재실행은 기능 안내 버튼의 requestKey가 실제로 바뀔 때만 처리한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,7 +58,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     if (localStorage.getItem(STORAGE_KEY)) return
     const timer = window.setTimeout(() => {
       if (!localStorage.getItem(STORAGE_KEY)) {
-        setIndex(FIRST_STEP_BY_PAGE[currentPage])
+        setIndex(0)
         setActive(true)
       }
     }, 1400)

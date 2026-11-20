@@ -116,9 +116,12 @@ test.describe('first visit feature tour', () => {
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
     await tour.getByRole('button', { name: '기능 안내 닫기' }).click()
     await expect(tour).toBeHidden()
-    await page.getByRole('button', { name: '홈', exact: true }).click()
+    await page.getByRole('button', { name: '고객센터', exact: true }).click()
     await page.waitForTimeout(1_600)
     await expect(tour).toBeHidden()
+    await page.getByRole('button', { name: '기능 안내', exact: true }).click()
+    await expect(tour.getByRole('heading', { name: '우애영의 돌봄 흐름을 한눈에' })).toBeVisible()
+    await expect(page.locator('.story-stage')).toBeVisible()
   })
 
   test('fits on a phone screen', async ({ browser }) => {
