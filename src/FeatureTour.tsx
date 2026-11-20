@@ -23,6 +23,7 @@ const STEPS: TourStep[] = [
   { page: 'records', selector: '.records-page', eyebrow: '반려동물 기록', title: '분석과 일상 기록을 이어서 관리', description: '오늘 상태, 영양 기록, 건강 추이와 다른 반려동물을 순서대로 반복해서 보여드려요.', scanPage: true },
   { page: 'records', selector: '.records-workspace, .records-empty', eyebrow: '기록 가져오기·관리', title: '외부 리포트를 가져오고 안전하게 정리', description: '영양 기록의 “JSON/PDF 파일 불러오기”로 다른 곳에서 저장한 리포트를 가져올 수 있어요. 더보기와 프로필 관리에서 삭제 메뉴를 찾을 수 있으며, 둘러보기에서는 위치만 보여주고 실제 삭제는 실행하지 않아요.' },
   { page: 'support', selector: '.support-library-main', eyebrow: '고객센터', title: '사용법과 건강 안내를 빠르게 찾기', description: '검색, 도움말 분류, 질문 목록을 한 화면에서 살펴보고 원하는 안내를 선택할 수 있어요.', lockScroll: true },
+  { page: 'support', selector: '.pet-companion', eyebrow: '돌봄 친구', title: '같이 살펴보는 작은 안내 친구', description: '돌봄 가이드 아래에서 함께 내용을 살펴보는 친구예요. 마우스를 바라보고, 잠시 움직임이 없으면 편안하게 쉬면서 다시 이용할 때 깨어나요.' },
   { page: 'support', selector: '#nearby-vets', eyebrow: '동물병원 찾기', title: '필요할 때 가까운 병원 확인', description: '위치 권한을 허용하면 현재 위치를 기준으로 가까운 동물병원을 찾을 수 있어요. 위치는 병원 검색에만 사용돼요.' },
   { page: 'support', selector: '.jarvis-toggle', eyebrow: 'JARVIS', title: '궁금한 내용을 바로 물어보세요', description: '저장된 분석과 기록을 바탕으로 요약과 성분 설명을 도와드려요. 화면 아래 JARVIS 버튼은 어느 페이지에서든 열 수 있어요.' },
   { page: 'support', selector: '.roaming-pet, .web-pet-show', eyebrow: '화면 속 반려견', title: '함께 다니는 작은 친구', description: '반려견을 원하는 곳으로 옮기거나 설정 버튼에서 걷기를 멈추고, 숨기고, 다시 불러올 수 있어요.' },
@@ -253,7 +254,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
 
   if (!active) return null
   const last = index === STEPS.length - 1
-  const petTarget = index === STEPS.length - 1 && rect
+  const petTarget = (step.selector === '.pet-companion' || index === STEPS.length - 1) && rect
   const targetSide = petTarget ? `${rect.left + rect.width / 2 > window.innerWidth / 2 ? 'target-right' : 'target-left'} ${rect.top + rect.height / 2 > window.innerHeight / 2 ? 'target-bottom' : 'target-top'}` : ''
 
   return <div className="feature-tour" role="region" aria-label="기능 둘러보기" aria-live="polite" data-tour-step={index + 1}>
