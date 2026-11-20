@@ -96,7 +96,10 @@ test.describe('first visit feature tour', () => {
       }
       if (index === 8) {
         await expect(page.getByRole('button', { name: '🐾 펫 보이기' })).toBeVisible({ timeout: 4_000 })
-        await expect(page.getByRole('group', { name: '화면 속 반려견' })).toBeVisible({ timeout: 3_000 })
+        const pet = page.getByRole('group', { name: '화면 속 반려견' })
+        await expect(pet).toBeVisible({ timeout: 3_000 })
+        const [petBox, cardBox] = await Promise.all([pet.boundingBox(), tour.locator('.feature-tour-card').boundingBox()])
+        expect(petBox && cardBox && (petBox.x + petBox.width <= cardBox.x || cardBox.x + cardBox.width <= petBox.x || petBox.y + petBox.height <= cardBox.y || cardBox.y + cardBox.height <= petBox.y)).toBeTruthy()
       }
       if (index < expected.length - 1) await tour.getByRole('button', { name: '다음' }).click()
     }

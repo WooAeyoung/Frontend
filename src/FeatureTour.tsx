@@ -20,7 +20,7 @@ const STEPS: TourStep[] = [
   { page: 'about', selector: '.about-page', eyebrow: 'About Us', title: '분석 기준과 서비스 원칙', description: '우애영이 어떤 기준으로 영양 정보를 정리하고, 보호자가 결과를 안전하게 활용하도록 돕는지 확인할 수 있어요.', scanPage: true },
   { page: 'analysis', selector: '.analysis-page', eyebrow: '영양제 분석', title: '급여 내용을 모아 맞춤 분석', description: '반려동물 정보와 사료·영양제를 입력하면 영양소별 적정·부족·주의·과다 상태와 다음 행동을 한 화면에서 확인할 수 있어요.', scanPage: true },
   { page: 'records', selector: '.records-page', eyebrow: '반려동물 기록', title: '분석과 일상 기록을 이어서 관리', description: '반려동물별 저장 분석, 급여 체크, 몸무게와 컨디션 기록을 모아 변화 흐름을 계속 살펴볼 수 있어요.', scanPage: true },
-  { page: 'support', selector: '.support-library-head', eyebrow: '고객센터', title: '사용법과 건강 안내를 빠르게 찾기', description: '자주 묻는 질문, 이용 안내, 건강 관련 주의사항과 가까운 동물병원 찾기를 이용할 수 있어요.', scanPage: true },
+  { page: 'support', selector: '.support-library-layout', eyebrow: '고객센터', title: '사용법과 건강 안내를 빠르게 찾기', description: '왼쪽에서 도움말 분류를 고르고 질문 목록을 누르면 오른쪽에서 자세한 답변을 확인할 수 있어요.', scanPage: true },
   { page: 'support', selector: '#nearby-vets', eyebrow: '동물병원 찾기', title: '필요할 때 가까운 병원 확인', description: '위치 권한을 허용하면 현재 위치를 기준으로 가까운 동물병원을 찾을 수 있어요. 위치는 병원 검색에만 사용돼요.' },
   { page: 'support', selector: '.jarvis-toggle', eyebrow: 'JARVIS', title: '궁금한 내용을 바로 물어보세요', description: '저장된 분석과 기록을 바탕으로 요약과 성분 설명을 도와드려요. 화면 아래 JARVIS 버튼은 어느 페이지에서든 열 수 있어요.' },
   { page: 'support', selector: '.roaming-pet, .web-pet-show', eyebrow: '화면 속 반려견', title: '함께 다니는 작은 친구', description: '반려견을 원하는 곳으로 옮기거나 설정 버튼에서 걷기를 멈추고, 숨기고, 다시 불러올 수 있어요.' },
@@ -131,7 +131,8 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     }
     window.addEventListener('resize', update)
     window.addEventListener('scroll', update, { passive: true })
-    return () => { window.removeEventListener('resize', update); window.removeEventListener('scroll', update) }
+    const tracking = step.selector.includes('.roaming-pet') ? window.setInterval(update, 120) : 0
+    return () => { window.removeEventListener('resize', update); window.removeEventListener('scroll', update); if (tracking) window.clearInterval(tracking) }
   }, [active, step.selector])
 
   useEffect(() => {
@@ -197,11 +198,10 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     if (step.selector === '.records-page') {
       timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('wooaeyoung:demo-records')), 450))
     }
-    if (step.selector === '.support-library-head') {
-      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[1]?.click(), 1_100))
-      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[2]?.click(), 2_300))
-      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-library-categories>button')[1]?.click(), 3_500))
-      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[0]?.click(), 4_500))
+    if (step.selector === '.support-library-layout') {
+      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[1]?.click(), 1_750))
+      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[2]?.click(), 2_850))
+      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-library-categories>button')[1]?.click(), 3_950))
     }
     return () => {
       timers.forEach(timer => window.clearTimeout(timer))
@@ -211,11 +211,13 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
 
   if (!active) return null
   const last = index === STEPS.length - 1
+  const petTarget = index === STEPS.length - 1 && rect
+  const targetSide = petTarget ? `${rect.left + rect.width / 2 > window.innerWidth / 2 ? 'target-right' : 'target-left'} ${rect.top + rect.height / 2 > window.innerHeight / 2 ? 'target-bottom' : 'target-top'}` : ''
 
   return <div className="feature-tour" role="region" aria-label="기능 둘러보기" aria-live="polite" data-tour-step={index + 1}>
     <div className="feature-tour-shade" />
     {rect && <div className="feature-tour-spotlight" style={rect} aria-hidden="true" />}
-    <section className={`feature-tour-card ${index >= 7 ? 'is-left' : ''}`}>
+    <section className={`feature-tour-card ${index >= 7 ? 'is-left' : ''} ${petTarget ? `avoid-target ${targetSide}` : ''}`}>
       <div className="feature-tour-card-head">
         <span><Compass size={16} /> 기능 둘러보기</span>
         <button type="button" onClick={close} aria-label="기능 안내 닫기"><X size={18} /></button>
