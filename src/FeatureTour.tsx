@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Compass, X } from 'lucide-react'
 import type { Page } from './Home'
 import './feature-tour.css'
@@ -27,20 +27,33 @@ const STEPS: TourStep[] = [
 
 type Rect = { top: number; left: number; width: number; height: number }
 
-export default function FeatureTour({ onNavigate, requestKey }: { onNavigate: (page: Page) => void; requestKey: number }) {
+const FIRST_STEP_BY_PAGE: Record<Page, number> = { home: 0, about: 2, analysis: 3, records: 4, support: 5 }
+
+export default function FeatureTour({ onNavigate, requestKey, currentPage }: { onNavigate: (page: Page) => void; requestKey: number; currentPage: Page }) {
   const [active, setActive] = useState(false)
   const [index, setIndex] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
+  const pendingNavigation = useRef<Page | null>(null)
   const step = STEPS[index]
 
   const start = useCallback(() => {
-    setIndex(0)
+    setIndex(FIRST_STEP_BY_PAGE[currentPage])
     setActive(true)
-  }, [])
+  }, [currentPage])
 
   useEffect(() => {
     if (requestKey > 0) start()
   }, [requestKey, start])
+
+  useEffect(() => {
+    if (!active) return
+    if (pendingNavigation.current) {
+      if (currentPage === pendingNavigation.current) pendingNavigation.current = null
+      return
+    }
+    if (currentPage === step.page) return
+    setIndex(FIRST_STEP_BY_PAGE[currentPage])
+  }, [active, currentPage, step.page])
 
   useEffect(() => {
     if (localStorage.getItem(STORAGE_KEY)) return
@@ -67,7 +80,10 @@ export default function FeatureTour({ onNavigate, requestKey }: { onNavigate: (p
 
   useLayoutEffect(() => {
     if (!active) return
-    onNavigate(step.page)
+    if (currentPage !== step.page) {
+      pendingNavigation.current = step.page
+      onNavigate(step.page)
+    }
     setRect(null)
     let cancelled = false
     let attempts = 0
@@ -97,7 +113,7 @@ export default function FeatureTour({ onNavigate, requestKey }: { onNavigate: (p
     }
     timer = window.setTimeout(locate, 100)
     return () => { cancelled = true; window.clearTimeout(timer) }
-  }, [active, index, onNavigate, step.page, step.selector])
+  }, [active, currentPage, index, onNavigate, step.page, step.selector])
 
   useEffect(() => {
     if (!active) return
@@ -127,6 +143,7 @@ export default function FeatureTour({ onNavigate, requestKey }: { onNavigate: (p
       <small>{String(index + 1).padStart(2, '0')} / {String(STEPS.length).padStart(2, '0')} · {step.eyebrow}</small>
       <h2>{step.title}</h2>
       <p>{step.description}</p>
+      <p className="feature-tour-interaction">안내 중에도 메뉴와 화면 기능을 직접 눌러보실 수 있어요.</p>
       <div className="feature-tour-actions">
         <button type="button" className="feature-tour-skip" onClick={close}>{last ? '안내 닫기' : '건너뛰기'}</button>
         <div>
