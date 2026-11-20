@@ -10,6 +10,8 @@ import RoamingPet from './RoamingPet'
 import { loadRecords, saveProfile, type SavedRecord } from './Records'
 import JarvisAssistant from './JarvisAssistant'
 import { warmServer, type Analysis } from './api'
+import FeatureTour from './FeatureTour'
+import { Compass } from 'lucide-react'
 
 const MENU: [Page, string][] = [['home', '홈'], ['about', 'About Us'], ['analysis', '영양제 분석'], ['records', '반려동물 기록'], ['support', '고객센터']]
 
@@ -24,6 +26,7 @@ export default function SiteApp() {
   const [analysisVisited, setAnalysisVisited] = useState(false)
   const [latestAnalysis, setLatestAnalysis] = useState<Analysis | null>(null)
   const [savedRecords, setSavedRecords] = useState<SavedRecord[]>(loadRecords)
+  const [tourRequest, setTourRequest] = useState(0)
   const firstPageRender = useRef(true)
   const scrollByPage = useRef<Partial<Record<Page, number>>>({})
   const restoreOnEnter = useRef(false)
@@ -74,7 +77,7 @@ export default function SiteApp() {
     <>
       <header className="site-h"><div className="w">
         <button className="logo" onClick={() => go('home')}>우애영</button>
-        <nav>{MENU.map(([k, label]) => <button key={k} className={page === k ? 'on' : ''} onClick={() => { if (k === 'analysis') { setProfileToLoad(undefined); setAnalysisDraft(undefined) } go(k, true) }}>{label}</button>)}</nav>
+        <nav>{MENU.map(([k, label]) => <button key={k} className={page === k ? 'on' : ''} onClick={() => { if (k === 'analysis') { setProfileToLoad(undefined); setAnalysisDraft(undefined) } go(k, true) }}>{label}</button>)}<button type="button" className="feature-tour-trigger" onClick={() => setTourRequest(value => value + 1)}><Compass /> 기능 안내</button></nav>
       </div></header>
       <main className={`site-main page-${page}`}>
         {page === 'home' && <Home go={go} beginAnalysis={draft => { const saved = saveProfile({ name: draft.name, species: draft.species, weightKg: draft.weightKg, age: { value: draft.ageYears * 12, unit: 'MONTH' }, completeFeed: true }); setAnalysisDraft(draft); setProfileToLoad(saved.id); setLoadSeq(n => n + 1); go('analysis') }} />}
@@ -87,6 +90,7 @@ export default function SiteApp() {
       <footer className="site-f"><b>우애영</b><br />반려동물 영양제 분석 서비스<br />© 2026 우애영. All rights reserved.</footer>
       <RoamingPet />
       <JarvisAssistant onNavigate={go} analysis={latestAnalysis} records={savedRecords} />
+      <FeatureTour requestKey={tourRequest} onNavigate={destination => go(destination, false, false)} />
     </>
   )
 }

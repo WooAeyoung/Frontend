@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test'
 
 test.describe('production regression', () => {
   test.use({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' })
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('wooaeyoung.feature-tour.v1', 'seen'))
+  })
 
   test('home restores its pinned ScrollTrigger story after reload', async ({ page }) => {
     await page.goto('/')
@@ -58,6 +61,44 @@ test.describe('production regression', () => {
     await expect(page.locator('.story-stage')).toBeVisible()
     await expect(page.getByRole('button', { name: '펫 설정' })).toBeVisible()
     await page.screenshot({ path: 'test-results/mobile-home.png' })
+    await page.close()
+  })
+})
+
+test.describe('first visit feature tour', () => {
+  test('introduces every page and can be started again', async ({ page }) => {
+    await page.goto('/')
+    const tour = page.getByRole('region', { name: '기능 둘러보기' })
+    await expect(tour).toBeVisible({ timeout: 5_000 })
+
+    const expected = [
+      '우애영의 돌봄 흐름을 한눈에',
+      '필요한 기능으로 바로 이동',
+      '분석 기준과 서비스 원칙',
+      '급여 내용을 모아 맞춤 분석',
+      '분석과 일상 기록을 이어서 관리',
+      '사용법과 건강 안내를 빠르게 찾기',
+      '필요할 때 가까운 병원 확인',
+      '궁금한 내용을 바로 물어보세요',
+      '함께 다니는 작은 친구',
+    ]
+    for (let index = 0; index < expected.length; index += 1) {
+      await expect(tour.getByRole('heading', { name: expected[index] })).toBeVisible()
+      if (index < expected.length - 1) await tour.getByRole('button', { name: '다음' }).click()
+    }
+    await page.screenshot({ path: 'test-results/feature-tour-desktop.png' })
+    await tour.getByRole('button', { name: '둘러보기 완료' }).click()
+    await expect(tour).toBeHidden()
+    await page.getByRole('button', { name: /기능 안내/ }).click()
+    await expect(tour).toBeVisible()
+  })
+
+  test('fits on a phone screen', async ({ browser }) => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+    await page.goto('/')
+    await expect(page.getByRole('region', { name: '기능 둘러보기' })).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByRole('button', { name: '기능 안내', exact: true })).toBeVisible()
+    await page.screenshot({ path: 'test-results/feature-tour-mobile.png' })
     await page.close()
   })
 })
