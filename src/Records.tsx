@@ -56,6 +56,8 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
   const [openReport, setOpenReport] = useState<SavedRecord | null>(null)
   const [selectedId, setSelectedId] = useState(() => loadProfiles()[0]?.id ?? '')
   const [activeTab, setActiveTab] = useState<RecordTab>('today')
+  const demoState = useRef({ selectedId, activeTab, profiles })
+  demoState.current = { selectedId, activeTab, profiles }
   const importInput = useRef<HTMLInputElement>(null)
   const [importNotice, setImportNotice] = useState('')
   const [importedPdfs, setImportedPdfs] = useState<ImportedPdf[]>(loadImportedPdfs)
@@ -101,6 +103,38 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
   const selectedRecords = selectedProfile ? recordsFor(selectedProfile) : []
   const selectedPdfs = importedPdfs.filter(file => file.profileId === selectedProfile?.id)
   useEffect(() => { if (selectedProfile && selectedProfile.id !== selectedId) setSelectedId(selectedProfile.id) }, [selectedId, selectedProfile])
+  useEffect(() => {
+    let timers: number[] = []
+    let original: { selectedId: string; activeTab: RecordTab } | null = null
+    const cancel = () => {
+      timers.forEach(window.clearTimeout)
+      timers = []
+      if (original) {
+        setSelectedId(original.selectedId)
+        setActiveTab(original.activeTab)
+        original = null
+      }
+    }
+    const demo = () => {
+      cancel()
+      const current = demoState.current
+      original = { selectedId: current.selectedId, activeTab: current.activeTab }
+      setActiveTab('today')
+      timers = [
+        window.setTimeout(() => setActiveTab('analysis'), 1_500),
+        window.setTimeout(() => setActiveTab('trend'), 3_000),
+        window.setTimeout(() => {
+          const latest = demoState.current
+          if (latest.profiles.length > 1) setSelectedId(latest.profiles.find(profile => profile.id !== latest.selectedId)?.id ?? latest.selectedId)
+          setActiveTab('today')
+        }, 4_500),
+        window.setTimeout(() => setActiveTab('trend'), 6_000),
+      ]
+    }
+    window.addEventListener('wooaeyoung:demo-records', demo)
+    window.addEventListener('wooaeyoung:cancel-records-demo', cancel)
+    return () => { cancel(); window.removeEventListener('wooaeyoung:demo-records', demo); window.removeEventListener('wooaeyoung:cancel-records-demo', cancel) }
+  }, [])
   return <section className={`records-page ${embedded ? 'embedded' : ''}`}>
     {embedded && <div className="panel-title"><span>STEP 5</span><div><h3>반려동물 기록</h3><p>분석을 저장하면 이곳에서 이어서 확인할 수 있어요.</p></div></div>}
     {!embedded && <><span className="records-kicker">PET HEALTH WORKSPACE</span><h2>반려동물 기록</h2><p className="lead">한 아이씩 선택해 오늘 관리와 영양 분석 기록을 확인하세요.</p></>}

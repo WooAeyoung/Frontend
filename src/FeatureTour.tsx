@@ -42,8 +42,12 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   }, [currentPage])
 
   useEffect(() => {
-    if (requestKey > 0) start()
-  }, [requestKey, start])
+    if (requestKey <= 0) return
+    setIndex(FIRST_STEP_BY_PAGE[currentPage])
+    setActive(true)
+    // 재실행은 기능 안내 버튼의 requestKey가 실제로 바뀔 때만 처리한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestKey])
 
   useEffect(() => {
     const followMenu = (event: Event) => {
@@ -185,7 +189,19 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     if (step.selector === '.jarvis-toggle') {
       timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('wooaeyoung:demo-jarvis')), 450))
     }
-    return () => timers.forEach(timer => window.clearTimeout(timer))
+    if (step.selector === '.records-page') {
+      timers.push(window.setTimeout(() => window.dispatchEvent(new CustomEvent('wooaeyoung:demo-records')), 450))
+    }
+    if (step.selector === '.support-library-head') {
+      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[1]?.click(), 1_100))
+      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[2]?.click(), 2_300))
+      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-library-categories>button')[1]?.click(), 3_500))
+      timers.push(window.setTimeout(() => document.querySelectorAll<HTMLButtonElement>('.support-guide-list>button')[0]?.click(), 4_500))
+    }
+    return () => {
+      timers.forEach(timer => window.clearTimeout(timer))
+      if (step.selector === '.records-page') window.dispatchEvent(new CustomEvent('wooaeyoung:cancel-records-demo'))
+    }
   }, [active, index, step.selector])
 
   if (!active) return null
