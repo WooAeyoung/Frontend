@@ -77,7 +77,7 @@ export default function SiteApp() {
     <>
       <header className="site-h"><div className="w">
         <button className="logo" onClick={() => go('home')}>우애영</button>
-        <nav>{MENU.map(([k, label]) => <button key={k} className={page === k ? 'on' : ''} onClick={() => { if (k === 'analysis') { setProfileToLoad(undefined); setAnalysisDraft(undefined) } go(k, true) }}>{label}</button>)}<button type="button" className="feature-tour-trigger" onClick={() => setTourRequest(value => value + 1)}><Compass /> 기능 안내</button></nav>
+        <nav>{MENU.map(([k, label]) => <button key={k} className={page === k ? 'on' : ''} onClick={() => { if (k === 'analysis') { setProfileToLoad(undefined); setAnalysisDraft(undefined) } window.dispatchEvent(new CustomEvent('wooaeyoung:tour-page', { detail: k })); go(k, true) }}>{label}</button>)}<button type="button" className="feature-tour-trigger" onClick={() => setTourRequest(value => value + 1)}><Compass /> 기능 안내</button></nav>
       </div></header>
       <main className={`site-main page-${page}`}>
         {page === 'home' && <Home go={go} beginAnalysis={draft => { const saved = saveProfile({ name: draft.name, species: draft.species, weightKg: draft.weightKg, age: { value: draft.ageYears * 12, unit: 'MONTH' }, completeFeed: true }); setAnalysisDraft(draft); setProfileToLoad(saved.id); setLoadSeq(n => n + 1); go('analysis') }} />}

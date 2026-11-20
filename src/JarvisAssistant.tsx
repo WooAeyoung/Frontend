@@ -172,6 +172,48 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
     } finally { setLoading(false) }
   }
 
+  useEffect(() => {
+    let typingTimer = 0
+    let sendTimer = 0
+    const demo = () => {
+      window.clearInterval(typingTimer)
+      window.clearTimeout(sendTimer)
+      const example = '안녕 자비스, 어떤 도움을 받을 수 있어?'
+      let length = 0
+      setOpen(true)
+      setSpeak(true)
+      setInput('')
+      typingTimer = window.setInterval(() => {
+        length += 1
+        setInput(example.slice(0, length))
+        if (length >= example.length) {
+          window.clearInterval(typingTimer)
+          sendTimer = window.setTimeout(() => {
+            const answer = '분석 결과 요약, 저장 기록 조회, 영양 성분 설명을 도와드릴 수 있어요.'
+            setInput('')
+            setMessages(previous => [...previous, { from: 'user', text: example }, { from: 'assistant', text: answer }])
+            if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(answer))
+          }, 650)
+        }
+      }, 65)
+    }
+    const cancelDemo = () => {
+      window.clearInterval(typingTimer)
+      window.clearTimeout(sendTimer)
+      setInput('')
+      setOpen(false)
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    }
+    window.addEventListener('wooaeyoung:demo-jarvis', demo)
+    window.addEventListener('wooaeyoung:cancel-tour-demos', cancelDemo)
+    return () => {
+      window.clearInterval(typingTimer)
+      window.clearTimeout(sendTimer)
+      window.removeEventListener('wooaeyoung:demo-jarvis', demo)
+      window.removeEventListener('wooaeyoung:cancel-tour-demos', cancelDemo)
+    }
+  }, [])
+
   const listen = () => {
     if (listening) { recognition.current?.stop(); return }
     const speechWindow = window as Window & { SpeechRecognition?: RecognitionConstructor; webkitSpeechRecognition?: RecognitionConstructor }

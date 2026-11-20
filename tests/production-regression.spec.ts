@@ -84,15 +84,28 @@ test.describe('first visit feature tour', () => {
     ]
     for (let index = 0; index < expected.length; index += 1) {
       await expect(tour.getByRole('heading', { name: expected[index] })).toBeVisible()
+      if (index === 7) {
+        await expect(page.getByLabel('자비스 대화창')).toBeVisible()
+        await expect(page.locator('.jarvis-msg.user')).toContainText('안녕 자비스', { timeout: 5_000 })
+      }
+      if (index === 8) {
+        await expect(page.getByRole('button', { name: '🐾 펫 보이기' })).toBeVisible({ timeout: 4_000 })
+        await expect(page.getByRole('group', { name: '화면 속 반려견' })).toBeVisible({ timeout: 3_000 })
+      }
       if (index < expected.length - 1) await tour.getByRole('button', { name: '다음' }).click()
     }
     await page.screenshot({ path: 'test-results/feature-tour-desktop.png' })
     await tour.getByRole('button', { name: '둘러보기 완료' }).click()
     await expect(tour).toBeHidden()
+    await page.reload()
+    await page.waitForTimeout(1_800)
+    await expect(tour).toBeHidden()
     await page.getByRole('button', { name: /기능 안내/ }).click()
     await expect(tour).toBeVisible()
     await page.getByRole('button', { name: '고객센터', exact: true }).click()
     await expect(tour.getByRole('heading', { name: '사용법과 건강 안내를 빠르게 찾기' })).toBeVisible()
+    await tour.getByRole('button', { name: '기능 안내 닫기' }).click()
+    await expect(tour).toBeHidden()
   })
 
   test('fits on a phone screen', async ({ browser }) => {
