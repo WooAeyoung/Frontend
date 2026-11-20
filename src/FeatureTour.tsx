@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Compass, X } from 'lucide-react'
 import type { Page } from './Home'
 import './feature-tour.css'
@@ -35,7 +35,36 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   const [active, setActive] = useState(false)
   const [index, setIndex] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
+  const music = useRef<HTMLAudioElement | null>(null)
   const step = STEPS[index]
+
+  useEffect(() => {
+    const audio = new Audio('/audio/first-snow-moment.mp3')
+    audio.loop = true
+    audio.preload = 'auto'
+    audio.volume = .28
+    music.current = audio
+    const startMusic = () => { void audio.play().catch(() => undefined) }
+    window.addEventListener('wooaeyoung:tour-music-start', startMusic)
+    return () => {
+      window.removeEventListener('wooaeyoung:tour-music-start', startMusic)
+      audio.pause()
+      music.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const audio = music.current
+    if (!audio) return
+    if (!active || index === 7) {
+      audio.pause()
+      return
+    }
+    const unlock = () => { void audio.play().catch(() => undefined) }
+    void audio.play().catch(() => undefined)
+    window.addEventListener('pointerdown', unlock, { once: true })
+    return () => window.removeEventListener('pointerdown', unlock)
+  }, [active, index])
 
   useEffect(() => {
     if (requestKey <= 0) return
@@ -70,6 +99,10 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
 
   const close = useCallback(() => {
     window.dispatchEvent(new CustomEvent('wooaeyoung:cancel-tour-demos'))
+    if (music.current) {
+      music.current.pause()
+      music.current.currentTime = 0
+    }
     localStorage.setItem(STORAGE_KEY, 'seen')
     setActive(false)
     setRect(null)
