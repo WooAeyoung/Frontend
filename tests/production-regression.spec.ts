@@ -88,6 +88,9 @@ test.describe('first visit feature tour', () => {
     ]
     for (let index = 0; index < expected.length; index += 1) {
       await expect(tour.getByRole('heading', { name: expected[index] })).toBeVisible()
+      if (expected[index] === '같이 살펴보는 작은 안내 친구') {
+        await expect(page.locator('.support-page .pet-companion')).toBeInViewport()
+      }
       if (index === 2 || index === 3) {
         await page.waitForTimeout(2_400)
         expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
