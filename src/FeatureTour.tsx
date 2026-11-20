@@ -143,8 +143,9 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     if (!active || !step.scanPage || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     let frame = 0
     let timer = 0
+    let interactionTimer = 0
     let cancelled = false
-    const stop = () => { cancelled = true; window.cancelAnimationFrame(frame); window.clearTimeout(timer) }
+    const stop = () => { cancelled = true; window.cancelAnimationFrame(frame); window.clearTimeout(timer); window.clearTimeout(interactionTimer) }
     const animate = (from: number, to: number, duration: number, done?: () => void) => {
       const started = performance.now()
       const tick = (now: number) => {
@@ -162,9 +163,11 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
       const bottom = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
       animate(0, bottom, 7_000)
     }, 1_100)
-    window.addEventListener('wheel', stop, { once: true, passive: true })
-    window.addEventListener('touchstart', stop, { once: true, passive: true })
-    window.addEventListener('pointerdown', stop, { once: true, passive: true })
+    interactionTimer = window.setTimeout(() => {
+      window.addEventListener('wheel', stop, { once: true, passive: true })
+      window.addEventListener('touchstart', stop, { once: true, passive: true })
+      window.addEventListener('pointerdown', stop, { once: true, passive: true })
+    }, 450)
     return () => {
       stop()
       window.removeEventListener('wheel', stop)
