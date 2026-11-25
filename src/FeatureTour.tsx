@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Compass, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Move, X } from 'lucide-react'
 import type { Page } from './Home'
 import './feature-tour.css'
 
@@ -38,6 +38,32 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   const [active, setActive] = useState(false)
   const [index, setIndex] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
+  const cardRef = useRef<HTMLElement>(null)
+  const drag = useRef<{ id: number; x: number; y: number } | null>(null)
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
+
+  const moveCard = useCallback((left: number, top: number) => {
+    const card = cardRef.current?.getBoundingClientRect()
+    if (!card) return
+    const next = {
+      left: Math.max(8, Math.min(left, window.innerWidth - card.width - 8)),
+      top: Math.max(8, Math.min(top, window.innerHeight - card.height - 8)),
+    }
+    setPosition(current => current?.left === next.left && current.top === next.top ? current : next)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!active || !position || !cardRef.current) return
+    const keepVisible = () => moveCard(position.left, position.top)
+    keepVisible()
+    const observer = new ResizeObserver(keepVisible)
+    observer.observe(cardRef.current)
+    window.addEventListener('resize', keepVisible)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', keepVisible)
+    }
+  }, [active, index, moveCard, position])
   const music = useRef<HTMLAudioElement | null>(null)
   const step = STEPS[index]
 
@@ -266,9 +292,34 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   return <div className="feature-tour" role="region" aria-label="기능 둘러보기" aria-live="polite" data-tour-step={index + 1}>
     <div className="feature-tour-shade" />
     {rect && <div className="feature-tour-spotlight" style={rect} aria-hidden="true" />}
-    <section className={`feature-tour-card ${index >= 7 ? 'is-left' : ''} ${petTarget ? `avoid-target ${targetSide}` : ''}`}>
+    <section ref={cardRef} className={`feature-tour-card ${index >= 7 ? 'is-left' : ''} ${petTarget ? `avoid-target ${targetSide}` : ''}`} style={position ? { ...position, right: 'auto', bottom: 'auto' } : undefined}>
       <div className="feature-tour-card-head">
-        <span><Compass size={16} /> 기능 둘러보기</span>
+        <button type="button" className="feature-tour-move" aria-label="안내창 위치 이동. 방향키로 이동, 홈 키로 초기화"
+          onPointerDown={event => {
+            const card = cardRef.current?.getBoundingClientRect()
+            if (!card || !event.isPrimary || event.button !== 0) return
+            drag.current = { id: event.pointerId, x: event.clientX - card.left, y: event.clientY - card.top }
+            event.currentTarget.setPointerCapture(event.pointerId)
+            moveCard(card.left, card.top)
+          }}
+          onPointerMove={event => {
+            const start = drag.current
+            if (start?.id === event.pointerId) moveCard(event.clientX - start.x, event.clientY - start.y)
+          }}
+          onLostPointerCapture={() => { drag.current = null }}
+          onKeyDown={event => {
+            const card = cardRef.current?.getBoundingClientRect()
+            if (!card) return
+            const offsets: Record<string, [number, number]> = { ArrowLeft: [-20, 0], ArrowRight: [20, 0], ArrowUp: [0, -20], ArrowDown: [0, 20] }
+            const offset = offsets[event.key]
+            if (event.key === 'Home') {
+              event.preventDefault()
+              setPosition(null)
+            } else if (offset) {
+              event.preventDefault()
+              moveCard(card.left + offset[0], card.top + offset[1])
+            }
+          }}><Move size={16} /> 기능 둘러보기 · 이동</button>
         <button type="button" onClick={close} aria-label="기능 안내 닫기"><X size={18} /></button>
       </div>
       <div className="feature-tour-progress" aria-label={`${STEPS.length}단계 중 ${index + 1}단계`}><i style={{ width: `${((index + 1) / STEPS.length) * 100}%` }} /></div>
