@@ -35,6 +35,7 @@ export default function Support() {
     let original = ''
     let running = false
     const stop = () => {
+      if (!running) return
       running = false
       window.clearInterval(typing)
       timers.forEach(window.clearTimeout)
@@ -61,9 +62,16 @@ export default function Support() {
       }
       runCycle()
     }
+    const pauseDemo = () => {
+      running = false
+      window.clearInterval(typing)
+      timers.forEach(window.clearTimeout)
+      timers = []
+    }
+    window.addEventListener('wooaeyoung:pause-tour-demos', pauseDemo)
     window.addEventListener('wooaeyoung:demo-support-search', demo)
     window.addEventListener('wooaeyoung:cancel-support-search', stop)
-    return () => { stop(); window.removeEventListener('wooaeyoung:demo-support-search', demo); window.removeEventListener('wooaeyoung:cancel-support-search', stop) }
+    return () => { stop(); window.removeEventListener('wooaeyoung:pause-tour-demos', pauseDemo); window.removeEventListener('wooaeyoung:demo-support-search', demo); window.removeEventListener('wooaeyoung:cancel-support-search', stop) }
   }, [])
 
   return <div className="support-page support-library-page">

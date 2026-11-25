@@ -50,9 +50,15 @@ export default function RoamingPet() {
         window.setTimeout(() => { if (original) apply(original); original = null }, 4_500),
       ]
     }
+    const pauseDemo = () => {
+      timers.forEach(window.clearTimeout)
+      timers = []
+      original = null
+    }
+    window.addEventListener('wooaeyoung:pause-tour-demos', pauseDemo)
     window.addEventListener('wooaeyoung:demo-pet', demo)
     window.addEventListener('wooaeyoung:cancel-tour-demos', cancelDemo)
-    return () => { cancelDemo(); window.removeEventListener('wooaeyoung:demo-pet', demo); window.removeEventListener('wooaeyoung:cancel-tour-demos', cancelDemo) }
+    return () => { cancelDemo(); window.removeEventListener('wooaeyoung:pause-tour-demos', pauseDemo); window.removeEventListener('wooaeyoung:demo-pet', demo); window.removeEventListener('wooaeyoung:cancel-tour-demos', cancelDemo) }
   }, [])
   const down = (event: React.PointerEvent<HTMLDivElement>) => { if ((event.target as HTMLElement).closest('button')) return; setDragging(true); dragOffset.current = { x: event.clientX - position.x, y: event.clientY - position.y }; event.currentTarget.setPointerCapture(event.pointerId) }
   const move = (event: React.PointerEvent<HTMLDivElement>) => { if (dragging) setPosition(clamp(event.clientX - dragOffset.current.x, event.clientY - dragOffset.current.y)) }

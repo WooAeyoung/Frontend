@@ -159,9 +159,14 @@ export default function Records({ selectProfile, embedded }: { go: (p: 'analysis
       }
       runCycle()
     }
+    const pauseDemo = () => {
+      original = null
+      cancel()
+    }
+    window.addEventListener('wooaeyoung:pause-tour-demos', pauseDemo)
     window.addEventListener('wooaeyoung:demo-records', demo)
     window.addEventListener('wooaeyoung:cancel-records-demo', cancel)
-    return () => { cancel(); window.removeEventListener('wooaeyoung:demo-records', demo); window.removeEventListener('wooaeyoung:cancel-records-demo', cancel) }
+    return () => { cancel(); window.removeEventListener('wooaeyoung:pause-tour-demos', pauseDemo); window.removeEventListener('wooaeyoung:demo-records', demo); window.removeEventListener('wooaeyoung:cancel-records-demo', cancel) }
   }, [])
   return <section className={`records-page ${embedded ? 'embedded' : ''}`}>
     {embedded && <div className="panel-title"><span>STEP 5</span><div><h3>반려동물 기록</h3><p>분석을 저장하면 이곳에서 이어서 확인할 수 있어요.</p></div></div>}

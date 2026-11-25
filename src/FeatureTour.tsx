@@ -37,6 +37,8 @@ const FIRST_STEP_BY_PAGE: Record<Page, number> = { home: 0, about: 2, analysis: 
 export default function FeatureTour({ onNavigate, requestKey, currentPage }: { onNavigate: (page: Page) => void; requestKey: number; currentPage: Page }) {
   const [active, setActive] = useState(false)
   const [index, setIndex] = useState(0)
+  const [pausedStep, setPausedStep] = useState<number | null>(null)
+  const paused = pausedStep === index
   const [rect, setRect] = useState<Rect | null>(null)
   const cardRef = useRef<HTMLElement>(null)
   const drag = useRef<{ id: number; x: number; y: number } | null>(null)
@@ -98,6 +100,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   useEffect(() => {
     if (requestKey <= 0) return
     setIndex(0)
+    setPausedStep(null)
     setActive(true)
     // 재실행은 기능 안내 버튼의 requestKey가 실제로 바뀔 때만 처리한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -108,6 +111,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
       if (!active) return
       const destination = (event as CustomEvent<Page>).detail
       setIndex(FIRST_STEP_BY_PAGE[destination])
+      setPausedStep(FIRST_STEP_BY_PAGE[destination])
     }
     window.addEventListener('wooaeyoung:tour-page', followMenu)
     return () => window.removeEventListener('wooaeyoung:tour-page', followMenu)
@@ -139,20 +143,33 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
 
   useEffect(() => {
     if (!active) return
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close()
-      if (event.key === 'ArrowRight') setIndex(value => Math.min(value + 1, STEPS.length - 1))
-      if (event.key === 'ArrowLeft') setIndex(value => Math.max(value - 1, 0))
+    const pause = (event: Event) => {
+      if (!event.isTrusted) return
+      if (!paused) window.scrollTo({ top: window.scrollY, left: window.scrollX, behavior: 'instant' })
+      window.dispatchEvent(new Event('wooaeyoung:pause-tour-demos'))
+      setPausedStep(index)
     }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) { pause(event); return }
+      if (event.key === 'Escape') close()
+      pause(event)
+    }
+    window.addEventListener('pointerdown', pause, true)
+    window.addEventListener('wheel', pause, { capture: true, passive: true })
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [active, close])
+    return () => {
+      window.removeEventListener('pointerdown', pause, true)
+      window.removeEventListener('wheel', pause, true)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [active, close, index, paused])
 
   useLayoutEffect(() => {
     if (!active) return
     if (currentPage !== step.page) {
       onNavigate(step.page)
     }
+    if (paused) return
     setRect(null)
     let cancelled = false
     let attempts = 0
@@ -183,7 +200,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     }
     timer = window.setTimeout(locate, 100)
     return () => { cancelled = true; window.clearTimeout(timer) }
-  }, [active, currentPage, index, onNavigate, step.lockScroll, step.page, step.selector])
+  }, [active, currentPage, index, onNavigate, paused, step.lockScroll, step.page, step.selector])
 
   useEffect(() => {
     if (!active) return
@@ -200,7 +217,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   }, [active, step.selector])
 
   useEffect(() => {
-    if (!active || !step.scanPage) return
+    if (!active || paused || !step.scanPage) return
     let frame = 0
     let timer = 0
     let interactionTimer = 0
@@ -242,10 +259,10 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
       window.removeEventListener('touchstart', stop)
       window.removeEventListener('pointerdown', stop)
     }
-  }, [active, index, step.scanPage])
+  }, [active, index, paused, step.scanPage])
 
   useEffect(() => {
-    if (!active) return
+    if (!active || paused) return
     const timers: number[] = []
     if (step.selector === '#nearby-vets') {
       timers.push(window.setTimeout(() => {
@@ -282,7 +299,7 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
       if (step.selector === '.records-page' || step.selector === '.records-workspace, .records-empty') window.dispatchEvent(new CustomEvent('wooaeyoung:cancel-records-demo'))
       if (step.selector === '.support-library-head') window.dispatchEvent(new CustomEvent('wooaeyoung:cancel-support-search'))
     }
-  }, [active, index, step.selector])
+  }, [active, index, paused, step.selector])
 
   if (!active) return null
   const last = index === STEPS.length - 1
@@ -330,8 +347,8 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
       <div className="feature-tour-actions">
         <button type="button" className="feature-tour-skip" onClick={close}>{last ? '안내 닫기' : '건너뛰기'}</button>
         <div>
-          <button type="button" onClick={() => setIndex(current => Math.max(0, current - 1))} disabled={index === 0} aria-label="이전 기능"><ChevronLeft size={17} /> 이전</button>
-          <button type="button" className="feature-tour-next" onClick={() => last ? close() : setIndex(current => Math.min(current + 1, STEPS.length - 1))}>{last ? '둘러보기 완료' : <>다음 <ChevronRight size={17} /></>}</button>
+          <button type="button" onClick={() => { setPausedStep(null); setIndex(current => Math.max(0, current - 1)) }} disabled={index === 0} aria-label="이전 기능"><ChevronLeft size={17} /> 이전</button>
+          <button type="button" className="feature-tour-next" onClick={() => { if (last) close(); else { setPausedStep(null); setIndex(current => Math.min(current + 1, STEPS.length - 1)) } }}>{last ? '둘러보기 완료' : <>다음 <ChevronRight size={17} /></>}</button>
         </div>
       </div>
     </section>

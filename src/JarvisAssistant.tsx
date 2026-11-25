@@ -204,12 +204,17 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
       setOpen(false)
       if ('speechSynthesis' in window) window.speechSynthesis.cancel()
     }
+    const pauseDemo = () => {
+      window.clearInterval(typingTimer)
+      window.clearTimeout(sendTimer)
+    }
+    window.addEventListener('wooaeyoung:pause-tour-demos', pauseDemo)
     window.addEventListener('wooaeyoung:demo-jarvis', demo)
     window.addEventListener('wooaeyoung:cancel-tour-demos', cancelDemo)
     return () => {
       window.clearInterval(typingTimer)
       window.clearTimeout(sendTimer)
-      window.removeEventListener('wooaeyoung:demo-jarvis', demo)
+      window.removeEventListener('wooaeyoung:pause-tour-demos', pauseDemo); window.removeEventListener('wooaeyoung:demo-jarvis', demo)
       window.removeEventListener('wooaeyoung:cancel-tour-demos', cancelDemo)
     }
   }, [])
