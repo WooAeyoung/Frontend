@@ -90,6 +90,15 @@ export async function getStandardCatalog(standardProfile:StandardProfile):Promis
 export async function getParameterCatalog(standardProfile:StandardProfile){
   return call<{standardProfile:StandardProfile;standardVersion:string;parameterVersion:string;verification:Record<string,string>;allowUnverified:boolean}>(`/api/v2/parameters/${standardProfile}`)
 }
+export async function summarizeNutritionReport(summary: Record<string, number>) {
+  const { deficient, adequate, caution, excess, noStandard } = summary
+  const response = await callWithTimeout<JarvisReply>('/api/v1/jarvis', {
+    method: 'POST',
+    body: JSON.stringify({ message: 'PDF_NUTRITION_SUMMARY', analysis: { summary: { deficient, adequate, caution, excess, noStandard } } }),
+  }, 20000)
+  return response.intent === 'PDF_NUTRITION_SUMMARY' ? response.answer : ''
+}
+
 export async function askJarvis(message:string,analysis:Analysis|null,history:{role:'user'|'assistant';content:string}[]=[]){
   await warmServer()
   const safeHistory=history.slice(-8).map(item=>({...item,content:item.content.slice(-300)})).filter(item=>item.content.trim())

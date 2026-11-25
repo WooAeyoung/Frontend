@@ -1,7 +1,10 @@
 import type { Analysis, Profile } from './api'
+import { summarizeNutritionReport } from './api'
+import { useState } from 'react'
 import type { SavedRecord } from './Records'
 import { formatNumber } from './format/number'
 import { createPortal } from 'react-dom'
+import { nutritionOneLine } from './nutritionInsight'
 
 const STATUS: Record<string, string> = {
   DEFICIENT: '부족', ADEQUATE: '적정', ADEQUATE_NO_UPPER_LIMIT: '적정 · 상한 없음',
@@ -12,14 +15,31 @@ const STATUS: Record<string, string> = {
 const ratioLabel = (status?: string) => ({ LOW: '낮음', HIGH: '높음', ADEQUATE: '적정', UNAVAILABLE: '계산 불가' }[status ?? ''] ?? status ?? '—')
 
 export default function NutritionReport({ record, onClose }: { record: SavedRecord; onClose: () => void }) {
+  const [geminiSummary, setGeminiSummary] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [summaryError, setSummaryError] = useState('')
+  async function generateSummary() {
+    setGenerating(true)
+    setSummaryError('')
+    try {
+      const answer = await summarizeNutritionReport(record.summary)
+      if (answer) setGeminiSummary(answer)
+      else setSummaryError('Gemini 요약을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.')
+    } catch {
+      setSummaryError('Gemini 요약을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setGenerating(false)
+    }
+  }
   const analysis = record.analysisSnapshot
   const profile = record.profileSnapshot
   const created = new Date(record.date).toLocaleString('ko-KR')
   const ratio = analysis?.ratios.calciumPhosphorus
   const print = () => window.print()
   return createPortal(<div className="report-overlay" role="dialog" aria-modal="true" aria-label={`${record.name} 영양 분석 리포트`}>
-    <div className="report-toolbar"><button className="btn ghost" onClick={onClose}>닫기</button><span>인쇄 화면에서 대상을 ‘PDF로 저장’으로 선택하세요.</span><button className="btn" onClick={print}>PDF로 저장</button></div>
+    <div className="report-toolbar"><button className="btn ghost" onClick={onClose}>닫기</button><button className="btn ghost" onClick={generateSummary} disabled={generating || Boolean(geminiSummary)}>{generating ? 'Gemini 요약 중…' : 'Gemini 한 줄 요약 만들기'}</button>{summaryError && <span role="status">{summaryError}</span>}<button className="btn" onClick={print} disabled={generating}>PDF로 저장</button></div>
     <article className="nutrition-report" id={`report-${record.id}`}>
+      <section className="report-section report-ai-insight"><div className="report-section-title"><div><h2>{geminiSummary ? 'Gemini 한 줄 요약' : '영양 한 줄 요약'}</h2></div></div><p>{geminiSummary || (record.oneLineInsight ?? (analysis ? nutritionOneLine(analysis) : '이전 형식의 기록으로 한줄 요약이 없습니다.'))}</p></section>
       <header className="report-cover"><div><span>WOOAEYOUNG NUTRITION JOURNAL</span><h1>{record.name}의 하루를<br />영양으로 읽습니다.</h1><p>사료와 영양제의 하루 섭취량을 분석 당시 기준과 비교한 리포트입니다.</p></div><aside><b>{analysis ? analysis.summary.adequate ?? 0 : record.summary.adequate ?? 0}</b><small>적정 성분</small></aside></header>
       <section className="report-meta"><div><small>REPORT DATE</small><b>{created}</b></div><div><small>PROFILE</small><b>{profile ? `${profile.species === 'DOG' ? '강아지' : '고양이'} · ${profile.weightKg}kg · ${profile.age.value}${profile.age.unit === 'MONTH' ? '개월' : '주'}` : record.species === 'DOG' ? '강아지' : '고양이'}</b></div><div><small>STANDARD</small><b>{record.standardVersion ?? '저장 당시 기준'}</b></div></section>
       <section className="report-section"><div className="report-section-title"><span>01</span><div><h2>분석 요약</h2><p>분석 당시 판정 결과를 그대로 보존했습니다.</p></div></div><div className="report-summary"><div><b>{record.summary.deficient ?? 0}</b><span>부족</span></div><div><b>{record.summary.adequate ?? 0}</b><span>적정</span></div><div><b>{record.summary.caution ?? 0}</b><span>주의</span></div><div><b>{record.summary.excess ?? 0}</b><span>과다</span></div><div><b>{record.summary.noStandard ?? 0}</b><span>기준 없음</span></div></div>{ratio && <p className={`report-ratio ${ratio.status.toLowerCase()}`}><span>칼슘 : 인 비율</span><b>{formatNumber(ratio.value)} : 1 · {ratioLabel(ratio.status)}</b></p>}</section>

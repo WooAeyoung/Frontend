@@ -391,3 +391,5 @@ th:first-child,td:first-child{text-align:left}
 .pet-companion.is-sleeping .pet-eye{top:17px;height:2px;border-radius:4px;background:#2c2522;box-shadow:none}
 .pet-companion.is-sleeping .pet-pupil{display:none}
 @media(prefers-reduced-motion:reduce){.pet-pupil{transition:none}}
+.record-oneline{margin:6px 0!important;color:#386654!important;line-height:1.45}
+.ai-one-line{margin:0 0 16px;padding:15px 17px;border:1px solid #cfe4d9;border-radius:8px;background:#f4faf7}.ai-one-line span{color:#237d5c;font-size:10px;font-weight:800;letter-spacing:.08em}.ai-one-line p{margin:6px 0 0;color:#264d3e;font-size:14px;font-weight:650;line-height:1.55}.report-ai-insight{background:#fbf9f3}.report-ai-insight>p{margin:0;padding:14px 16px;border-left:3px solid #b6792d;background:#f0eadc;color:#504b40;font-size:12px;line-height:1.6}.pet-health-oneline{max-width:620px;margin-top:10px!important;padding:9px 11px;border-left:3px solid #50a783;background:#f5faf7;color:#426154!important;line-height:1.5}.pet-health-oneline b{display:block;margin-bottom:2px;color:#237a5a;font-size:10px;letter-spacing:.05em}
