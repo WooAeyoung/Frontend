@@ -14,10 +14,19 @@ import FeatureTour from './FeatureTour'
 import { Compass } from 'lucide-react'
 
 const MENU: [Page, string][] = [['home', '홈'], ['about', 'About Us'], ['analysis', '영양제 분석'], ['records', '반려동물 기록'], ['support', '고객센터']]
+const EN_MENU: Record<Page, string> = { home: 'Home', about: 'About Us', analysis: 'Nutrition analysis', records: 'Pet records', support: 'Support' }
+const JA_MENU: Record<Page, string> = { home: 'ホーム', about: 'About Us', analysis: '栄養分析', records: 'ペットの記録', support: 'サポート' }
 
 const pageFromPath = (): Page => window.location.pathname === '/about' ? 'about' : 'home'
 
 export default function SiteApp() {
+  const [menuLanguage, setMenuLanguage] = useState<'ko' | 'en' | 'ja'>(() => {
+    try { const stored = localStorage.getItem('wooaeyoung.menu-language'); return stored === 'en' || stored === 'ja' ? stored : 'ko' } catch { return 'ko' }
+  })
+  const changeMenuLanguage = (language: 'ko' | 'en' | 'ja') => {
+    setMenuLanguage(language)
+    try { localStorage.setItem('wooaeyoung.menu-language', language) } catch { /* Session selection still works. */ }
+  }
   const [page, setPage] = useState<Page>(pageFromPath)
   const [tick, setTick] = useState(0)
   const [profileToLoad, setProfileToLoad] = useState<string>()
@@ -77,7 +86,8 @@ export default function SiteApp() {
     <>
       <header className="site-h"><div className="w">
         <button className="logo" onClick={() => go('home')}>우애영</button>
-        <nav>{MENU.map(([k, label]) => <button key={k} className={page === k ? 'on' : ''} onClick={() => { if (k === 'analysis') { setProfileToLoad(undefined); setAnalysisDraft(undefined) } window.dispatchEvent(new CustomEvent('wooaeyoung:tour-page', { detail: k })); go(k, true) }}>{label}</button>)}<button type="button" className="feature-tour-trigger" onClick={() => { window.dispatchEvent(new CustomEvent('wooaeyoung:tour-music-start')); setTourRequest(value => value + 1) }}><Compass /> 기능 안내</button></nav>
+        <label style={{ fontSize: 12 }}>언어 / Language / 言語 <select aria-label="언어 / Language / 言語" value={menuLanguage} onChange={event => changeMenuLanguage(event.target.value === 'en' || event.target.value === 'ja' ? event.target.value : 'ko')}><option value="ko">한국어</option><option value="en">English</option><option value="ja">日本語</option></select></label>
+        <nav lang={menuLanguage}>{MENU.map(([k, label]) => <button key={k} className={page === k ? 'on' : ''} onClick={() => { if (k === 'analysis') { setProfileToLoad(undefined); setAnalysisDraft(undefined) } window.dispatchEvent(new CustomEvent('wooaeyoung:tour-page', { detail: k })); go(k, true) }}>{menuLanguage === 'en' ? EN_MENU[k] : menuLanguage === 'ja' ? JA_MENU[k] : label}</button>)}<button type="button" className="feature-tour-trigger" onClick={() => { window.dispatchEvent(new CustomEvent('wooaeyoung:tour-music-start')); setTourRequest(value => value + 1) }}><Compass /> {menuLanguage === 'en' ? 'Feature tour' : menuLanguage === 'ja' ? '機能案内' : '기능 안내'}</button></nav>
       </div></header>
       <main className={`site-main page-${page}`}>
         {page === 'home' && <Home go={go} beginAnalysis={draft => { const saved = saveProfile({ name: draft.name, species: draft.species, weightKg: draft.weightKg, age: { value: draft.ageYears * 12, unit: 'MONTH' }, completeFeed: true }); setAnalysisDraft(draft); setProfileToLoad(saved.id); setLoadSeq(n => n + 1); go('analysis') }} />}
