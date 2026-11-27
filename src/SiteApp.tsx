@@ -94,7 +94,7 @@ export default function SiteApp() {
         {page === 'about' && <AboutPage go={go} language={menuLanguage} />}
         {/* 실제 분석 화면은 계속 마운트해 두어 다른 화면에 다녀와도 입력값·결과가 유지된다. */}
         {analysisVisited && <div hidden={page !== 'analysis'}><AnalysisPage onSaved={() => setTick(value => value + 1)} onAnalysis={setLatestAnalysis} initialProfileId={profileToLoad} initialDraft={analysisDraft} loadSeq={loadSeq} active={page === 'analysis'} language={menuLanguage} /></div>}
-        {page === 'records' && <Records key={tick} go={go} selectProfile={id => { setAnalysisDraft(undefined); setProfileToLoad(id); setLoadSeq(n => n + 1); go('analysis') }} />}
+        {page === 'records' && <Records key={tick} go={go} selectProfile={id => { setAnalysisDraft(undefined); setProfileToLoad(id); setLoadSeq(n => n + 1); go('analysis') }} language={menuLanguage} />}
         {page === 'support' && <Support language={menuLanguage} />}
       </main>
       <footer className="site-f"><b>우애영</b><br />{menuLanguage === 'en' ? 'Pet nutrition analysis service' : menuLanguage === 'ja' ? 'ペット栄養分析サービス' : '반려동물 영양제 분석 서비스'}<br />© 2026 우애영. All rights reserved.</footer>
