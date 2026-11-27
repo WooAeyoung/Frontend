@@ -92,13 +92,13 @@ function NutrientBar({ nutrient, language }: { nutrient: Analysis['nutrients'][n
   const partial = Boolean(nutrient.unknownContribution)
   return <div className={`nutrient-bar-row ${nutrient.source === 'ESTIMATED' ? 'estimated' : ''}`}>
     <div className="nutrient-bar-head"><b>{nutrientLabel(nutrient.nutrientId, nutrient.name, language)}{nutrient.source === 'ESTIMATED' && <em className="estimate-badge">{language === 'en' ? 'Estimated' : language === 'ja' ? '推定' : '추정'}</em>}</b><span>{language === 'ko' ? source : nutrientSourceText(nutrient, language)} · {statusText(nutrient.status, language)}</span></div>
-    <div className="nutrient-track" role="img" aria-label={`${nutrient.name}: ${fmt(nutrient.total)} ${nutrient.unit}, ${source}, ${statusText(nutrient.status, language)}`}>
+    <div className="nutrient-track" role="img" aria-label={`${nutrientLabel(nutrient.nutrientId, nutrient.name, language)}: ${fmt(nutrient.total)} ${nutrient.unit}, ${language === 'ko' ? source : nutrientSourceText(nutrient, language)}, ${statusText(nutrient.status, language)}`}>
       <span className={`nutrient-fill ${nutrient.status}`} style={{ width: `${total}%` }} />
-      <span className="nutrient-segment feed" style={{ width: `${feed}%` }} title={`사료 ${fmt(nutrient.fromFeed)}`} />
-      <span className="nutrient-segment supplement" style={{ left: `${feed}%`, width: `${supplements}%` }} title={`영양제 ${fmt(nutrient.fromSupplements)}`} />
-      {minimum !== null && <i className="nutrient-marker minimum" style={{ left: `${minimum}%` }} title={`하한 ${fmt(nutrient.minimum)}`} />}
-      {caution !== null && <i className="nutrient-marker caution" style={{ left: `${caution}%` }} title={`주의 ${fmt(nutrient.caution)}`} />}
-      {upper !== null && <i className="nutrient-marker upper" style={{ left: `${upper}%` }} title={`상한 ${fmt(nutrient.upper)}`} />}
+      <span className="nutrient-segment feed" style={{ width: `${feed}%` }} title={`${language === 'en' ? 'Food' : language === 'ja' ? 'フード' : '사료'} ${fmt(nutrient.fromFeed)}`} />
+      <span className="nutrient-segment supplement" style={{ left: `${feed}%`, width: `${supplements}%` }} title={`${language === 'en' ? 'Supplements' : language === 'ja' ? 'サプリ' : '영양제'} ${fmt(nutrient.fromSupplements)}`} />
+      {minimum !== null && <i className="nutrient-marker minimum" style={{ left: `${minimum}%` }} title={`${language === 'en' ? 'Minimum' : language === 'ja' ? '下限' : '하한'} ${fmt(nutrient.minimum)}`} />}
+      {caution !== null && <i className="nutrient-marker caution" style={{ left: `${caution}%` }} title={`${language === 'en' ? 'Caution' : language === 'ja' ? '注意' : '주의'} ${fmt(nutrient.caution)}`} />}
+      {upper !== null && <i className="nutrient-marker upper" style={{ left: `${upper}%` }} title={`${language === 'en' ? 'Upper limit' : language === 'ja' ? '上限' : '상한'} ${fmt(nutrient.upper)}`} />}
     </div>
     <div className="nutrient-bar-scale"><span>{language === 'en' ? 'Food' : language === 'ja' ? 'フード' : '사료'} {fmt(nutrient.fromFeed)} · {language === 'en' ? 'Supplements' : language === 'ja' ? 'サプリ' : '영양제'} {fmt(nutrient.fromSupplements)} · {partial ? (language === 'en' ? 'Confirmed amount only' : language === 'ja' ? '確認済みの量のみ' : '확인된 양만') : (language === 'en' ? 'Total' : language === 'ja' ? '合計' : '합계')} {fmt(nutrient.total)} {nutrient.unit.toLowerCase()}</span><span>{language === 'en' ? 'Minimum' : language === 'ja' ? '下限' : '하한'} {fmt(nutrient.minimum)} · {language === 'en' ? 'Caution' : language === 'ja' ? '注意' : '주의'} {fmt(nutrient.caution)} · {language === 'en' ? 'Upper limit' : language === 'ja' ? '上限' : '상한'} {fmt(nutrient.upper)}</span></div>
   </div>
@@ -208,8 +208,8 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
     setProfileSaved(false); setError('')
   }
   function saveCurrentProfile() {
-    if (!name.trim() || !(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('프로필을 저장하려면 이름, 체중, 나이를 입력해 주세요.'); return }
-    if (needSize && (!adultSize || !(Number(expectedAdultWeight) >= Number(weight)))) { setError('성장기 강아지는 현재 체중에 맞는 예상 성체 체급을 선택해 주세요.'); return }
+    if (!name.trim() || !(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError(language === 'en' ? 'Enter a name, weight, and age to save the profile.' : language === 'ja' ? 'プロフィールを保存するには名前・体重・年齢を入力してください。' : '프로필을 저장하려면 이름, 체중, 나이를 입력해 주세요.'); return }
+    if (needSize && (!adultSize || !(Number(expectedAdultWeight) >= Number(weight)))) { setError(language === 'en' ? 'For a growing dog, select an expected adult size that fits their current weight.' : language === 'ja' ? '成長期の犬は、現在の体重に合った成犬時の体格を選択してください。' : '성장기 강아지는 현재 체중에 맞는 예상 성체 체급을 선택해 주세요.'); return }
     const savedProfile = saveAnalysisProfile(profile, profileId || undefined)
     const next = profileId ? profiles.map(item => item.id === savedProfile.id ? savedProfile : item) : [savedProfile, ...profiles]
     setProfiles(next); setProfileId(savedProfile.id); setProfileSaved(true); setError(''); onSaved()
@@ -264,9 +264,9 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
 
   async function run() {
     setError(''); setSaved(false)
-    if (incompatibleItems.length) { setError('선택한 기준과 맞지 않는 직접 입력 제품을 삭제하고 다시 입력해 주세요.'); return }
-    if (!(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError('체중과 나이를 입력해 주세요.'); return }
-    if (items.length === 0 && manualItems.length === 0) { setError('급여 중인 제품을 하나 이상 추가해 주세요.'); return }
+    if (incompatibleItems.length) { setError(language === 'en' ? 'Remove and re-enter manually added products that do not match the selected standard.' : language === 'ja' ? '選択した基準に合わない手入力製品を削除して再入力してください。' : '선택한 기준과 맞지 않는 직접 입력 제품을 삭제하고 다시 입력해 주세요.'); return }
+    if (!(Number(weight) > 0) || !(Number(ageValue) > 0)) { setError(language === 'en' ? 'Enter your pet’s weight and age.' : language === 'ja' ? '体重と年齢を入力してください。' : '체중과 나이를 입력해 주세요.'); return }
+    if (items.length === 0 && manualItems.length === 0) { setError(language === 'en' ? 'Add at least one food or supplement.' : language === 'ja' ? '食べているフードまたはサプリを1つ以上追加してください。' : '급여 중인 제품을 하나 이상 추가해 주세요.'); return }
     recommendationRequest.current += 1
     setRecommendationLoading(false); setRecommendationError(''); setRec(null); setLoading(true)
     try {
@@ -277,14 +277,14 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
       void loadRecommendation(items)
     } catch (e) {
       setAnalysis(null); onAnalysis(null); setRec(null)
-      setError(e instanceof Error ? e.message : '요청을 처리하지 못했습니다.')
+      setError(language === 'ko' && e instanceof Error ? e.message : language === 'en' ? 'The analysis request could not be completed. Please try again.' : '分析リクエストを完了できませんでした。もう一度お試しください。')
     } finally { setLoading(false) }
   }
 
   function saveManual() {
-    if (!manualReady) { setError('제품명, 제공량, 하루 급여량과 0 이상의 올바른 성분 함량을 입력해 주세요.'); return }
+    if (!manualReady) { setError(language === 'en' ? 'Enter a product name, serving size, daily amount, and valid non-negative nutrient values.' : language === 'ja' ? '製品名・1回量・1日の給与量と、0以上の正しい成分量を入力してください。' : '제품명, 제공량, 하루 급여량과 0 이상의 올바른 성분 함량을 입력해 주세요.'); return }
     const nutrients = Object.entries(manual.nutrients).filter(([, value]) => value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0).map(([nutrientId, value]) => ({ nutrientId, amount: Number(value), unit: manual.units[nutrientId] || nutrientOptions(standardProfile).find(([id]) => id === nutrientId)?.[2] || 'MG', ...(standardProfile === 'NIAS_V3' && manual.forms[nutrientId] ? { form: manual.forms[nutrientId] } : {}) }))
-    if (!manual.name.trim() || !nutrients.length || Number(manual.amount) <= 0 || Number(manual.daily) <= 0) { setError('직접 입력 제품명, 급여량, 영양성분을 하나 이상 입력해 주세요.'); return }
+    if (!manual.name.trim() || !nutrients.length || Number(manual.amount) <= 0 || Number(manual.daily) <= 0) { setError(language === 'en' ? 'Enter the product name, serving amounts, and at least one nutrient.' : language === 'ja' ? '手入力製品の名前・給与量・栄養成分を1つ以上入力してください。' : '직접 입력 제품명, 급여량, 영양성분을 하나 이상 입력해 주세요.'); return }
     setManualItems([...manualItems, { name: manual.name.trim(), type: manual.type, servingAmount: Number(manual.amount), servingUnit: manual.unit, dailyAmount: Number(manual.daily), nutrients }])
     setManual({ ...manual, name: '', nutrients: emptyNutrients(), units: {}, forms: {} })
     setIngredientRows([''])
@@ -445,23 +445,23 @@ export default function AnalysisPage({ onSaved, onAnalysis, initialProfileId, in
           <details className="contribution-details"><summary>{t('제품별 성분 기여량 보기', 'View nutrient contributions by product', '製品ごとの栄養成分量を見る')}</summary><ul className="plist">{analysis.contributions.map((item, index) => <li key={`${item.name}-${index}`}><span><span className="tag">{item.type === 'FEED' ? t('사료', 'Food', 'フード') : t('영양제', 'Supplement', 'サプリ')}</span>{item.name} <small>{item.source === 'ESTIMATED' ? t('최소 권장량 추정', 'Minimum recommendation estimate', '推奨最小量による推定') : t('성분표 실제값', 'Product label value', '製品ラベルの値')}</small></span><small>{Object.entries(item.nutrients).map(([id, value]) => `${nutrientLabel(id, id, language)}: ${fmt(value)}`).join(' · ') || t('확인된 성분 없음', 'No confirmed nutrients', '確認済み成分なし')}</small></li>)}</ul></details>
           {Object.entries(analysis.ratios).map(([k, v]) => <p key={k} className="ratio-note"><b>{k === 'calciumPhosphorus' ? '칼슘:인 비율' : k} {fmt(v.value)} : 1</b><span>현재 분석 적용 범위 {v.minimum ?? 1} : 1 ~ {v.maximum ?? (analysis.lifeStage === 'GROWTH_EARLY' ? 1.6 : analysis.lifeStage === 'GROWTH_LATE' && Number(expectedAdultWeight) > 15 && ageDays < 182.625 ? 1.6 : analysis.lifeStage === 'GROWTH_LATE' ? 1.8 : 2)} : 1 · {RATIO[v.status] ?? v.status}</span></p>)}
           {analysis.warnings.length > 0 && <ul className="warns">{analysis.warnings.map(w => <li key={w}>{w}</li>)}</ul>}
-          <p style={{ marginTop: 14 }}><button className="btn" onClick={save} disabled={saved}>{saved ? '리포트 저장됨' : '리포트로 기록 저장'}</button></p>
+          <p style={{ marginTop: 14 }}><button className="btn" onClick={save} disabled={saved}>{saved ? t('리포트 저장됨', 'Report saved', 'レポートを保存しました') : t('리포트로 기록 저장', 'Save report to records', 'レポートを記録に保存')}</button></p>
         </div>
       )}
 
       {rec && (
-        <div className="panel"><h3>추천 영양제</h3><p className="note">{rec.message}</p>
+        <div className="panel"><h3>{t('추천 영양제', 'Suggested supplements', 'おすすめのサプリ')}</h3><p className="note">{rec.message}</p>
           <ul className="plist">
             {rec.items.map(r => (
-              <li key={r.productId}><span>{r.name} <small>하루 {r.dailyAmount} {UNIT[r.unit] ?? r.unit} · 부족 성분 {r.fixedNutrients}종 보완</small></span>
-                <button className="btn ghost" onClick={() => addRecommendation(r)} disabled={items.some(i => i.productId === r.productId) || loading}>급여 목록에 추가</button></li>))}
-            {rec.items.length === 0 && <li className="note">추가로 권장할 제품이 없습니다.</li>}
+              <li key={r.productId}><span>{r.name} <small>{t('하루', 'Daily', '1日')} {r.dailyAmount} {UNIT[r.unit] ?? r.unit} · {t('부족 성분', 'nutrients addressed', '不足成分を補完')} {r.fixedNutrients}</small></span>
+                <button className="btn ghost" onClick={() => addRecommendation(r)} disabled={items.some(i => i.productId === r.productId) || loading}>{t('급여 목록에 추가', 'Add to feeding list', '給餌リストに追加')}</button></li>))}
+            {rec.items.length === 0 && <li className="note">{t('추가로 권장할 제품이 없습니다.', 'No additional products to recommend.', '追加でおすすめできる製品はありません。')}</li>}
           </ul>
-          {rec.excluded.length > 0 && <details><summary className="note">제외된 제품 {rec.excluded.length}개</summary><ul className="warns">{rec.excluded.map(x => <li key={x.productId}>{x.name}: {x.reason}</li>)}</ul></details>}
+          {rec.excluded.length > 0 && <details><summary className="note">{t('제외된 제품', 'Excluded products', '対象外の製品')} {rec.excluded.length}</summary><ul className="warns">{rec.excluded.map(x => <li key={x.productId}>{x.name}: {x.reason}</li>)}</ul></details>}
         </div>
       )}
-      {analysis && recommendationLoading && <div className="panel" role="status"><h3>추천 영양제 계산 중</h3><p className="note">분석 결과를 먼저 표시했어요. 추천 목록은 준비되는 대로 나타납니다.</p></div>}
-      {analysis && recommendationError && <div className="panel"><h3>추천 영양제를 불러오지 못했어요</h3><p className="note">분석 결과는 정상적으로 사용할 수 있습니다.</p><button className="btn ghost" onClick={() => void loadRecommendation(items)}>추천만 다시 불러오기</button></div>}
+      {analysis && recommendationLoading && <div className="panel" role="status"><h3>{t('추천 영양제 계산 중', 'Finding supplement suggestions', 'おすすめのサプリを計算中')}</h3><p className="note">{t('분석 결과를 먼저 표시했어요. 추천 목록은 준비되는 대로 나타납니다.', 'Your analysis is ready. Supplement suggestions will appear as soon as they are available.', '分析結果を先に表示しました。おすすめ一覧は準備でき次第表示されます。')}</p></div>}
+      {analysis && recommendationError && <div className="panel"><h3>{t('추천 영양제를 불러오지 못했어요', 'Could not load supplement suggestions', 'おすすめのサプリを読み込めませんでした')}</h3><p className="note">{t('분석 결과는 정상적으로 사용할 수 있습니다.', 'Your analysis results are still available.', '分析結果は引き続きご利用いただけます。')}</p><button className="btn ghost" onClick={() => void loadRecommendation(items)}>{t('추천만 다시 불러오기', 'Retry suggestions', 'おすすめを再読み込み')}</button></div>}
       {!analysis && <div className="panel result-placeholder"><div className="result-title"><span>STEP 3 · RESULT</span><h3>{t('분석 결과', 'Analysis results', '分析結果')}</h3><p>{t('위에서 정보를 입력하고 분석을 시작하면 이곳에 결과가 나타나요.', 'Enter your pet’s information above and start an analysis to see the results here.', '上でペット情報を入力して分析を始めると、ここに結果が表示されます。')}</p></div></div>}
       </section>
 
