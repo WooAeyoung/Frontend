@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function PetCompanion() {
+export default function PetCompanion({ language = 'ko' }: { language?: 'ko' | 'en' | 'ja' }) {
   const [look, setLook] = useState({ x: 0, y: 0 })
   const [sleeping, setSleeping] = useState(false)
   const idle = useRef<number | undefined>(undefined)
@@ -10,12 +10,12 @@ export default function PetCompanion() {
     window.addEventListener('mousemove', move); wake()
     return () => { window.removeEventListener('mousemove', move); window.clearTimeout(idle.current) }
   }, [])
-  return <div className={`pet-companion ${sleeping ? 'is-sleeping' : ''}`} aria-label="분석을 지켜보는 반려동물">
+  return <div className={`pet-companion ${sleeping ? 'is-sleeping' : ''}`} aria-label={language === 'en' ? 'Pet companion' : language === 'ja' ? '見守っているペットのキャラクター' : '분석을 지켜보는 반려동물'}>
     <div className="pet-shadow" />
     <div className="pet-body"><span className="pet-ear left"/><span className="pet-ear right"/><span className="pet-face">
       {[0, 1].map(eye => <span className="pet-eye" key={eye}><span className="pet-pupil" style={{ transform: `translate(${look.x * 2}px, ${look.y * 2}px)` }} /></span>)}<span className="pet-nose" />
     </span></div>
     <span className="pet-ball" />
-    <span className="pet-bubble">{sleeping ? 'zzZ' : '같이 볼까요?'}</span>
+    <span className="pet-bubble">{sleeping ? 'zzZ' : language === 'en' ? 'Shall we take a look?' : language === 'ja' ? '一緒に見てみましょうか？' : '같이 볼까요?'}</span>
   </div>
 }
