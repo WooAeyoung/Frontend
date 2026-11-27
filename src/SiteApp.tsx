@@ -90,8 +90,8 @@ export default function SiteApp() {
         <nav lang={menuLanguage}>{MENU.map(([k, label]) => <button key={k} className={page === k ? 'on' : ''} onClick={() => { if (k === 'analysis') { setProfileToLoad(undefined); setAnalysisDraft(undefined) } window.dispatchEvent(new CustomEvent('wooaeyoung:tour-page', { detail: k })); go(k, true) }}>{menuLanguage === 'en' ? EN_MENU[k] : menuLanguage === 'ja' ? JA_MENU[k] : label}</button>)}<button type="button" className="feature-tour-trigger" onClick={() => { window.dispatchEvent(new CustomEvent('wooaeyoung:tour-music-start')); setTourRequest(value => value + 1) }}><Compass /> {menuLanguage === 'en' ? 'Feature tour' : menuLanguage === 'ja' ? '機能案内' : '기능 안내'}</button></nav>
       </div></header>
       <main className={`site-main page-${page}`}>
-        {page === 'home' && <Home go={go} beginAnalysis={draft => { const saved = saveProfile({ name: draft.name, species: draft.species, weightKg: draft.weightKg, age: { value: draft.ageYears * 12, unit: 'MONTH' }, completeFeed: true }); setAnalysisDraft(draft); setProfileToLoad(saved.id); setLoadSeq(n => n + 1); go('analysis') }} />}
-        {page === 'about' && <AboutPage go={go} />}
+        {page === 'home' && <Home go={go} language={menuLanguage} beginAnalysis={draft => { const saved = saveProfile({ name: draft.name, species: draft.species, weightKg: draft.weightKg, age: { value: draft.ageYears * 12, unit: 'MONTH' }, completeFeed: true }); setAnalysisDraft(draft); setProfileToLoad(saved.id); setLoadSeq(n => n + 1); go('analysis') }} />}
+        {page === 'about' && <AboutPage go={go} language={menuLanguage} />}
         {/* 실제 분석 화면은 계속 마운트해 두어 다른 화면에 다녀와도 입력값·결과가 유지된다. */}
         {analysisVisited && <div hidden={page !== 'analysis'}><AnalysisPage onSaved={() => setTick(value => value + 1)} onAnalysis={setLatestAnalysis} initialProfileId={profileToLoad} initialDraft={analysisDraft} loadSeq={loadSeq} active={page === 'analysis'} /></div>}
         {page === 'records' && <Records key={tick} go={go} selectProfile={id => { setAnalysisDraft(undefined); setProfileToLoad(id); setLoadSeq(n => n + 1); go('analysis') }} />}
