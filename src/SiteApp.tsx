@@ -98,7 +98,7 @@ export default function SiteApp() {
         {page === 'support' && <Support language={menuLanguage} />}
       </main>
       <footer className="site-f"><b>우애영</b><br />{menuLanguage === 'en' ? 'Pet nutrition analysis service' : menuLanguage === 'ja' ? 'ペット栄養分析サービス' : '반려동물 영양제 분석 서비스'}<br />© 2026 우애영. All rights reserved.</footer>
-      <RoamingPet />
+      <RoamingPet language={menuLanguage} />
       <JarvisAssistant onNavigate={go} analysis={latestAnalysis} records={savedRecords} language={menuLanguage} />
       <FeatureTour requestKey={tourRequest} currentPage={page} onNavigate={destination => go(destination, false, false)} language={menuLanguage} />
     </>
