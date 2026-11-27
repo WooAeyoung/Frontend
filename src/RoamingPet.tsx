@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 
+type Language = 'ko' | 'en' | 'ja'
+
 type PetState = { x: number; y: number; paused: boolean; hidden: boolean }
 const KEY = 'wooaeyoung-web-pet-v1'
 const readState = (): Partial<PetState> => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') } catch { return {} } }
 
-export default function RoamingPet() {
+export default function RoamingPet({ language = 'ko' }: { language?: Language }) {
   const saved = useRef(readState())
   const [paused, setPaused] = useState(Boolean(saved.current.paused))
   const [hidden, setHidden] = useState(Boolean(saved.current.hidden))
@@ -65,5 +67,10 @@ export default function RoamingPet() {
   const up = () => { setDragging(false); persist() }
   const update = (next: Partial<PetState>) => { if ('paused' in next) setPaused(Boolean(next.paused)); if ('hidden' in next) setHidden(Boolean(next.hidden)); persist(next); setMenuOpen(false) }
   const reset = () => { const next = { x: Math.max(12, window.innerWidth - 110), y: Math.max(12, window.innerHeight - 120) }; setPosition(next); persist(next); setMenuOpen(false) }
-  return <>{!hidden && <div className={`roaming-pet web-pet ${dragging ? 'pet-dragging' : ''}`} style={{ left: position.x, top: position.y, right: 'auto', bottom: 'auto' }} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} role="group" aria-label="화면 속 반려견"><button className="web-pet-menu" onClick={() => setMenuOpen(value => !value)} aria-label="펫 설정" aria-expanded={menuOpen}>⋯</button><img className="pet-sprite" src="/pets/dog-transparent.png" alt="골든리트리버" />{menuOpen && <div className="web-pet-actions"><button onClick={() => update({ paused: !paused })}>{paused ? '걷기 재개' : '걷기 멈추기'}</button><button onClick={reset}>위치 초기화</button><button onClick={() => update({ hidden: true })}>펫 숨기기</button></div>}</div>}{hidden && <button className="web-pet-show" onClick={() => update({ hidden: false })}>🐾 펫 보이기</button>}</>
+  const labels = language === 'en'
+    ? { group: 'Roaming pet', menu: 'Pet settings', alt: 'Golden retriever', resume: 'Resume walking', pause: 'Pause walking', reset: 'Reset position', hide: 'Hide pet', show: '🐾 Show pet' }
+    : language === 'ja'
+      ? { group: '画面を歩くペット', menu: 'ペットの設定', alt: 'ゴールデンレトリバー', resume: '歩行を再開', pause: '歩行を停止', reset: '位置をリセット', hide: 'ペットを隠す', show: '🐾 ペットを表示' }
+      : { group: '화면 속 반려견', menu: '펫 설정', alt: '골든리트리버', resume: '걷기 재개', pause: '걷기 멈추기', reset: '위치 초기화', hide: '펫 숨기기', show: '🐾 펫 보이기' }
+  return <>{!hidden && <div className={`roaming-pet web-pet ${dragging ? 'pet-dragging' : ''}`} style={{ left: position.x, top: position.y, right: 'auto', bottom: 'auto' }} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} role="group" aria-label={labels.group}><button className="web-pet-menu" onClick={() => setMenuOpen(value => !value)} aria-label={labels.menu} aria-expanded={menuOpen}>⋯</button><img className="pet-sprite" src="/pets/dog-transparent.png" alt={labels.alt} />{menuOpen && <div className="web-pet-actions"><button onClick={() => update({ paused: !paused })}>{paused ? labels.resume : labels.pause}</button><button onClick={reset}>{labels.reset}</button><button onClick={() => update({ hidden: true })}>{labels.hide}</button></div>}</div>}{hidden && <button className="web-pet-show" onClick={() => update({ hidden: false })}>{labels.show}</button>}</>
 }

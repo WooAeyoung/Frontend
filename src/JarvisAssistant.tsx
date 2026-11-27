@@ -12,6 +12,17 @@ type Recognition = { lang: string; continuous: boolean; interimResults: boolean;
 type RecognitionConstructor = new () => Recognition
 type CommandAnswer = { answer: string; page?: Page; awaitPetSelection?: boolean; contextPet?: string }
 
+function speakAnswer(text: string, language: 'ko' | 'en' | 'ja') {
+  if (!('speechSynthesis' in window)) return
+  const locale = language === 'ja' ? 'ja-JP' : language === 'en' ? 'en-US' : 'ko-KR'
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = locale
+  const voice = window.speechSynthesis.getVoices().find(candidate => candidate.lang.toLowerCase() === locale.toLowerCase())
+    ?? window.speechSynthesis.getVoices().find(candidate => candidate.lang.toLowerCase().startsWith(language))
+  if (voice) utterance.voice = voice
+  window.speechSynthesis.speak(utterance)
+}
+
 const WELCOME = '안녕하세요. 우애영의 자비스예요. 궁금한 점을 편하게 말씀해 주세요. 영양 분석 결과와 기록을 차근차근 함께 살펴드릴게요.'
 const QUICK_PROMPTS = ['오늘 분석 결과 요약해 줘', '칼슘:인 비율 알려줘', '부족한 성분만 보여줘', '지난 기록 열어줘']
 const COPY = {
@@ -197,7 +208,7 @@ export default function JarvisAssistant({ onNavigate, analysis, records, languag
       setAwaitingPetSelection(Boolean(localResponse.awaitPetSelection))
       if (localResponse.contextPet) setContextPet(localResponse.contextPet)
       setMessages(previous => [...previous, { from: 'assistant', text: localResponse.answer }])
-      if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(localResponse.answer))
+      if (speak) speakAnswer(localResponse.answer, language)
       if (localResponse.page) onNavigate(localResponse.page)
       return
     }
@@ -208,7 +219,7 @@ export default function JarvisAssistant({ onNavigate, analysis, records, languag
       setFailedInput(['AI_RATE_LIMIT', 'AI_TIMEOUT_OR_NETWORK', 'AI_PROVIDER_ERROR', 'AI_EMPTY_RESPONSE', 'AI_UNAVAILABLE'].includes(response.intent) ? text : '')
       const answer = language === 'ko' ? response.answer : BACKEND_FAILURES[language][response.intent as keyof typeof BACKEND_FAILURES[typeof language]] ?? response.answer
       setMessages(previous => [...previous, { from: 'assistant', text: answer }])
-      if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(answer))
+      if (speak) speakAnswer(answer, language)
       if (response.page) onNavigate(response.page)
     } catch (error) {
       setFailedInput(text)
