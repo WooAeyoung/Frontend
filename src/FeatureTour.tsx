@@ -15,6 +15,46 @@ type TourStep = {
   lockScroll?: boolean
 }
 
+type TourLanguage = 'ko' | 'en' | 'ja'
+type TourCopy = { steps: Omit<TourStep, 'page' | 'selector' | 'scanPage' | 'lockScroll'>[]; label: string; move: string; moveAria: string; close: string; interaction: string; skip: string; finish: string; previous: string; next: string; previousAria: string; progress: (current: number, total: number) => string }
+
+const TOUR_COPY: Record<Exclude<TourLanguage, 'ko'>, TourCopy> = {
+  en: {
+    steps: [
+      { eyebrow: 'Home', title: 'See the whole care journey at a glance', description: 'Scroll through the home page to explore the journey from your pet’s profile to nutrition analysis and daily records.' },
+      { eyebrow: 'Main menu', title: 'Go straight to the feature you need', description: 'Open Home, About Us, Nutrition analysis, Pet records, or Support whenever you need them.' },
+      { eyebrow: 'About Us', title: 'Learn about our standards and principles', description: 'See how Wooaeyoung organizes nutrition information and helps you understand results with care.' },
+      { eyebrow: 'Nutrition analysis', title: 'Review everything your pet eats', description: 'Enter your pet’s profile, food, and supplements to review nutrient levels and suggested next steps.' },
+      { eyebrow: 'Pet records', title: 'Keep analysis and daily care together', description: 'Review today’s wellbeing, nutrition records, health trends, and records for each pet.' },
+      { eyebrow: 'Import and manage records', title: 'Bring in reports and manage saved records', description: 'Use “Import JSON/PDF” in Nutrition records to bring in a report. Find delete options under More or Profile settings. The tour previews these controls without deleting anything.' },
+      { eyebrow: 'Search the care guide', title: 'Find answers to your questions', description: 'Enter a keyword in Support search to find relevant help articles.' },
+      { eyebrow: 'Support', title: 'Find service and health guidance', description: 'Browse search, help categories, and question lists, then open the guidance you need.' },
+      { eyebrow: 'Care companion', title: 'A little friend to look around with', description: 'Find this companion below Support. It watches your cursor and rests when you pause, then wakes when you return.' },
+      { eyebrow: 'Find a veterinarian', title: 'Look for nearby veterinary clinics', description: 'Allow location access to find nearby clinics. Your location is used only to search for clinics.' },
+      { eyebrow: 'JARVIS', title: 'Ask about your pet’s results', description: 'JARVIS can summarize available analyses and explain nutrients. Open it with the JARVIS button at the bottom of any page.' },
+      { eyebrow: 'On-screen pet', title: 'Meet your little companion around the site', description: 'Move the pet around, or use its settings to pause walking, hide it, and bring it back.' },
+    ],
+    label: 'Feature tour', move: 'Feature tour · Move', moveAria: 'Move the tour card. Use arrow keys to move and Home to reset.', close: 'Close feature tour', interaction: 'You can still click menus and use the page while the tour is open.', skip: 'Skip tour', finish: 'Finish tour', previous: 'Previous', next: 'Next', previousAria: 'Previous feature', progress: (current, total) => `Step ${current} of ${total}`,
+  },
+  ja: {
+    steps: [
+      { eyebrow: 'ホーム', title: 'ウエヨンのケアの流れをひと目で', description: 'ホーム画面をスクロールして、ペットのプロフィール入力から栄養分析、日々の記録までをご覧ください。' },
+      { eyebrow: 'メインメニュー', title: '必要な機能へすぐに移動', description: 'ホーム、About Us、栄養分析、ペットの記録、サポートをいつでも開けます。' },
+      { eyebrow: 'About Us', title: '分析基準とサービスの方針', description: 'ウエヨンが栄養情報をどのような基準で整理し、結果を理解するお手伝いをしているかをご紹介します。' },
+      { eyebrow: '栄養分析', title: '食べているものをまとめて確認', description: 'ペットのプロフィール、フード、サプリを入力すると、栄養素の状態と次の確認ポイントを見られます。' },
+      { eyebrow: 'ペットの記録', title: '分析と毎日のケアをまとめて管理', description: '今日の体調、栄養記録、健康の推移、ほかのペットの記録を確認できます。' },
+      { eyebrow: '記録の取り込み・管理', title: 'レポートを取り込み、記録を管理', description: '栄養記録の「JSON/PDFを読み込む」からレポートを取り込めます。「その他」やプロフィール管理から削除メニューを確認できます。この案内では削除を実行しません。' },
+      { eyebrow: 'ケアガイドを検索', title: '知りたいことをすぐに検索', description: 'サポートの検索欄にキーワードを入力すると、関連するヘルプを探せます。' },
+      { eyebrow: 'サポート', title: '使い方や健康に関する案内を探す', description: '検索、ヘルプの分類、質問一覧から必要な案内を選べます。' },
+      { eyebrow: 'ケアの仲間', title: '一緒に見てくれる小さな友だち', description: 'サポートの下にいる仲間です。カーソルを目で追い、操作が止まると休み、再び使うと目を覚まします。' },
+      { eyebrow: '動物病院を探す', title: '近くの動物病院を確認', description: '位置情報を許可すると、現在地の近くにある病院を探せます。位置情報は病院検索にのみ使用します。' },
+      { eyebrow: 'JARVIS', title: 'ペットの分析結果について質問', description: 'JARVISは分析結果の要約や栄養素の説明をお手伝いします。各ページ下部のJARVISボタンから開けます。' },
+      { eyebrow: '画面のペット', title: '画面を一緒に歩く小さな友だち', description: 'ペットを好きな場所へ移動できます。設定から歩行を停止したり、非表示にしたり、再び表示できます。' },
+    ],
+    label: '機能案内', move: '機能案内 · 移動', moveAria: '案内カードを移動します。矢印キーで移動、Homeキーで位置をリセットします。', close: '機能案内を閉じる', interaction: '案内中もメニューや画面の機能を直接操作できます。', skip: 'スキップ', finish: '案内を終了', previous: '戻る', next: '次へ', previousAria: '前の機能', progress: (current, total) => `${total}段階中 ${current}段階目`,
+  },
+}
+
 const STEPS: TourStep[] = [
   { page: 'home', selector: '.story-stage', eyebrow: '홈', title: '우애영의 돌봄 흐름을 한눈에', description: '첫 화면을 천천히 내려보면 반려동물 정보 입력부터 영양 분석, 기록 관리까지 전체 이용 흐름을 이야기처럼 살펴볼 수 있어요.', scanPage: true },
   { page: 'home', selector: '.site-h nav', eyebrow: '전체 메뉴', title: '필요한 기능으로 바로 이동', description: '홈, 우애영 소개, 영양제 분석, 반려동물 기록, 고객센터를 언제든 바로 열 수 있어요.' },
@@ -34,7 +74,7 @@ type Rect = { top: number; left: number; width: number; height: number }
 
 const FIRST_STEP_BY_PAGE: Record<Page, number> = { home: 0, about: 2, analysis: 3, records: 4, support: 6 }
 
-export default function FeatureTour({ onNavigate, requestKey, currentPage }: { onNavigate: (page: Page) => void; requestKey: number; currentPage: Page }) {
+export default function FeatureTour({ onNavigate, requestKey, currentPage, language = 'ko' }: { onNavigate: (page: Page) => void; requestKey: number; currentPage: Page; language?: TourLanguage }) {
   const [active, setActive] = useState(false)
   const [index, setIndex] = useState(0)
   const [pausedStep, setPausedStep] = useState<number | null>(null)
@@ -67,7 +107,8 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
     }
   }, [active, index, moveCard, position])
   const music = useRef<HTMLAudioElement | null>(null)
-  const step = STEPS[index]
+  const step = language === 'ko' ? STEPS[index] : { ...STEPS[index], ...TOUR_COPY[language].steps[index] }
+  const copy = language === 'ko' ? null : TOUR_COPY[language]
 
   useEffect(() => {
     const audio = new Audio('/audio/first-snow-moment.mp3')
@@ -306,12 +347,12 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
   const petTarget = (step.selector === '.support-page .pet-companion' || index === STEPS.length - 1) && rect
   const targetSide = petTarget ? `${rect.left + rect.width / 2 > window.innerWidth / 2 ? 'target-right' : 'target-left'} ${rect.top + rect.height / 2 > window.innerHeight / 2 ? 'target-bottom' : 'target-top'}` : ''
 
-  return <div className="feature-tour" role="region" aria-label="기능 둘러보기" aria-live="polite" data-tour-step={index + 1}>
+  return <div className="feature-tour" role="region" aria-label={copy?.label ?? '기능 둘러보기'} aria-live="polite" data-tour-step={index + 1}>
     <div className="feature-tour-shade" />
     {rect && <div className="feature-tour-spotlight" style={rect} aria-hidden="true" />}
     <section ref={cardRef} className={`feature-tour-card ${index >= 7 ? 'is-left' : ''} ${petTarget ? `avoid-target ${targetSide}` : ''}`} style={position ? { ...position, right: 'auto', bottom: 'auto' } : undefined}>
       <div className="feature-tour-card-head">
-        <button type="button" className="feature-tour-move" aria-label="안내창 위치 이동. 방향키로 이동, 홈 키로 초기화"
+        <button type="button" className="feature-tour-move" aria-label={copy?.moveAria ?? '안내창 위치 이동. 방향키로 이동, 홈 키로 초기화'}
           onPointerDown={event => {
             const card = cardRef.current?.getBoundingClientRect()
             if (!card || !event.isPrimary || event.button !== 0) return
@@ -336,19 +377,19 @@ export default function FeatureTour({ onNavigate, requestKey, currentPage }: { o
               event.preventDefault()
               moveCard(card.left + offset[0], card.top + offset[1])
             }
-          }}><Move size={16} /> 기능 둘러보기 · 이동</button>
-        <button type="button" onClick={close} aria-label="기능 안내 닫기"><X size={18} /></button>
+          }}><Move size={16} /> {copy?.move ?? '기능 둘러보기 · 이동'}</button>
+        <button type="button" onClick={close} aria-label={copy?.close ?? '기능 안내 닫기'}><X size={18} /></button>
       </div>
-      <div className="feature-tour-progress" aria-label={`${STEPS.length}단계 중 ${index + 1}단계`}><i style={{ width: `${((index + 1) / STEPS.length) * 100}%` }} /></div>
+      <div className="feature-tour-progress" aria-label={copy?.progress(index + 1, STEPS.length) ?? `${STEPS.length}단계 중 ${index + 1}단계`}><i style={{ width: `${((index + 1) / STEPS.length) * 100}%` }} /></div>
       <small>{String(index + 1).padStart(2, '0')} / {String(STEPS.length).padStart(2, '0')} · {step.eyebrow}</small>
       <h2>{step.title}</h2>
       <p>{step.description}</p>
-      <p className="feature-tour-interaction">안내 중에도 메뉴와 화면 기능을 직접 눌러보실 수 있어요.</p>
+      <p className="feature-tour-interaction">{copy?.interaction ?? '안내 중에도 메뉴와 화면 기능을 직접 눌러보실 수 있어요.'}</p>
       <div className="feature-tour-actions">
-        <button type="button" className="feature-tour-skip" onClick={close}>{last ? '안내 닫기' : '건너뛰기'}</button>
+        <button type="button" className="feature-tour-skip" onClick={close}>{last ? copy?.finish ?? '안내 닫기' : copy?.skip ?? '건너뛰기'}</button>
         <div>
-          <button type="button" onClick={() => { setPausedStep(null); setIndex(current => Math.max(0, current - 1)) }} disabled={index === 0} aria-label="이전 기능"><ChevronLeft size={17} /> 이전</button>
-          <button type="button" className="feature-tour-next" onClick={() => { if (last) close(); else { setPausedStep(null); setIndex(current => Math.min(current + 1, STEPS.length - 1)) } }}>{last ? '둘러보기 완료' : <>다음 <ChevronRight size={17} /></>}</button>
+          <button type="button" onClick={() => { setPausedStep(null); setIndex(current => Math.max(0, current - 1)) }} disabled={index === 0} aria-label={copy?.previousAria ?? '이전 기능'}><ChevronLeft size={17} /> {copy?.previous ?? '이전'}</button>
+          <button type="button" className="feature-tour-next" onClick={() => { if (last) close(); else { setPausedStep(null); setIndex(current => Math.min(current + 1, STEPS.length - 1)) } }}>{last ? copy?.finish ?? '둘러보기 완료' : <>{copy?.next ?? '다음'} <ChevronRight size={17} /></>}</button>
         </div>
       </div>
     </section>
