@@ -86,18 +86,18 @@ export default function SiteApp() {
     <>
       <header className="site-h"><div className="w">
         <button className="logo" onClick={() => go('home')}>우애영</button>
-        <label style={{ fontSize: 12 }}>언어 / Language / 言語 <select aria-label="언어 / Language / 言語" value={menuLanguage} onChange={event => changeMenuLanguage(event.target.value === 'en' || event.target.value === 'ja' ? event.target.value : 'ko')}><option value="ko">한국어</option><option value="en">English</option><option value="ja">日本語</option></select></label>
+        <label style={{ fontSize: 12 }}>{menuLanguage === 'en' ? 'Language' : menuLanguage === 'ja' ? '言語' : '언어'} <select aria-label={menuLanguage === 'en' ? 'Language' : menuLanguage === 'ja' ? '言語' : '언어'} value={menuLanguage} onChange={event => changeMenuLanguage(event.target.value === 'en' || event.target.value === 'ja' ? event.target.value : 'ko')}><option value="ko">한국어</option><option value="en">English</option><option value="ja">日本語</option></select></label>
         <nav lang={menuLanguage}>{MENU.map(([k, label]) => <button key={k} className={page === k ? 'on' : ''} onClick={() => { if (k === 'analysis') { setProfileToLoad(undefined); setAnalysisDraft(undefined) } window.dispatchEvent(new CustomEvent('wooaeyoung:tour-page', { detail: k })); go(k, true) }}>{menuLanguage === 'en' ? EN_MENU[k] : menuLanguage === 'ja' ? JA_MENU[k] : label}</button>)}<button type="button" className="feature-tour-trigger" onClick={() => { window.dispatchEvent(new CustomEvent('wooaeyoung:tour-music-start')); setTourRequest(value => value + 1) }}><Compass /> {menuLanguage === 'en' ? 'Feature tour' : menuLanguage === 'ja' ? '機能案内' : '기능 안내'}</button></nav>
       </div></header>
       <main className={`site-main page-${page}`}>
         {page === 'home' && <Home go={go} language={menuLanguage} beginAnalysis={draft => { const saved = saveProfile({ name: draft.name, species: draft.species, weightKg: draft.weightKg, age: { value: draft.ageYears * 12, unit: 'MONTH' }, completeFeed: true }); setAnalysisDraft(draft); setProfileToLoad(saved.id); setLoadSeq(n => n + 1); go('analysis') }} />}
         {page === 'about' && <AboutPage go={go} language={menuLanguage} />}
         {/* 실제 분석 화면은 계속 마운트해 두어 다른 화면에 다녀와도 입력값·결과가 유지된다. */}
-        {analysisVisited && <div hidden={page !== 'analysis'}><AnalysisPage onSaved={() => setTick(value => value + 1)} onAnalysis={setLatestAnalysis} initialProfileId={profileToLoad} initialDraft={analysisDraft} loadSeq={loadSeq} active={page === 'analysis'} /></div>}
+        {analysisVisited && <div hidden={page !== 'analysis'}><AnalysisPage onSaved={() => setTick(value => value + 1)} onAnalysis={setLatestAnalysis} initialProfileId={profileToLoad} initialDraft={analysisDraft} loadSeq={loadSeq} active={page === 'analysis'} language={menuLanguage} /></div>}
         {page === 'records' && <Records key={tick} go={go} selectProfile={id => { setAnalysisDraft(undefined); setProfileToLoad(id); setLoadSeq(n => n + 1); go('analysis') }} />}
         {page === 'support' && <Support language={menuLanguage} />}
       </main>
-      <footer className="site-f"><b>우애영</b><br />반려동물 영양제 분석 서비스<br />© 2026 우애영. All rights reserved.</footer>
+      <footer className="site-f"><b>우애영</b><br />{menuLanguage === 'en' ? 'Pet nutrition analysis service' : menuLanguage === 'ja' ? 'ペット栄養分析サービス' : '반려동물 영양제 분석 서비스'}<br />© 2026 우애영. All rights reserved.</footer>
       <RoamingPet />
       <JarvisAssistant onNavigate={go} analysis={latestAnalysis} records={savedRecords} />
       <FeatureTour requestKey={tourRequest} currentPage={page} onNavigate={destination => go(destination, false, false)} />
