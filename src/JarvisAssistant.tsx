@@ -5,15 +5,35 @@ import type { Page } from './Home'
 import type { SavedRecord } from './Records'
 import './jarvis.css'
 
-type Props = { onNavigate: (page: Page) => void; analysis: Analysis | null; records: SavedRecord[] }
+type Props = { onNavigate: (page: Page) => void; analysis: Analysis | null; records: SavedRecord[]; language?: 'ko' | 'en' | 'ja' }
 type Message = { from: 'user' | 'assistant'; text: string }
 type SpeechResult = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type Recognition = { lang: string; continuous: boolean; interimResults: boolean; onresult: ((event: SpeechResult) => void) | null; onerror: (() => void) | null; onend: (() => void) | null; start: () => void; stop: () => void }
 type RecognitionConstructor = new () => Recognition
 type CommandAnswer = { answer: string; page?: Page; awaitPetSelection?: boolean; contextPet?: string }
 
+function speakAnswer(text: string, language: 'ko' | 'en' | 'ja') {
+  if (!('speechSynthesis' in window)) return
+  const locale = language === 'ja' ? 'ja-JP' : language === 'en' ? 'en-US' : 'ko-KR'
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = locale
+  const voice = window.speechSynthesis.getVoices().find(candidate => candidate.lang.toLowerCase() === locale.toLowerCase())
+    ?? window.speechSynthesis.getVoices().find(candidate => candidate.lang.toLowerCase().startsWith(language))
+  if (voice) utterance.voice = voice
+  window.speechSynthesis.speak(utterance)
+}
+
 const WELCOME = '안녕하세요. 우애영의 자비스예요. 궁금한 점을 편하게 말씀해 주세요. 영양 분석 결과와 기록을 차근차근 함께 살펴드릴게요.'
 const QUICK_PROMPTS = ['오늘 분석 결과 요약해 줘', '칼슘:인 비율 알려줘', '부족한 성분만 보여줘', '지난 기록 열어줘']
+const COPY = {
+  ko: { welcome: WELCOME, status: '자동 응답 · 케어 도우미', hasAnalysis: '최근 분석 있음', noAnalysis: '분석 결과 없음', records: (count: number) => `저장 기록 ${count}건`, noRecords: '저장 기록 없음', linked: '18개 성분 연동', basic: '기본 안내', today: '오늘', ask: '이렇게 물어보세요', retryHint: '방금 질문을 그대로 다시 확인할 수 있어요.', retry: '다시 시도', listen: '음성 인식 시작', stopListening: '음성 인식 중지', loading: '답변 생성 중…', placeholder: '자비스에게 물어보기', send: '메시지 보내기', note: '건강 상태의 진단이나 처방을 대신하지 않습니다.', panel: '자비스 대화창', assistant: '우애영 AI 도우미', voiceOn: '음성 답변 켜기', voiceOff: '음성 답변 끄기', close: '자비스 닫기', voiceUnsupported: '이 브라우저에서는 음성 인식을 지원하지 않아요. 텍스트로 입력해 주세요.', voiceFailed: '음성을 인식하지 못했어요. 마이크 권한을 확인하고 다시 시도해 주세요.', quick: QUICK_PROMPTS },
+  en: { welcome: 'Hello, I’m JARVIS from Wooaeyoung. Ask me anything. I can help you review nutrition analyses and saved records.', status: 'Auto-reply · Care assistant', hasAnalysis: 'Recent analysis available', noAnalysis: 'No analysis yet', records: (count: number) => `${count} saved record${count === 1 ? '' : 's'}`, noRecords: 'No saved records', linked: '18 nutrients connected', basic: 'General guidance', today: 'Today', ask: 'Try asking', retryHint: 'I can check your last question again.', retry: 'Try again', listen: 'Start voice input', stopListening: 'Stop voice input', loading: 'Preparing an answer…', placeholder: 'Ask JARVIS', send: 'Send message', note: 'This is not a diagnosis or treatment recommendation.', panel: 'JARVIS chat', assistant: 'Wooaeyoung AI assistant', voiceOn: 'Turn voice replies on', voiceOff: 'Turn voice replies off', close: 'Close JARVIS', voiceUnsupported: 'Voice recognition is not supported in this browser. Please type your question.', voiceFailed: 'I couldn’t recognize your voice. Check microphone access and try again.', quick: ['Summarize today’s analysis', 'What is the calcium to phosphorus ratio?', 'Show nutrients marked low', 'Open my previous records'] },
+  ja: { welcome: 'こんにちは。ウエヨンのJARVISです。栄養分析や保存した記録を一緒に確認します。気軽にお尋ねください。', status: '自動応答 · ケアアシスタント', hasAnalysis: '最近の分析があります', noAnalysis: '分析結果はありません', records: (count: number) => `保存記録 ${count}件`, noRecords: '保存記録はありません', linked: '18項目の栄養素と連携', basic: '基本案内', today: '今日', ask: 'こんな質問ができます', retryHint: '直前の質問をもう一度確認できます。', retry: '再試行', listen: '音声入力を開始', stopListening: '音声入力を停止', loading: '回答を準備しています…', placeholder: 'JARVISに質問する', send: 'メッセージを送信', note: '健康状態の診断や治療の提案を行うものではありません。', panel: 'JARVISチャット', assistant: 'ウエヨン AIアシスタント', voiceOn: '音声回答をオンにする', voiceOff: '音声回答をオフにする', close: 'JARVISを閉じる', voiceUnsupported: 'このブラウザーでは音声認識を利用できません。テキストで入力してください。', voiceFailed: '音声を認識できませんでした。マイクの権限を確認して再度お試しください。', quick: ['今日の分析結果を要約して', 'カルシウムとリンの比率は？', '不足と判定された成分を表示して', '過去の記録を開いて'] }
+} as const
+const BACKEND_FAILURES = {
+  en: { AI_NOT_CONFIGURED: 'The personalized answer service is not configured yet. Analysis summaries and saved records are still available.', AI_AUTHENTICATION: 'The AI provider rejected its credentials. The service team needs to check the API key.', AI_MODEL_NOT_FOUND: 'The configured AI model is unavailable. The service team needs to check the model setting.', AI_RATE_LIMIT: 'The AI provider has reached its usage limit. Please try again later.', AI_TIMEOUT_OR_NETWORK: 'The AI response is taking longer than expected. Please try again in a little while.', AI_PROVIDER_ERROR: 'The AI provider is temporarily unavailable. Please try again later.', AI_EMPTY_RESPONSE: 'The AI provider returned an empty answer. Please try again.', AI_UNAVAILABLE: 'The personalized answer service is temporarily unavailable. Please try again later.' },
+  ja: { AI_NOT_CONFIGURED: '個別回答サービスはまだ設定されていません。分析の要約と保存記録は引き続きご利用いただけます。', AI_AUTHENTICATION: 'AIプロバイダーの認証に失敗しました。APIキーの確認が必要です。', AI_MODEL_NOT_FOUND: '設定されたAIモデルを利用できません。モデル設定の確認が必要です。', AI_RATE_LIMIT: 'AIプロバイダーの利用上限に達しました。しばらくしてから再度お試しください。', AI_TIMEOUT_OR_NETWORK: 'AIの回答に時間がかかっています。少し待ってから再度お試しください。', AI_PROVIDER_ERROR: 'AIプロバイダーを一時的に利用できません。後ほど再度お試しください。', AI_EMPTY_RESPONSE: 'AIプロバイダーから回答がありませんでした。もう一度お試しください。', AI_UNAVAILABLE: '個別回答サービスを一時的に利用できません。後ほど再度お試しください。' }
+} as const
 
 function describeAnalysis(analysis: Analysis | null, record?: SavedRecord) {
   if (!analysis) return '아직 완료된 분석 결과가 없어요. 반려동물 정보와 급여 제품을 입력한 뒤 “맞춤 분석 시작하기”를 눌러 주세요.'
@@ -56,6 +76,40 @@ function nutrientExplanation(analysis: Analysis | null, phrase: string) {
     return `${nutrient.name}이 부족으로 나온 이유는 확인된 하루 섭취량 ${nutrient.total}${unit}이 적용 최소 기준 ${nutrient.minimum}${unit}보다 낮기 때문이에요.${caveat}`
   }
   return `${nutrient.name}은 이 분석에서 ${status}으로 표시됐어요. 제품 라벨의 함량과 하루 급여량을 확인한 뒤 다시 분석해 주세요.`
+}
+
+const NUTRIENT_NAMES: Record<string, { en: string; ja: string }> = {
+  EPA_DHA: { en: 'EPA+DHA (omega-3)', ja: 'EPA+DHA（オメガ3）' }, CALCIUM: { en: 'Calcium', ja: 'カルシウム' }, PHOSPHORUS: { en: 'Phosphorus', ja: 'リン' },
+  COPPER: { en: 'Copper', ja: '銅' }, IODINE: { en: 'Iodine', ja: 'ヨウ素' }, IRON: { en: 'Iron', ja: '鉄' }, MANGANESE: { en: 'Manganese', ja: 'マンガン' },
+  SELENIUM: { en: 'Selenium', ja: 'セレン' }, ZINC: { en: 'Zinc', ja: '亜鉛' }, VITAMIN_A: { en: 'Vitamin A', ja: 'ビタミンA' }, VITAMIN_D: { en: 'Vitamin D', ja: 'ビタミンD' },
+  VITAMIN_E: { en: 'Vitamin E', ja: 'ビタミンE' }, VITAMIN_B1: { en: 'Vitamin B1', ja: 'ビタミンB1' }, VITAMIN_B6: { en: 'Vitamin B6', ja: 'ビタミンB6' },
+  VITAMIN_B12: { en: 'Vitamin B12', ja: 'ビタミンB12' }, FOLATE: { en: 'Folate', ja: '葉酸' }, BIOTIN: { en: 'Biotin', ja: 'ビオチン' }, TAURINE: { en: 'Taurine', ja: 'タウリン' },
+}
+
+function quickAnswer(index: number, analysis: Analysis | null, records: SavedRecord[], language: 'ko' | 'en' | 'ja'): CommandAnswer {
+  const ja = language === 'ja'
+  const label = (nutrient: Analysis['nutrients'][number]) => language === 'ko' ? nutrient.name : NUTRIENT_NAMES[nutrient.nutrientId]?.[language] ?? nutrient.name
+  const latest = [...records].sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0]
+  if (index === 0) {
+    if (!analysis) return { answer: ja ? 'まだ完了した分析結果がありません。プロフィールと食べている製品を入力して分析してください。' : 'There is no completed analysis yet. Enter your pet’s profile and products, then start an analysis.', page: 'analysis' }
+    const s = analysis.summary
+    return { answer: ja ? `最新の分析結果です。不足 ${s.deficient ?? 0}項目、適正 ${s.adequate ?? 0}項目、注意 ${s.caution ?? 0}項目、過剰 ${s.excess ?? 0}項目です。気になる栄養素があれば、理由も説明します。` : `Here is the latest analysis: ${s.deficient ?? 0} low, ${s.adequate ?? 0} adequate, ${s.caution ?? 0} caution, and ${s.excess ?? 0} high nutrient results. Ask me about any nutrient for more detail.`, page: 'analysis' }
+  }
+  if (index === 1) {
+    const ratio = analysis?.ratios.calciumPhosphorus
+    if (!ratio || ratio.value == null) return { answer: ja ? 'カルシウムとリンの比率を確認できる分析結果がありません。製品を入力して分析してください。' : 'I don’t have an analysis with a calcium to phosphorus ratio yet. Enter the products and run an analysis first.', page: 'analysis' }
+    return { answer: ja ? `カルシウムとリンの比率は ${ratio.value.toFixed(2)}:1 です。判定は${ratio.status === 'ADEQUATE' ? '適正' : '確認が必要'}です。` : `The calcium to phosphorus ratio is ${ratio.value.toFixed(2)}:1. The result is ${ratio.status === 'ADEQUATE' ? 'within range' : 'outside the expected range'}.`, page: 'analysis' }
+  }
+  if (index === 2) {
+    const source = analysis?.nutrients ?? []
+    if (!analysis) return { answer: ja ? '現在の不足成分を確認できる分析結果がありません。先に分析してください。' : 'There is no completed analysis to check for low nutrients. Please run an analysis first.', page: 'analysis' }
+    const names = source.filter(item => item.status === 'DEFICIENT').map(label)
+    return { answer: names.length ? (ja ? `不足と判定された成分は${names.join('、')}です。これは入力された摂取量と基準の比較結果です。` : `Nutrients marked low: ${names.join(', ')}. This compares the intake you entered with the selected standard.`) : (ja ? '現在の分析では不足と判定された成分はありません。' : 'No nutrients are marked low in the current analysis.'), page: 'analysis' }
+  }
+  if (!latest) return { answer: ja ? '保存された記録はまだありません。分析結果を保存すると、ここから確認できます。' : 'There are no saved records yet. Save an analysis to review it here.', page: 'records' }
+  const summary = latest.summary
+  const date = new Date(latest.date).toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-US')
+  return { answer: ja ? `${latest.name}さんの${date}の保存記録です。不足 ${summary.deficient ?? 0}項目、適正 ${summary.adequate ?? 0}項目、注意 ${summary.caution ?? 0}項目、過剰 ${summary.excess ?? 0}項目です。記録画面で詳細を確認できます。` : `${latest.name}’s saved record from ${date}: ${summary.deficient ?? 0} low, ${summary.adequate ?? 0} adequate, ${summary.caution ?? 0} caution, and ${summary.excess ?? 0} high results. Open Pet records to see the details.`, page: 'records' }
 }
 
 function answerCommand(input: string, analysis: Analysis | null, records: SavedRecord[], awaitingPetSelection: boolean, contextPet: string): CommandAnswer | undefined {
@@ -124,11 +178,12 @@ function answerCommand(input: string, analysis: Analysis | null, records: SavedR
   return undefined
 }
 
-export default function JarvisAssistant({ onNavigate, analysis, records }: Props) {
+export default function JarvisAssistant({ onNavigate, analysis, records, language = 'ko' }: Props) {
+  const t = COPY[language]
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [listening, setListening] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([{ from: 'assistant', text: WELCOME }])
+  const [messages, setMessages] = useState<Message[]>([{ from: 'assistant', text: t.welcome }])
   const [loading, setLoading] = useState(false)
   const [speak, setSpeak] = useState(false)
   const [failedInput, setFailedInput] = useState('')
@@ -138,6 +193,7 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => () => recognition.current?.stop(), [])
+  useEffect(() => { setMessages(previous => previous.length === 1 && previous[0].from === 'assistant' && (previous[0].text === WELCOME || Object.values(COPY).some(copy => previous[0].text === copy.welcome)) ? [{ from: 'assistant', text: t.welcome }] : previous) }, [t.welcome])
   useEffect(() => { if (open) endRef.current?.scrollIntoView({ block: 'nearest' }) }, [messages, open])
 
   const submit = async (value = input) => {
@@ -145,23 +201,25 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
     if (!text) return
     setMessages(previous => [...previous, { from: 'user', text }])
     setInput('')
-    const localResponse = answerCommand(text, analysis, records, awaitingPetSelection, contextPet)
+    const quickIndex = language === 'ko' ? -1 : t.quick.findIndex(prompt => prompt.toLocaleLowerCase() === text.toLocaleLowerCase())
+    const localResponse = quickIndex >= 0 ? quickAnswer(quickIndex, analysis, records, language) : language === 'ko' ? answerCommand(text, analysis, records, awaitingPetSelection, contextPet) : undefined
     if (localResponse) {
       setFailedInput('')
       setAwaitingPetSelection(Boolean(localResponse.awaitPetSelection))
       if (localResponse.contextPet) setContextPet(localResponse.contextPet)
       setMessages(previous => [...previous, { from: 'assistant', text: localResponse.answer }])
-      if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(localResponse.answer))
+      if (speak) speakAnswer(localResponse.answer, language)
       if (localResponse.page) onNavigate(localResponse.page)
       return
     }
     setLoading(true)
     try {
       const history = messages.map(message => ({ role: message.from, content: message.text }))
-      const response = await askJarvis(text, analysis, history)
+      const response = await askJarvis(text, analysis, history, language)
       setFailedInput(['AI_RATE_LIMIT', 'AI_TIMEOUT_OR_NETWORK', 'AI_PROVIDER_ERROR', 'AI_EMPTY_RESPONSE', 'AI_UNAVAILABLE'].includes(response.intent) ? text : '')
-      setMessages(previous => [...previous, { from: 'assistant', text: response.answer }])
-      if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.answer))
+      const answer = language === 'ko' ? response.answer : BACKEND_FAILURES[language][response.intent as keyof typeof BACKEND_FAILURES[typeof language]] ?? response.answer
+      setMessages(previous => [...previous, { from: 'assistant', text: answer }])
+      if (speak) speakAnswer(answer, language)
       if (response.page) onNavigate(response.page)
     } catch (error) {
       setFailedInput(text)
@@ -178,7 +236,7 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
     const demo = () => {
       window.clearInterval(typingTimer)
       window.clearTimeout(sendTimer)
-      const example = '안녕 자비스, 어떤 도움을 받을 수 있어?'
+      const example = language === 'en' ? 'Hi JARVIS, what can you help me with?' : language === 'ja' ? 'こんにちはJARVIS、どんなことを手伝ってくれますか？' : '안녕 자비스, 어떤 도움을 받을 수 있어?'
       let length = 0
       setOpen(true)
       setSpeak(true)
@@ -189,7 +247,7 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
         if (length >= example.length) {
           window.clearInterval(typingTimer)
           sendTimer = window.setTimeout(() => {
-            const answer = '분석 결과 요약, 저장 기록 조회, 영양 성분 설명을 도와드릴 수 있어요.'
+            const answer = language === 'en' ? 'I can summarize analysis results, find saved records, and explain nutrients.' : language === 'ja' ? '分析結果の要約、保存記録の確認、栄養素の説明をお手伝いします。' : '분석 결과 요약, 저장 기록 조회, 영양 성분 설명을 도와드릴 수 있어요.'
             setInput('')
             setMessages(previous => [...previous, { from: 'user', text: example }, { from: 'assistant', text: answer }])
             if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(answer))
@@ -217,30 +275,30 @@ export default function JarvisAssistant({ onNavigate, analysis, records }: Props
       window.removeEventListener('wooaeyoung:pause-tour-demos', pauseDemo); window.removeEventListener('wooaeyoung:demo-jarvis', demo)
       window.removeEventListener('wooaeyoung:cancel-tour-demos', cancelDemo)
     }
-  }, [])
+  }, [language])
 
   const listen = () => {
     if (listening) { recognition.current?.stop(); return }
     const speechWindow = window as Window & { SpeechRecognition?: RecognitionConstructor; webkitSpeechRecognition?: RecognitionConstructor }
     const Constructor = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
-    if (!Constructor) { setMessages(previous => [...previous, { from: 'assistant', text: '이 브라우저에서는 음성 인식을 지원하지 않아요. 텍스트로 입력해 주세요.' }]); return }
+    if (!Constructor) { setMessages(previous => [...previous, { from: 'assistant', text: t.voiceUnsupported }]); return }
     const next = new Constructor()
-    next.lang = 'ko-KR'; next.continuous = false; next.interimResults = false
+    next.lang = language === 'en' ? 'en-US' : language === 'ja' ? 'ja-JP' : 'ko-KR'; next.continuous = false; next.interimResults = false
     next.onresult = event => { void submit(event.results[0][0].transcript) }
-    next.onerror = () => setMessages(previous => [...previous, { from: 'assistant', text: '음성을 인식하지 못했어요. 마이크 권한을 확인하고 다시 시도해 주세요.' }])
+    next.onerror = () => setMessages(previous => [...previous, { from: 'assistant', text: t.voiceFailed }])
     next.onend = () => setListening(false)
     recognition.current = next
     try { next.start(); setListening(true) } catch { setListening(false) }
   }
 
-  return <aside className="jarvis-root" aria-label="우애영 AI 도우미">
-    {open && <section className="jarvis-panel" aria-label="자비스 대화창">
-      <header className="jarvis-top"><div className="jarvis-identity"><span className="jarvis-monogram">J</span><div><b>JARVIS</b><small><i /> 자동 응답 · 케어 도우미</small></div></div><div className="jarvis-tools"><button type="button" onClick={() => setSpeak(value => !value)} aria-pressed={speak} title="음성 답변" aria-label={speak ? '음성 답변 끄기' : '음성 답변 켜기'}>{speak ? <Volume2 size={16} /> : <VolumeX size={16} />}</button><button type="button" onClick={() => setOpen(false)} aria-label="자비스 닫기"><X size={17} /></button></div></header>
-      <div className="jarvis-context" aria-label="현재 대화 정보"><span>{analysis ? '최근 분석 있음' : '분석 결과 없음'}</span><span>{records.length ? `저장 기록 ${records.length}건` : '저장 기록 없음'}</span><span>{analysis ? '18개 성분 연동' : '기본 안내'}</span></div>
-      <div className="jarvis-messages" role="log" aria-live="polite"><span className="jarvis-day">오늘</span>{messages.map((message, index) => <p key={index} className={`jarvis-msg ${message.from}`}>{message.text}</p>)}{messages.length === 1 && <div className="jarvis-quick"><small>이렇게 물어보세요</small><div>{QUICK_PROMPTS.map(prompt => <button type="button" key={prompt} onClick={() => void submit(prompt)}>{prompt}</button>)}</div></div>}<div ref={endRef} /></div>
-      {failedInput && !loading && <div className="jarvis-retry-bar" role="status"><span>방금 질문을 그대로 다시 확인할 수 있어요.</span><button type="button" className="jarvis-retry" onClick={() => void submit(failedInput)}><RefreshCw size={14} /> 다시 시도</button></div>}
-      <form className="jarvis-form" onSubmit={event => { event.preventDefault(); void submit() }}><button type="button" onClick={listen} aria-label={listening ? '음성 인식 중지' : '음성 인식 시작'} aria-pressed={listening} className={listening ? 'listening' : ''}><Mic size={19} /></button><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder={loading ? '답변 생성 중…' : '자비스에게 물어보기'} aria-label="자비스 명령 입력" disabled={loading} /><button type="submit" aria-label="메시지 보내기" disabled={!input.trim() || loading}>{loading ? '…' : <Send size={18} />}</button></form>
-      <small className="jarvis-note">건강 상태의 진단이나 처방을 대신하지 않습니다.</small>
+  return <aside className="jarvis-root" aria-label={t.assistant}>
+    {open && <section className="jarvis-panel" aria-label={t.panel}>
+      <header className="jarvis-top"><div className="jarvis-identity"><span className="jarvis-monogram">J</span><div><b>JARVIS</b><small><i /> {t.status}</small></div></div><div className="jarvis-tools"><button type="button" onClick={() => setSpeak(value => !value)} aria-pressed={speak} title={speak ? t.voiceOff : t.voiceOn} aria-label={speak ? t.voiceOff : t.voiceOn}>{speak ? <Volume2 size={16} /> : <VolumeX size={16} />}</button><button type="button" onClick={() => setOpen(false)} aria-label={t.close}><X size={17} /></button></div></header>
+      <div className="jarvis-context" aria-label={language === 'en' ? 'Conversation context' : language === 'ja' ? '会話の情報' : '현재 대화 정보'}><span>{analysis ? t.hasAnalysis : t.noAnalysis}</span><span>{records.length ? t.records(records.length) : t.noRecords}</span><span>{analysis ? t.linked : t.basic}</span></div>
+      <div className="jarvis-messages" role="log" aria-live="polite"><span className="jarvis-day">{t.today}</span>{messages.map((message, index) => <p key={index} className={`jarvis-msg ${message.from}`}>{message.text}</p>)}{messages.length === 1 && <div className="jarvis-quick"><small>{t.ask}</small><div>{t.quick.map(prompt => <button type="button" key={prompt} onClick={() => void submit(prompt)}>{prompt}</button>)}</div></div>}<div ref={endRef} /></div>
+      {failedInput && !loading && <div className="jarvis-retry-bar" role="status"><span>{t.retryHint}</span><button type="button" className="jarvis-retry" onClick={() => void submit(failedInput)}><RefreshCw size={14} /> {t.retry}</button></div>}
+      <form className="jarvis-form" onSubmit={event => { event.preventDefault(); void submit() }}><button type="button" onClick={listen} aria-label={listening ? t.stopListening : t.listen} aria-pressed={listening} className={listening ? 'listening' : ''}><Mic size={19} /></button><input value={input} maxLength={500} onChange={event => setInput(event.target.value)} placeholder={loading ? t.loading : t.placeholder} aria-label={t.placeholder} disabled={loading} /><button type="submit" aria-label={t.send} disabled={!input.trim() || loading}>{loading ? '…' : <Send size={18} />}</button></form>
+      <small className="jarvis-note">{t.note}</small>
     </section>}
     <button type="button" className="jarvis-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}><Sparkles size={19} /><span>JARVIS</span></button>
   </aside>
